@@ -15,7 +15,7 @@ the same design and seed give the same numbers.
 | Milestone | State |
 |---|---|
 | 0 — Scaffold | done |
-| 1 — Engine kernel | |
+| 1 — Engine kernel | done |
 | 2 — Walking skeleton | |
 | 3 — Full component set | |
 | 4 — Levels | |
