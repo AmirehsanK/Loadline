@@ -1,0 +1,23 @@
+{
+  "name": "@loadline/engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Deterministic discrete-event simulation of request flow through a system design.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json && tsc -p bench/tsconfig.json",
+    "test": "vitest run",
+    "bench": "node bench/engine.bench.ts"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "fast-check": "4.10.2"
+  }
+}
