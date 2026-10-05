@@ -1,0 +1,23 @@
+{
+  "name": "@loadline/share",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Turns a design into a link and back, treating the link as untrusted input.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@loadline/engine": "*",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@loadline/scenarios": "*"
+  }
+}
