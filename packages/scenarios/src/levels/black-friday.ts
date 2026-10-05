@@ -42,6 +42,7 @@ export const blackFriday: Scenario = {
   id: 'black-friday',
   text: {
     title: 'Black Friday',
+    summary: 'Six times the traffic for a minute, on a budget.',
     brief:
       'For most of the day two instances are plenty. Then the sale opens: traffic climbs to six and a half times as much ' +
       'over thirty seconds, holds, and falls away. A new instance takes ten seconds to start. ' +

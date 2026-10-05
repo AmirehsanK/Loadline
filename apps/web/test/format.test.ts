@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { formatClock, formatCount, formatDuration, formatPercent } from '../src/metrics/format.ts';
+import { dotSpacing, failureEvery } from '../src/canvas/traffic.ts';
+import { formatClock, formatCount, formatDuration, formatPercent, formatShare } from '../src/metrics/format.ts';
 
 describe('formatDuration', () => {
   it('uses the unit and precision that suit the size', () => {
@@ -42,5 +43,39 @@ describe('formatClock', () => {
     expect(formatClock(42_900)).toBe('0:42');
     expect(formatClock(725_000)).toBe('12:05');
     expect(formatClock(3_723_000)).toBe('1:02:03');
+  });
+});
+
+describe('formatShare', () => {
+  it('keeps enough digits to be read against a limit', () => {
+    expect(formatShare(0)).toBe('0%');
+    expect(formatShare(0.00003)).toBe('<0.01%');
+    expect(formatShare(0.0003)).toBe('0.03%');
+    expect(formatShare(0.0026)).toBe('0.26%');
+    expect(formatShare(0.005)).toBe('0.5%');
+    expect(formatShare(0.0187)).toBe('1.87%');
+    expect(formatShare(0.1076)).toBe('10.8%');
+    expect(formatShare(0.13)).toBe('13%');
+    expect(formatShare(1)).toBe('100%');
+    expect(formatShare(Infinity)).toBe('–');
+  });
+});
+
+describe('the dots on a connection', () => {
+  it('are closer together the more calls there are, within limits', () => {
+    expect(dotSpacing(0)).toBe(44);
+    expect(dotSpacing(9)).toBe(33);
+    expect(dotSpacing(99)).toBe(22);
+    expect(dotSpacing(999)).toBe(11);
+    expect(dotSpacing(1_000_000)).toBe(7);
+  });
+
+  it('are red one in every so many, for the share that failed', () => {
+    expect(failureEvery(0)).toBe(Infinity);
+    expect(failureEvery(0.01)).toBe(100);
+    expect(failureEvery(0.33)).toBe(3);
+    expect(failureEvery(0.5)).toBe(2);
+    expect(failureEvery(0.8)).toBe(1);
+    expect(failureEvery(1)).toBe(1);
   });
 });

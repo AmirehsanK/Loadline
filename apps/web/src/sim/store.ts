@@ -1,6 +1,6 @@
 import type { BlameReport, Bottleneck, Gauge, Issue, WindowSample } from '@loadline/engine';
 import { create } from 'zustand';
-import type { Totals } from './protocol.ts';
+import type { LevelFrame, Totals } from './protocol.ts';
 
 /** How many sampling windows the page keeps for charts. */
 export const HISTORY = 240;
@@ -8,8 +8,11 @@ export const HISTORY = 240;
 export const NO_TOTALS: Totals = { created: 0, ok: 0, failed: 0, attempts: 0, events: 0 };
 
 export interface SimState {
-  /** `blocked` means the design has errors and cannot run. */
-  status: 'blocked' | 'paused' | 'running' | 'failed';
+  /**
+   * `blocked` means the design has errors and cannot run. `finished` is a run of a level that has
+   * reached the level's end.
+   */
+  status: 'blocked' | 'paused' | 'running' | 'finished' | 'failed';
   /** Why a run stopped, when `status` is `failed`. */
   failure: string | null;
   issues: Issue[];
@@ -19,7 +22,10 @@ export interface SimState {
   speed: number;
   /** Speed achieved; lower than `speed` when the simulation cannot keep up. */
   measuredSpeed: number;
+  /** What the traffic control is set to. */
   multiplier: number;
+  /** What every client's rate is multiplied by at this moment: the control, the workload, spikes. */
+  traffic: number;
   totals: Totals;
   samples: WindowSample[];
   gauges: Gauge[];
@@ -29,6 +35,8 @@ export interface SimState {
   bottleneck: Bottleneck | null;
   /** What the design has cost to run so far, in dollars a month. */
   monthlyCost: number;
+  /** How the run stands against its level, when it is a run of one. */
+  level: LevelFrame | null;
   /** Position of each node and edge in the arrays of a sample. */
   nodeIndex: Record<string, number>;
   edgeIndex: Record<string, number>;
@@ -38,12 +46,15 @@ export interface SimState {
 export const EMPTY_RUN = {
   now: 0,
   measuredSpeed: 0,
+  traffic: 1,
   totals: NO_TOTALS,
   samples: [] as WindowSample[],
   gauges: [] as Gauge[],
   blame: [] as BlameReport[],
   bottleneck: null,
   failure: null,
+  level: null,
+  monthlyCost: 0,
 } satisfies Partial<SimState>;
 
 export const useSim = create<SimState>(() => ({
@@ -52,7 +63,6 @@ export const useSim = create<SimState>(() => ({
   issues: [],
   speed: 1,
   multiplier: 1,
-  monthlyCost: 0,
   nodeIndex: {},
   edgeIndex: {},
 }));

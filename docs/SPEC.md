@@ -132,15 +132,28 @@ falls behind, the UI shows the real speed; fidelity is never dropped silently.
 
 ## 5. Web app
 
-- **Layout:** component palette, canvas, inspector for the selected node or edge, a metrics dock
-  (KPIs, charts, failure causes, bottleneck callout), and a top bar with the level brief, run
-  controls, speed, seed, share, language and theme.
-- **Worker protocol:** typed messages (init, start, pause, speed, command, reset → samples, report,
-  error), posted at 10 Hz.
-- **Traffic display:** edge width, colour and dash speed follow throughput and error rate; a canvas
-  particle overlay comes in the polish milestone.
-- **Editing:** undo and redo on the design store. Desktop-first; the embed and shared views work on
-  phones.
+- **Pages:** `#/` is the front page, with the list of levels and how many stars each has earned;
+  `#/level/<id>` plays a level; `#/sandbox` is the playground with every part and no objectives.
+- **Layout of the workbench:** a left panel, the canvas, an inspector for the selected node or
+  edge, and a metrics dock (KPIs, charts, failure causes, bottleneck callout). In the sandbox the
+  left panel is the palette of parts. In a level it is the brief, the objectives with how the run
+  stands against each, hints, and the parts that level allows.
+- **Playing a level:** the run uses the level's traffic, faults and seed, and ends at the level's
+  duration; the top bar shows that as a timeline, with the warm-up and each scripted fault marked.
+  The run can go at full speed, which is as fast as the engine will. Any change to the design
+  starts the run over, stopped, because a level is scored on one design from start to finish.
+  When a run ends its result opens: what was met, the stars, and on a pass the debrief.
+- **Rules in the editor:** settings a level has fixed are shown and cannot be changed, parts it
+  needs cannot be removed, and only the parts it offers can be added. The scoring enforces the
+  same rules; the editor only makes sure nobody finds out at the end of a run.
+- **Storage:** the sandbox design, the design in progress for each level, and the stars earned are
+  each kept in localStorage under a versioned key. Saved data is validated like any other input.
+- **Worker protocol:** typed messages (load, reconfigure, play, pause, speed, multiplier, command →
+  frame, failed). A frame is posted about ten times a second and carries the level's result so far.
+- **Traffic display:** the calls on a connection travel along it as dots. The more calls, the
+  closer the dots; for the share that failed, every so many dots one is red.
+- **Editing:** undo and redo on the design store, where a run of changes to one part is one step.
+  Desktop-first; the embed and shared views work on phones.
 
 ## 6. Levels
 

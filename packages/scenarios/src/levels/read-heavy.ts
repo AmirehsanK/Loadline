@@ -36,6 +36,7 @@ export const readHeavy: Scenario = {
   id: 'read-heavy',
   text: {
     title: 'Read-heavy',
+    summary: 'A database that cannot grow, and readers who all want the same pages.',
     brief:
       'Most of your traffic is people reading the same popular pages, and every read goes to a database that can do about 330 ' +
       'queries a second. 450 arrive. The database is as big as it is going to get. ' +

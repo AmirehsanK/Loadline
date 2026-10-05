@@ -88,6 +88,17 @@
     border-color: var(--color-oxide);
     background: var(--color-oxide-wash);
   }
+  /* A setting the level has fixed: readable, and plainly not for changing. */
+  .field-input:disabled {
+    border-style: dashed;
+    background: var(--color-deck);
+    color: var(--color-ink-2);
+    cursor: not-allowed;
+    opacity: 1;
+  }
+  .field-input:disabled:hover {
+    border-color: var(--color-line);
+  }
 }
 
 /* --- The canvas ---------------------------------------------------------------------------- */
@@ -123,11 +134,15 @@
   overflow: hidden;
 }
 
-/* Traffic moving along a connection. The dashes only move while the run does. */
+/*
+ * Traffic moving along a connection, as dots. Each connection sets how far apart its dots are in
+ * --period; moving the pattern by exactly that far makes the loop seamless. They only move while
+ * the run does.
+ */
 .flow-traffic {
   fill: none;
+  stroke-width: 5;
   stroke-linecap: round;
-  stroke-dasharray: 2 12;
   animation: flow-traffic linear infinite;
   animation-play-state: paused;
   pointer-events: none;
@@ -137,7 +152,18 @@
 }
 @keyframes flow-traffic {
   to {
-    stroke-dashoffset: -14;
+    stroke-dashoffset: calc(-1 * var(--period));
+  }
+}
+
+/* The stars of a result are stamped on one after another. */
+.stamp {
+  animation: stamp 380ms cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: scale(2.2) rotate(-18deg);
   }
 }
 
@@ -145,8 +171,20 @@
   transition: height 600ms ease-out;
 }
 
+/* The water on the front page drifts by one wavelength and repeats. */
+.hull-water {
+  animation: hull-drift 9s linear infinite;
+}
+@keyframes hull-drift {
+  to {
+    transform: translateX(60px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .flow-traffic {
+  .flow-traffic,
+  .hull-water,
+  .stamp {
     animation: none;
   }
   .gauge-level {

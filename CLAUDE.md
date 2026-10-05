@@ -32,8 +32,12 @@ package names (`@loadline/*`), so a rename would be a find-and-replace and a rep
   what two edits to one file in the same tool batch are. The server then keeps serving the first
   save, and the browser reports an error that is no longer in the file. `touch` the file (or every
   file under `apps/web/src`) and reload before believing such an error.
-- The preview pane returns screenshots 800 pixels wide. Emulating a larger viewport scales the
-  whole page down to fit; click coordinates are in the screenshot's pixels, not the viewport's.
+- The preview pane can be narrower than the app's minimum width. Emulate a viewport of about
+  1040×700 to see the layout: the page is scaled down to fit the pane, and a screenshot may show
+  the frame before the last change, so take it again after a pause. A click by element reference
+  misses under that scaling; click from JavaScript, or by the screenshot's own coordinates. To read
+  part of the page at full size, give the root element `transform: scale(2)` with a
+  `transform-origin` at that part, and reload to undo it.
 
 ## Commands
 

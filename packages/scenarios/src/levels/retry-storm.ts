@@ -23,6 +23,7 @@ export const retryStorm: Scenario = {
   id: 'retry-storm',
   text: {
     title: 'Retry storm',
+    summary: 'A five-second hiccup that never ends.',
     brief:
       'The API runs comfortably at three quarters of what it can do. At twenty seconds it has a bad moment: five seconds of ' +
       'being three times slower. Then it is fine again, and yet the failures never stop. ' +

@@ -28,6 +28,7 @@ export const slowDependency: Scenario = {
   id: 'slow-dependency',
   text: {
     title: 'Slow dependency',
+    summary: 'A service you do not own turns slow, and takes yours down with it.',
     brief:
       'Twenty seconds in, the payments service turns slow: two seconds a call instead of 20 ms, for forty seconds. It is not ' +
       'yours to fix. Only purchases use it, a fifth of your traffic, yet browsing is failing too. ' +

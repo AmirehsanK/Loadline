@@ -12,9 +12,11 @@ export interface Bottleneck {
   /** The node at the end of the trail. */
   nodeId: string;
   /**
-   * - `saturated`: its slots are full, and calls wait for one.
+   * - `saturated`: its slots are full, and calls wait for one. The waiting may be happening in
+   *   a caller's connection pool, when that is what keeps the node from being given too much.
    * - `contended`: a database running more queries than it has cores for.
-   * - `pool`: callers are waiting for a connection over `edgeId`, not for the node behind it.
+   * - `pool`: callers are waiting for a connection over `edgeId` while the node behind it has
+   *   room: the pool is what is short.
    * - `down`: it has no instance up.
    * - `work`: the time is its own work, and it has room to spare. Nothing is short; it is just slow.
    */
@@ -123,10 +125,18 @@ export function findBottleneck(design: Design, sample: WindowSample): Bottleneck
       }
       if (heaviest >= 0 && most >= DOMINANT * window.busyMs) {
         const edge = sample.edges[heaviest]!;
+        const next = indexOf.get(design.edges[heaviest]!.to)!;
         if (!isClient && edge.poolWaitMs >= DOMINANT * edge.waitMs) {
+          // Waiting for a connection. If what is behind the pool is flat out, the pool is doing
+          // its job and that node is what is short; if it has room, the pool is.
+          const behind = sample.nodes[next]!;
+          if (behind.utilization >= SATURATED) {
+            const target = design.nodes[next]!.id;
+            return { nodeId: target, kind: 'saturated', path: [...path, target], utilization: behind.utilization };
+          }
           return { nodeId: node.id, kind: 'pool', edgeId: design.edges[heaviest]!.id, path, utilization: window.utilization };
         }
-        at = indexOf.get(design.edges[heaviest]!.to)!;
+        at = next;
         continue;
       }
 

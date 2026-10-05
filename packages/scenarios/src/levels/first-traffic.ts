@@ -28,6 +28,7 @@ export const firstTraffic: Scenario = {
   id: 'first-traffic',
   text: {
     title: 'First traffic',
+    summary: 'Traffic is about to pass what one instance can do.',
     brief:
       'Your API got through launch day. Now traffic is climbing to 300 requests a second, and one instance can do about 200. ' +
       'Keep 99% of requests under 500 ms and failures under 1%, for no more than $140 a month.',

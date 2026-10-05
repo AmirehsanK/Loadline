@@ -65,6 +65,7 @@ export const theBill: Scenario = {
   id: 'the-bill',
   text: {
     title: 'The bill',
+    summary: 'Everything works. It costs five times what it should.',
     brief:
       'Nothing is wrong with this system. It is fast, nothing fails, and it costs $1,987 a month, because every part of it ' +
       'was sized by someone who never wanted to be paged. ' +

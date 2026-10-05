@@ -11,10 +11,10 @@ function bottleneck(target: Design, input: RunInput, fromS: number, toS: number)
   return period ? findBottleneck(target, period) : null;
 }
 
-const pooled = (poolSize: number) =>
+const pooled = (poolSize: number, rps = 340) =>
   system(
     [
-      { id: 'users', type: 'client', params: { rps: 340, readRatio: 1 } },
+      { id: 'users', type: 'client', params: { rps, readRatio: 1 } },
       { id: 'api', type: 'service', params: { concurrency: 200, queue: 256, serviceTime: fixed(1) } },
       { id: 'db', type: 'database', params: { concurrency: 4, maxConnections: 500, readTime: fixed(10) } },
     ],
@@ -51,6 +51,14 @@ describe('finding the bottleneck', () => {
       edgeId: 'api-db',
       path: ['api'],
     });
+  });
+
+  it('says the database, when the pool is the right size and the database still cannot keep up', () => {
+    // 450 a second for a database that does 400: the calls wait in the pool, which is what keeps
+    // the database at full speed. More connections would not help; the database is what is short.
+    const found = bottleneck(pooled(4, 450), { sendMs: 60_000 }, 20, 60);
+    expect(found).toMatchObject({ nodeId: 'db', kind: 'saturated', path: ['api', 'db'] });
+    expect(found!.utilization).toBeGreaterThan(0.95);
   });
 
   it('says the database is contended when it has been given more than it can run', () => {

@@ -54,13 +54,13 @@ const small = 'font-mono text-[0.85rem]';
 /** A source of traffic: a pill, because it is outside the system and nothing calls it. */
 export function ClientNodeView({ id, data, selected }: NodeProps<FlowNodeOf<'client'>>) {
   const m = useMessages();
-  const multiplier = useSim((state) => state.multiplier);
+  const traffic = useSim((state) => state.traffic);
   return (
     <div className={`flex w-44 items-center gap-2.5 rounded-full border border-ink bg-plate py-2 ps-3 pe-5 ${outline(selected)}`}>
       <span className="grid size-7 shrink-0 place-items-center rounded-full bg-ink text-plate">{PART_ICONS.client}</span>
       <div className="min-w-0">
         <div className="truncate font-bold">{data.name || id}</div>
-        <div className={`truncate text-ink-2 ${small}`}>{m.node.perSecond(formatCount(data.params.rps * multiplier))}</div>
+        <div className={`truncate text-ink-2 ${small}`}>{m.node.perSecond(formatCount(data.params.rps * traffic))}</div>
       </div>
       <Handle type="source" position={Position.Right} />
     </div>

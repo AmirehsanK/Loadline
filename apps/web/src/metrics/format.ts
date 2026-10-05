@@ -40,3 +40,12 @@ export function formatClock(ms: number): string {
   const hours = Math.floor(total / 3600);
   return hours > 0 ? `${hours}:${String(minutes).padStart(2, '0')}:${seconds}` : `${minutes}:${seconds}`;
 }
+
+/** A share that has to be read against a limit, so it keeps more digits: "0.03%", "1.87%", "10.8%". */
+export function formatShare(fraction: number): string {
+  if (!Number.isFinite(fraction)) return '–';
+  const percent = fraction * 100;
+  if (percent === 0) return '0%';
+  if (percent < 0.005) return '<0.01%';
+  return `${trim(percent, percent < 10 ? 2 : 1)}%`;
+}

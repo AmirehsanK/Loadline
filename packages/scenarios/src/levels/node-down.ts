@@ -33,6 +33,7 @@ export const nodeDown: Scenario = {
   id: 'node-down',
   text: {
     title: 'Node down',
+    summary: 'One of two instances dies and does not come back.',
     brief:
       'Two instances share the traffic, each a little over half busy. Twenty seconds in, one of them dies and does not ' +
       'come back. Keep failures under 1% and 99% of requests under 600 ms across the whole run, for no more than $140 a month.',

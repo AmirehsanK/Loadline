@@ -150,6 +150,85 @@ export function WorkerIcon() {
   );
 }
 
+export function UndoIcon() {
+  return (
+    <Icon>
+      <path d="M5.5 3 2.5 6l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 6h6.5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </Icon>
+  );
+}
+
+export function RedoIcon() {
+  return (
+    <Icon>
+      <path d="m10.5 3 3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13 6H6.5a3.5 3.5 0 0 0 0 7H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </Icon>
+  );
+}
+
+export function LockIcon() {
+  return (
+    <Icon size={12}>
+      <path d="M4 7V5a4 4 0 0 1 8 0v2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M3 7h10v7H3z" fill="currentColor" />
+    </Icon>
+  );
+}
+
+export function CheckIcon() {
+  return (
+    <Icon>
+      <path d="m3 8.5 3.2 3.2L13 4.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </Icon>
+  );
+}
+
+export function CrossIcon() {
+  return (
+    <Icon>
+      <path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </Icon>
+  );
+}
+
+/** Points the way a reader of the page's language reads on: it is mirrored where text runs right to left. */
+export function ForwardIcon() {
+  return (
+    <span className="inline-flex rtl:-scale-x-100">
+      <Icon>
+        <path d="M2.5 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </Icon>
+    </span>
+  );
+}
+
+export function BackIcon() {
+  return (
+    <span className="inline-flex rtl:-scale-x-100">
+      <Icon>
+        <path d="M13.5 8h-10M7 4 3 8l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </Icon>
+    </span>
+  );
+}
+
+/** One of the three marks a level can earn. */
+export function StarIcon({ earned, size = 16 }: { earned: boolean; size?: number }) {
+  return (
+    <Icon size={size}>
+      <path
+        d="m8 1.6 1.9 4 4.4.6-3.2 3 .8 4.4L8 11.5l-3.9 2.1.8-4.4-3.2-3 4.4-.6L8 1.6Z"
+        fill={earned ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </Icon>
+  );
+}
+
 export function BoltIcon() {
   return (
     <Icon>

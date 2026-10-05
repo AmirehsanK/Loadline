@@ -5,6 +5,7 @@ import { canConnect } from '../design/model.ts';
 import type { FlowEdge, FlowNode } from '../design/model.ts';
 import { useDesign } from '../design/store.ts';
 import { useMessages } from '../i18n/index.ts';
+import { canRemove, canRemoveEdge } from '../level/rules.ts';
 import { useSim } from '../sim/store.ts';
 import { FlowEdgeView } from './FlowEdgeView.tsx';
 import { PART_MIME } from './Palette.tsx';
@@ -20,6 +21,7 @@ export function Canvas() {
   const onEdgesChange = useDesign((state) => state.onEdgesChange);
   const connect = useDesign((state) => state.connect);
   const addNode = useDesign((state) => state.addNode);
+  const level = useDesign((state) => state.level);
   const running = useSim((state) => state.status === 'running');
   const { screenToFlowPosition } = useReactFlow();
 
@@ -49,6 +51,13 @@ export function Canvas() {
         onEdgesChange={onEdgesChange}
         onConnect={connect}
         isValidConnection={({ source, target }) => canConnect(nodes, edges, source, target)}
+        // The delete key takes out only what the level lets go.
+        onBeforeDelete={({ nodes: doomedNodes, edges: doomedEdges }) =>
+          Promise.resolve({
+            nodes: doomedNodes.filter((node) => canRemove(level, node.id)),
+            edges: doomedEdges.filter((edge) => canRemoveEdge(level, edge)),
+          })
+        }
         fitView
         fitViewOptions={{ padding: 0.35, maxZoom: 1 }}
         minZoom={0.3}

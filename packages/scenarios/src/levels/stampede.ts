@@ -38,6 +38,7 @@ export const stampede: Scenario = {
   id: 'stampede',
   text: {
     title: 'Stampede',
+    summary: 'The cache is emptied at the height of the sale.',
     brief:
       'The cache answers nearly every request, so the database behind it is small and mostly idle. Twenty-five seconds in, ' +
       'at the height of the sale, a deploy empties the cache. The database cannot be made bigger. ' +

@@ -1,23 +1,22 @@
-import { NODE_TYPES } from '@loadline/engine';
+import type { NodeType } from '@loadline/engine';
 import { useDesign } from '../design/store.ts';
 import { useMessages } from '../i18n/index.ts';
+import { allowedParts } from '../level/rules.ts';
 import { PART_ICONS } from './nodes.tsx';
 
 /** The key under which a dragged part's type travels to the canvas. */
 export const PART_MIME = 'application/x-loadline-part';
 
-export function Palette() {
+/** The parts that can be added, each a button that can also be dragged onto the canvas. */
+export function PartsList({ types }: { types: readonly NodeType[] }) {
   const m = useMessages();
   const addNode = useDesign((state) => state.addNode);
   const count = useDesign((state) => state.nodes.length);
 
   return (
-    <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto border-e border-line bg-plate p-3" aria-labelledby="parts-title">
-      <h2 id="parts-title" className="marking">
-        {m.parts.title}
-      </h2>
+    <>
       <ul className="flex flex-col gap-1.5">
-        {NODE_TYPES.map((type) => (
+        {types.map((type) => (
           <li key={type}>
             <button
               type="button"
@@ -46,6 +45,19 @@ export function Palette() {
         ))}
       </ul>
       <p className="text-[0.85rem] text-ink-3">{m.parts.hint}</p>
+    </>
+  );
+}
+
+/** The left-hand panel of the sandbox: every kind of part. */
+export function Palette() {
+  const m = useMessages();
+  return (
+    <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto border-e border-line bg-plate p-3" aria-labelledby="parts-title">
+      <h2 id="parts-title" className="marking">
+        {m.parts.title}
+      </h2>
+      <PartsList types={allowedParts(null)} />
     </aside>
   );
 }

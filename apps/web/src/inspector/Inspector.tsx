@@ -8,6 +8,7 @@ import { useDesign } from '../design/store.ts';
 import type { FieldText, Messages } from '../i18n/en.ts';
 import { useMessages } from '../i18n/index.ts';
 import { BoltIcon, TrashIcon } from '../icons.tsx';
+import { canRemove, canRemoveEdge, isLocked, lockedPaths } from '../level/rules.ts';
 import { formatCount } from '../metrics/format.ts';
 import { inject } from '../sim/controller.ts';
 import { useSim } from '../sim/store.ts';
@@ -39,10 +40,12 @@ function NodeSettings({ node }: { node: FlowNode }) {
   const m = useMessages();
   const renameNode = useDesign((state) => state.renameNode);
   const patchNode = useDesign((state) => state.patchNode);
+  const level = useDesign((state) => state.level);
   const texts = m.fields.node[node.type] as Record<string, FieldText>;
 
   return (
     <div className="flex flex-col gap-3">
+      {lockedPaths(level, node.id, node.type) === '*' && <p className="rounded-[3px] bg-shallows px-2 py-1.5">{m.level.lockedPart}</p>}
       <TextField
         label={m.inspector.name}
         value={node.data.name}
@@ -54,18 +57,22 @@ function NodeSettings({ node }: { node: FlowNode }) {
         specs={NODE_FIELDS[node.type]}
         texts={texts}
         values={node.data.params}
+        locked={(path) => isLocked(level, node.id, path, node.type)}
         onChange={(path, value) => {
           patchNode(node.id, setPath(node.data.params, path, value));
         }}
       />
       <Summary node={node} />
-      <Faults
-        faults={faultsFor(node, m)}
-        onInject={(command) => {
-          inject(command);
-        }}
-      />
-      <RemoveButton kind="node" id={node.id} />
+      {/* What goes wrong in a level is the level's to decide. */}
+      {!level && (
+        <Faults
+          faults={faultsFor(node, m)}
+          onInject={(command) => {
+            inject(command);
+          }}
+        />
+      )}
+      {canRemove(level, node.id) && <RemoveButton kind="node" id={node.id} />}
     </div>
   );
 }
@@ -73,6 +80,7 @@ function NodeSettings({ node }: { node: FlowNode }) {
 function EdgeSettings({ edge }: { edge: FlowEdge }) {
   const m = useMessages();
   const patchEdge = useDesign((state) => state.patchEdge);
+  const level = useDesign((state) => state.level);
   const from = useDesign((state) => state.nodes.find((node) => node.id === edge.source)?.data.name);
   const to = useDesign((state) => state.nodes.find((node) => node.id === edge.target)?.data.name);
   const params = edge.data?.params;
@@ -86,20 +94,23 @@ function EdgeSettings({ edge }: { edge: FlowEdge }) {
         specs={EDGE_FIELDS}
         texts={m.fields.edge}
         values={params}
+        locked={(path) => isLocked(level, edge.id, path)}
         onChange={(path, value) => {
           patchEdge(edge.id, setPath(params, path, value));
         }}
       />
-      <Faults
-        faults={[
-          { label: labels.sever, command: { type: 'sever', edgeId: edge.id, durationMs: FAULT_MS } },
-          { label: labels.delay, command: { type: 'delay', edgeId: edge.id, addMs: 100, durationMs: FAULT_MS } },
-        ]}
-        onInject={(command) => {
-          inject(command);
-        }}
-      />
-      <RemoveButton kind="edge" id={edge.id} />
+      {!level && (
+        <Faults
+          faults={[
+            { label: labels.sever, command: { type: 'sever', edgeId: edge.id, durationMs: FAULT_MS } },
+            { label: labels.delay, command: { type: 'delay', edgeId: edge.id, addMs: 100, durationMs: FAULT_MS } },
+          ]}
+          onInject={(command) => {
+            inject(command);
+          }}
+        />
+      )}
+      {canRemoveEdge(level, edge) && <RemoveButton kind="edge" id={edge.id} />}
     </div>
   );
 }
@@ -108,11 +119,13 @@ interface FieldsProps {
   specs: FieldSpec[];
   texts: Record<string, FieldText>;
   values: object;
+  /** Whether the setting at a path is fixed by the level being played. */
+  locked: (path: string) => boolean;
   onChange: (path: string, value: unknown) => void;
 }
 
 /** One control per setting, from the field table. */
-function Fields({ specs, texts, values, onChange }: FieldsProps) {
+function Fields({ specs, texts, values, locked, onChange }: FieldsProps) {
   const m = useMessages();
   return (
     <>
@@ -123,7 +136,11 @@ function Fields({ specs, texts, values, onChange }: FieldsProps) {
         const set = (next: unknown) => {
           onChange(spec.path, next);
         };
-        const shared = { label: text.label, ...(text.hint === undefined ? {} : { hint: text.hint }) };
+        const shared = {
+          label: text.label,
+          ...(text.hint === undefined ? {} : { hint: text.hint }),
+          locked: locked(spec.path) ? m.level.locked : undefined,
+        };
 
         switch (spec.kind) {
           case 'number':
@@ -153,7 +170,7 @@ function Fields({ specs, texts, values, onChange }: FieldsProps) {
           case 'toggle':
             return <ToggleField key={spec.path} {...shared} value={value === true} onChange={set} />;
           case 'work':
-            return <WorkField key={spec.path} label={text.label} value={value as Dist} onChange={set} />;
+            return <WorkField key={spec.path} label={text.label} locked={shared.locked} value={value as Dist} onChange={set} />;
         }
       })}
     </>
@@ -161,7 +178,17 @@ function Fields({ specs, texts, values, onChange }: FieldsProps) {
 }
 
 /** A duration and how much it varies from one time to the next. */
-function WorkField({ label, value, onChange }: { label: string; value: Dist; onChange: (value: Dist) => void }) {
+function WorkField({
+  label,
+  locked,
+  value,
+  onChange,
+}: {
+  label: string;
+  locked: string | undefined;
+  value: Dist;
+  onChange: (value: Dist) => void;
+}) {
   const m = useMessages();
   const texts = m.fields.work;
   return (
@@ -170,6 +197,7 @@ function WorkField({ label, value, onChange }: { label: string; value: Dist; onC
       <NumberField
         label={label}
         hideLabel
+        locked={locked}
         value={value.mean}
         min={0.01}
         max={600_000}
@@ -180,6 +208,7 @@ function WorkField({ label, value, onChange }: { label: string; value: Dist; onC
       />
       <SelectField
         label={texts.variation}
+        locked={locked}
         value={value.kind}
         options={(['const', 'exp', 'lognormal'] as const).map((kind) => ({ value: kind, label: texts.options[kind] }))}
         onChange={(kind) => {
@@ -189,6 +218,7 @@ function WorkField({ label, value, onChange }: { label: string; value: Dist; onC
       {value.kind === 'lognormal' && (
         <NumberField
           label={texts.cv}
+          locked={locked}
           value={value.cv ?? 1}
           min={0}
           max={10}

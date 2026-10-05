@@ -2,6 +2,8 @@ import { commandSchema, hasErrors, lintDesign } from '@loadline/engine';
 import type { CommandInput, Design } from '@loadline/engine';
 import { simulationKey, structureKey } from '../design/model.ts';
 import { currentDesign, useDesign } from '../design/store.ts';
+import { useProgress } from '../level/progress.ts';
+import { FULL_SPEED } from './protocol.ts';
 import type { FromWorker, ToWorker } from './protocol.ts';
 import { EMPTY_RUN, HISTORY, useSim } from './store.ts';
 
@@ -19,9 +21,10 @@ const send = (message: ToWorker) => {
 // Counts the `load` messages sent. The worker counts the ones it receives, so a frame carrying an
 // older number belongs to a design that has since been replaced.
 let run = 0;
-// What the worker is running: the whole of it, and just its nodes and edges.
+// What the worker is running: the whole of it, just its nodes and edges, and for which level.
 let loadedKey: string | null = null;
 let loadedStructure: string | null = null;
+let loadedLevel: string | null = null;
 
 worker.onmessage = (event: MessageEvent<FromWorker>) => {
   const message = event.data;
@@ -31,28 +34,36 @@ worker.onmessage = (event: MessageEvent<FromWorker>) => {
   }
   const { frame } = message;
   if (frame.run !== run) return;
-  useSim.setState((state) => {
-    // A blocked or failed run is over; whatever the worker still reports about it is not shown.
-    if (state.status === 'failed' || state.status === 'blocked') return state;
-    const samples = frame.samples.length > 0 ? [...state.samples, ...frame.samples].slice(-HISTORY) : state.samples;
-    return {
-      status: frame.playing ? 'running' : 'paused',
-      now: frame.now,
-      measuredSpeed: frame.measuredSpeed,
-      totals: frame.totals,
-      gauges: frame.gauges,
-      blame: frame.blame,
-      bottleneck: frame.bottleneck,
-      monthlyCost: frame.monthlyCost,
-      samples,
-    };
-  });
+  const before = useSim.getState().status;
+  // A blocked or failed run is over; whatever the worker still reports about it is not shown.
+  if (before === 'failed' || before === 'blocked') return;
+
+  const finished = frame.level?.finished ?? false;
+  useSim.setState((state) => ({
+    status: finished ? 'finished' : frame.playing ? 'running' : 'paused',
+    now: frame.now,
+    measuredSpeed: frame.measuredSpeed,
+    traffic: frame.traffic,
+    totals: frame.totals,
+    gauges: frame.gauges,
+    blame: frame.blame,
+    bottleneck: frame.bottleneck,
+    monthlyCost: frame.monthlyCost,
+    level: frame.level,
+    samples: frame.samples.length > 0 ? [...state.samples, ...frame.samples].slice(-HISTORY) : state.samples,
+  }));
+  // The moment a run of a level ends is the moment its result counts.
+  if (finished && before !== 'finished' && loadedLevel !== null && frame.level?.outcome.passed) {
+    useProgress.getState().record(loadedLevel, frame.level.outcome.stars);
+  }
 };
 
 /** Starts a run of `design` from time zero. */
 function load(design: Design, playing: boolean): void {
+  const { level } = useDesign.getState();
   const issues = lintDesign(design);
   loadedKey = simulationKey(design);
+  loadedLevel = level?.id ?? null;
   if (hasErrors(issues)) {
     loadedStructure = null;
     send({ type: 'pause' });
@@ -69,17 +80,33 @@ function load(design: Design, playing: boolean): void {
     nodeIndex: Object.fromEntries(design.nodes.map((node, index) => [node.id, index])),
     edgeIndex: Object.fromEntries(design.edges.map((edge, index) => [edge.id, index])),
   });
-  send({ type: 'load', design, seed: SEED, multiplier });
+  // A level sets its own traffic and seed; the traffic control only applies in the sandbox.
+  send({
+    type: 'load',
+    design,
+    seed: level?.seed ?? SEED,
+    multiplier: level ? 1 : multiplier,
+    levelId: level?.id ?? null,
+  });
   send({ type: 'speed', value: speed });
   if (playing) send({ type: 'play' });
 }
 
 /** Brings the worker in line with the design, if the part the simulation depends on has changed. */
 function sync(): void {
-  const design = currentDesign(useDesign.getState());
+  const state = useDesign.getState();
+  const design = currentDesign(state);
   if (!design) return;
   const key = simulationKey(design);
-  if (key === loadedKey) return;
+  const levelId = state.level?.id ?? null;
+  if (key === loadedKey && levelId === loadedLevel) return;
+
+  // A level is scored on one design from start to finish, so any change starts the run over,
+  // stopped. So does moving between a level and the sandbox.
+  if (levelId !== null || levelId !== loadedLevel) {
+    load(design, false);
+    return;
+  }
 
   const { status } = useSim.getState();
   const issues = lintDesign(design);
@@ -94,8 +121,15 @@ function sync(): void {
 }
 
 let syncTimer: ReturnType<typeof setTimeout> | undefined;
-useDesign.subscribe(() => {
+useDesign.subscribe((state, previous) => {
   clearTimeout(syncTimer);
+  if (state.slot !== previous.slot) {
+    // Another design has been opened: show it at once. Full speed is only for runs that end.
+    if (!state.level && useSim.getState().speed === FULL_SPEED) setSpeed(1);
+    sync();
+    return;
+  }
+  // An edit waits until typing has paused.
   syncTimer = setTimeout(sync, RELOAD_DELAY_MS);
 });
 sync();
@@ -109,7 +143,8 @@ export function restart(playing = useSim.getState().status === 'running'): void 
 export function play(): void {
   const { status } = useSim.getState();
   if (status === 'blocked') return;
-  if (status === 'failed') restart(true);
+  // A run that is over starts again from the beginning.
+  if (status === 'failed' || status === 'finished') restart(true);
   else send({ type: 'play' });
 }
 

@@ -293,6 +293,11 @@ and asks again. Where it stops is where the time is really going, however far up
 showed, and it says what is short there: slots (`saturated`), cores (`contended`), connections
 (`pool`), instances (`down`), or nothing (`work`: it is simply slow).
 
+Waiting for a connection needs a second look, because a pool is where waiting is supposed to happen.
+If the node behind the pool is flat out, the pool is doing its job and that node is what is short
+(`saturated`): more connections would only make it slower. Only when the node behind has room is
+the pool itself too small (`pool`).
+
 ### 7.2 Random systems, random faults
 
 `test/soak.test.ts` builds random systems out of every kind of part, with random policies on every

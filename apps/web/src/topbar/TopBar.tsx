@@ -1,22 +1,27 @@
 import { useId } from 'react';
 import { useDesign } from '../design/store.ts';
 import { useMessages } from '../i18n/index.ts';
-import { BoltIcon, LoadMark, PauseIcon, PlayIcon, RestartIcon } from '../icons.tsx';
+import { BackIcon, BoltIcon, LoadMark, PauseIcon, PlayIcon, RedoIcon, RestartIcon, UndoIcon } from '../icons.tsx';
+import { Timeline } from '../level/Timeline.tsx';
 import { formatClock, formatCount } from '../metrics/format.ts';
+import { HOME, hrefOf } from '../route.ts';
 import { inject, pause, play, restart, setMultiplier, setSpeed } from '../sim/controller.ts';
+import { FULL_SPEED } from '../sim/protocol.ts';
 import { useSim } from '../sim/store.ts';
 
 const SPEEDS = [1, 2, 5, 10];
 
+const quiet = 'rounded-[3px] border border-line hover:border-ink disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line';
+
 export function TopBar() {
   const m = useMessages();
+  const level = useDesign((state) => state.level);
   const status = useSim((state) => state.status);
-  const now = useSim((state) => state.now);
   const failure = useSim((state) => state.failure);
   const running = status === 'running';
 
   return (
-    <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line bg-plate px-4 py-2">
+    <header className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-plate px-4 py-2">
       <a href="#canvas" className="sr-only focus:not-sr-only">
         {m.app.skipToCanvas}
       </a>
@@ -24,16 +29,20 @@ export function TopBar() {
         <LoadMark />
         <span className="marking text-[1.75rem]!">{m.app.name}</span>
       </h1>
+      <a href={hrefOf(HOME)} className="flex items-center gap-1.5 text-ink-2 hover:text-ink">
+        <BackIcon />
+        {m.level.back}
+      </a>
 
       <div className="flex items-center gap-1.5" role="group" aria-label={m.run.controls}>
         <button
           type="button"
           disabled={status === 'blocked'}
           onClick={running ? pause : play}
-          className="flex w-24 items-center justify-center gap-1.5 rounded-[3px] bg-ink px-3 py-1.5 font-bold text-plate hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-ink-3"
+          className="flex min-w-24 items-center justify-center gap-1.5 rounded-[3px] bg-ink px-3 py-1.5 font-bold whitespace-nowrap text-plate hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-ink-3"
         >
           {running ? <PauseIcon /> : <PlayIcon />}
-          {running ? m.run.pause : m.run.play}
+          {running ? m.run.pause : status === 'finished' ? m.run.again : m.run.play}
         </button>
         <button
           type="button"
@@ -41,20 +50,23 @@ export function TopBar() {
           onClick={() => {
             restart();
           }}
-          className="flex items-center gap-1.5 rounded-[3px] border border-line px-3 py-1.5 hover:border-ink disabled:cursor-not-allowed disabled:text-ink-3"
+          className={`flex items-center gap-1.5 px-3 py-1.5 ${quiet}`}
         >
           <RestartIcon />
           {m.run.restart}
         </button>
       </div>
 
-      <SpeedPicker />
-      <TrafficControl />
-
-      <div className="ms-auto flex items-baseline gap-2">
-        <span className="text-[0.85rem] text-ink-2">{m.run.clock}</span>
-        <span className="text-[1.15rem] font-bold tabular-nums">{formatClock(now)}</span>
-      </div>
+      <History />
+      <SpeedPicker ends={level !== null} />
+      {level ? (
+        <Timeline level={level} />
+      ) : (
+        <>
+          <TrafficControl />
+          <Clock />
+        </>
+      )}
 
       <RunNotice />
       {status === 'failed' && failure !== null && (
@@ -67,16 +79,48 @@ export function TopBar() {
   );
 }
 
-function SpeedPicker() {
+function Clock() {
+  const m = useMessages();
+  const now = useSim((state) => state.now);
+  return (
+    <div className="ms-auto flex items-baseline gap-2">
+      <span className="text-[0.85rem] text-ink-2">{m.run.clock}</span>
+      <span className="text-[1.15rem] font-bold tabular-nums">{formatClock(now)}</span>
+    </div>
+  );
+}
+
+/** Undo and redo. The keyboard shortcuts for them are set up with the workbench. */
+function History() {
+  const m = useMessages();
+  const canUndo = useDesign((state) => state.past.length > 0);
+  const canRedo = useDesign((state) => state.future.length > 0);
+  const undo = useDesign((state) => state.undo);
+  const redo = useDesign((state) => state.redo);
+  return (
+    <div className="flex items-center gap-1" role="group">
+      <button type="button" disabled={!canUndo} onClick={undo} aria-label={m.edit.undo} title={m.edit.undo} className={`p-2 ${quiet}`}>
+        <UndoIcon />
+      </button>
+      <button type="button" disabled={!canRedo} onClick={redo} aria-label={m.edit.redo} title={m.edit.redo} className={`p-2 ${quiet}`}>
+        <RedoIcon />
+      </button>
+    </div>
+  );
+}
+
+/** How fast simulated time passes. A run that ends can also go as fast as it will. */
+function SpeedPicker({ ends }: { ends: boolean }) {
   const m = useMessages();
   const speed = useSim((state) => state.speed);
+  const options = ends ? [...SPEEDS, FULL_SPEED] : SPEEDS;
   return (
     <div className="flex items-center gap-2">
       <span id="speed-label" className="text-[0.85rem] text-ink-2">
         {m.run.speed}
       </span>
       <div className="flex overflow-hidden rounded-[3px] border border-line" role="group" aria-labelledby="speed-label">
-        {SPEEDS.map((option) => (
+        {options.map((option) => (
           <button
             key={option}
             type="button"
@@ -86,7 +130,7 @@ function SpeedPicker() {
             }}
             className={`px-2.5 py-1 font-mono ${speed === option ? 'bg-ink text-plate' : 'text-ink-2 hover:bg-deck'}`}
           >
-            {m.run.speedOption(option)}
+            {option === FULL_SPEED ? m.run.fullSpeed : m.run.speedOption(option)}
           </button>
         ))}
       </div>
@@ -142,7 +186,8 @@ function TrafficControl() {
 function RunNotice() {
   const m = useMessages();
   const behind = useSim(
-    (state) => state.status === 'running' && state.now > 2000 && state.measuredSpeed < state.speed * 0.85,
+    (state) =>
+      state.status === 'running' && state.speed !== FULL_SPEED && state.now > 2000 && state.measuredSpeed < state.speed * 0.85,
   );
   const measured = useSim((state) => state.measuredSpeed);
   if (!behind) return null;

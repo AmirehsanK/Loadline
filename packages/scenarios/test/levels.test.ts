@@ -95,12 +95,14 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('%s', (_id, lev
   });
 
   it('has its words', () => {
-    const { title, brief, hints, debrief, rules } = level.text;
+    const { title, summary, brief, hints, debrief, rules } = level.text;
     expect(title.length).toBeGreaterThan(3);
+    expect(summary.length).toBeGreaterThan(20);
+    expect(summary.length).toBeLessThan(90);
     expect(brief.length).toBeGreaterThan(80);
     expect(debrief.length).toBeGreaterThan(200);
     expect(hints).toHaveLength(3);
-    for (const text of [title, brief, debrief, ...hints, ...Object.values(rules ?? {})]) {
+    for (const text of [title, summary, brief, debrief, ...hints, ...Object.values(rules ?? {})]) {
       expect(text).toBe(text.trim());
       expect(text).not.toMatch(/ {2}/);
     }

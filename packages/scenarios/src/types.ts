@@ -16,6 +16,8 @@ export type Objective =
 /** The words of a level, in English. Other languages are in the web app's catalogs, by level id. */
 export interface ScenarioText {
   title: string;
+  /** The situation in one line, for a list of levels. It does not give the answer away. */
+  summary: string;
   /** What is happening and what is asked, in two or three sentences. */
   brief: string;
   /** Nudges, from gentle to nearly the answer. */

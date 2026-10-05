@@ -1,3 +1,4 @@
+import { findLevel } from '@loadline/scenarios';
 import type { FromWorker, ToWorker } from '../sim/protocol.ts';
 import { Runner } from '../sim/runner.ts';
 
@@ -30,10 +31,14 @@ self.onmessage = (event: MessageEvent<ToWorker>) => {
   const message = event.data;
   try {
     switch (message.type) {
-      case 'load':
+      case 'load': {
         run++;
-        runner.load(run, message.design, message.seed, message.multiplier);
+        // A level has rules that are functions, which cannot be posted; it is looked up by id.
+        const level = message.levelId === null ? null : findLevel(message.levelId);
+        if (level === undefined) throw new Error(`There is no level "${message.levelId ?? ''}".`);
+        runner.load(run, message.design, message.seed, message.multiplier, level);
         break;
+      }
       case 'play':
         runner.play(clock());
         break;
@@ -64,8 +69,9 @@ setInterval(() => {
   if (!runner.isPlaying) return;
   try {
     const now = clock();
-    runner.step(now, STEP_BUDGET_MS, clock);
-    if (now - framedAt >= FRAME_MS) postFrame();
+    const ended = runner.step(now, STEP_BUDGET_MS, clock);
+    // A run that has just ended is reported at once, not on the next tick of the frame clock.
+    if (ended || now - framedAt >= FRAME_MS) postFrame();
   } catch (error) {
     fail(error);
   }

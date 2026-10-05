@@ -51,6 +51,7 @@ export const writeBurst: Scenario = {
   id: 'write-burst',
   text: {
     title: 'Write burst',
+    summary: 'Five times the orders for ten seconds, and none may be lost.',
     brief:
       'Every order is recorded in the ledger before the customer is told it went through. The ledger can record 100 a second, ' +
       'and 80 arrive. Then a sale starts: 400 a second for ten seconds. ' +

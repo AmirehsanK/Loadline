@@ -1,6 +1,8 @@
 import { commandSchema, designSchema } from '@loadline/engine';
+import { findLevel, runScenario } from '@loadline/scenarios';
 import { describe, expect, it } from 'vitest';
 import { STARTER } from '../src/design/model.ts';
+import { FULL_SPEED } from '../src/sim/protocol.ts';
 import { Runner } from '../src/sim/runner.ts';
 
 const design = designSchema.parse(STARTER);
@@ -177,5 +179,80 @@ describe('Runner', () => {
       return frame.totals;
     };
     expect(totals(16, 1)).toEqual(totals(100, 5));
+  });
+});
+
+describe('Runner, on a level', () => {
+  const level = findLevel('first-traffic')!;
+
+  function onLevel(target = level.starter) {
+    const runner = new Runner();
+    runner.load(1, target, level.seed, 1, level);
+    return { runner, clock: fakeClock() };
+  }
+
+  it('sends the traffic of the level, and stops at its end with the result', () => {
+    const { runner, clock } = onLevel();
+    runner.play(clock.read());
+    runner.setSpeed(10);
+    let ended = 0;
+    for (let i = 0; i < 100; i++) if (runner.step(clock.tick(100), 1000, clock.read)) ended++;
+
+    const frame = runner.frame(clock.read());
+    expect(ended).toBe(1);
+    expect(frame.now).toBe(level.durationMs);
+    expect(frame.playing).toBe(false);
+    // The level's traffic had climbed to three times its base by the end.
+    expect(frame.traffic).toBe(3);
+    expect(frame.level?.finished).toBe(true);
+    // The result is the one the same design gets anywhere else.
+    expect(frame.level?.outcome).toEqual(runScenario(level, level.starter));
+    expect(frame.level?.outcome.passed).toBe(false);
+
+    // A run that is over does not start again by itself.
+    runner.play(clock.read());
+    expect(runner.step(clock.tick(100), 1000, clock.read)).toBe(false);
+    expect(runner.frame(clock.read()).now).toBe(level.durationMs);
+  });
+
+  it('judges the run as it goes, with nothing scored during warm-up', () => {
+    const { runner, clock } = onLevel(level.reference);
+    runner.play(clock.read());
+    runner.setSpeed(10);
+    for (let i = 0; i < 20; i++) runner.step(clock.tick(100), 1000, clock.read);
+
+    const early = runner.frame(clock.read());
+    expect(early.now).toBeCloseTo(20_000, 6);
+    expect(early.totals.ok).toBeGreaterThan(2000);
+    expect(early.level).toMatchObject({ finished: false, outcome: { passed: false, score: { fromMs: level.warmupMs, ok: 0, failed: 0 } } });
+
+    for (let i = 0; i < 20; i++) runner.step(clock.tick(100), 1000, clock.read);
+    const later = runner.frame(clock.read());
+    expect(later.level?.outcome.score.ok).toBeGreaterThan(2500);
+    expect(later.level?.outcome.passed).toBe(true);
+  });
+
+  it('goes as fast as it can at full speed, to the same result', () => {
+    const { runner, clock } = onLevel(level.reference);
+    runner.play(clock.read());
+    runner.setSpeed(FULL_SPEED);
+    let steps = 1;
+    while (!runner.step(clock.tick(16), 1000, clock.read)) {
+      steps++;
+      if (steps > 50) throw new Error('the run never ended');
+    }
+    // A minute of simulated time to a slice: 75 s is two of them.
+    expect(steps).toBe(2);
+    const frame = runner.frame(clock.read());
+    expect(frame.level?.outcome).toEqual(runScenario(level, level.reference));
+    expect(frame.level?.outcome.stars).toBe(3);
+  });
+
+  it('stops short of forever at full speed when the run has no end', () => {
+    const { runner, clock } = loaded();
+    runner.play(clock.read());
+    runner.setSpeed(FULL_SPEED);
+    expect(runner.step(clock.tick(16), 1000, clock.read)).toBe(false);
+    expect(runner.frame(clock.read())).toMatchObject({ now: 60_000, playing: true, level: null });
   });
 });

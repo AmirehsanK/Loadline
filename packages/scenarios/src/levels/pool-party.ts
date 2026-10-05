@@ -27,6 +27,7 @@ export const poolParty: Scenario = {
   id: 'pool-party',
   text: {
     title: 'Pool party',
+    summary: 'A database with room to spare that is somehow flat out.',
     brief:
       'The database can run 400 queries a second and is being asked for 300, so there should be room. Yet requests are failing ' +
       'and the database is flat out. Nothing may be added and nothing made bigger. ' +

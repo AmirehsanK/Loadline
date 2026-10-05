@@ -1,16 +1,30 @@
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
+import { LockIcon } from '../icons.tsx';
 
 interface FieldShell {
   label: string;
   hint?: string;
+  /** Set when the setting cannot be changed; the text says why, for a screen reader and a tooltip. */
+  locked?: string | undefined;
 }
 
-function Field({ id, label, hint, hideLabel = false, children }: FieldShell & { id: string; hideLabel?: boolean; children: ReactNode }) {
+/** The mark beside the label of a setting that is fixed. */
+function Lock({ reason }: { reason: string }) {
+  return (
+    <span className="ms-1 inline-flex translate-y-px text-ink-3" title={reason}>
+      <LockIcon />
+      <span className="sr-only">{reason}</span>
+    </span>
+  );
+}
+
+function Field({ id, label, hint, locked, hideLabel = false, children }: FieldShell & { id: string; hideLabel?: boolean; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className={hideLabel ? 'sr-only' : 'field-label'}>
         {label}
+        {locked !== undefined && <Lock reason={locked} />}
       </label>
       {children}
       {hint !== undefined && (
@@ -56,7 +70,7 @@ interface NumberFieldProps extends FieldShell {
  * A number with bounds. The text follows what is typed, including a half-finished or out-of-range
  * entry, but only a valid number is passed on; leaving the field restores the last valid one.
  */
-export function NumberField({ label, hint, value, min, max, step = 1, integer = false, unit, hideLabel = false, onChange }: NumberFieldProps) {
+export function NumberField({ label, hint, locked, value, min, max, step = 1, integer = false, unit, hideLabel = false, onChange }: NumberFieldProps) {
   const id = useId();
   // What is being typed, while the field has focus. Otherwise the field shows the value itself,
   // so it follows changes made elsewhere.
@@ -76,7 +90,7 @@ export function NumberField({ label, hint, value, min, max, step = 1, integer = 
   const valid = accepts(text);
 
   return (
-    <Field id={id} label={label} hideLabel={hideLabel} {...(hint === undefined ? {} : { hint })}>
+    <Field id={id} label={label} locked={locked} hideLabel={hideLabel} {...(hint === undefined ? {} : { hint })}>
       <div className="relative">
         <input
           id={id}
@@ -87,6 +101,7 @@ export function NumberField({ label, hint, value, min, max, step = 1, integer = 
           min={min}
           max={max}
           step={step}
+          disabled={locked !== undefined}
           aria-invalid={!valid}
           aria-describedby={hint === undefined ? undefined : `${id}-hint`}
           onFocus={() => {
@@ -114,17 +129,19 @@ export function NumberField({ label, hint, value, min, max, step = 1, integer = 
 export function SelectField<T extends string>({
   label,
   hint,
+  locked,
   value,
   options,
   onChange,
 }: FieldShell & { value: T; options: { value: T; label: string }[]; onChange: (value: T) => void }) {
   const id = useId();
   return (
-    <Field id={id} label={label} {...(hint === undefined ? {} : { hint })}>
+    <Field id={id} label={label} locked={locked} {...(hint === undefined ? {} : { hint })}>
       <select
         id={id}
         className="field-input font-sans!"
         value={value}
+        disabled={locked !== undefined}
         onChange={(event) => {
           onChange(event.target.value as T);
         }}
@@ -139,22 +156,26 @@ export function SelectField<T extends string>({
   );
 }
 
-export function ToggleField({ label, hint, value, onChange }: FieldShell & { value: boolean; onChange: (value: boolean) => void }) {
+export function ToggleField({ label, hint, locked, value, onChange }: FieldShell & { value: boolean; onChange: (value: boolean) => void }) {
   const id = useId();
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="flex cursor-pointer items-start gap-2">
+      <label htmlFor={id} className={`flex items-start gap-2 ${locked === undefined ? 'cursor-pointer' : 'cursor-not-allowed text-ink-2'}`}>
         <input
           id={id}
           type="checkbox"
           className="mt-0.5 size-4 shrink-0 accent-ink"
           checked={value}
+          disabled={locked !== undefined}
           aria-describedby={hint === undefined ? undefined : `${id}-hint`}
           onChange={(event) => {
             onChange(event.target.checked);
           }}
         />
-        <span>{label}</span>
+        <span>
+          {label}
+          {locked !== undefined && <Lock reason={locked} />}
+        </span>
       </label>
       {hint !== undefined && (
         <p id={`${id}-hint`} className="text-[0.85rem] text-ink-3">

@@ -22,6 +22,10 @@ export function Why() {
 
   const explain = (found: Bottleneck): string => {
     const name = nameOf(found.nodeId);
+    // A database has cores, not slots, and what waits for it waits in a caller's pool.
+    if (found.kind === 'saturated' && nodes.find((node) => node.id === found.nodeId)?.type === 'database') {
+      return m.why.saturatedStore(name);
+    }
     if (found.kind !== 'pool') return m.why[found.kind](name);
     const target = edges.find((edge) => edge.id === found.edgeId)?.target;
     return m.why.pool(name, target === undefined ? '' : nameOf(target));
