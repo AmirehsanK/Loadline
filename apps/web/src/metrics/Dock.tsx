@@ -2,6 +2,7 @@ import type { WindowSample } from '@loadline/engine';
 import { useMemo, useState } from 'react';
 import { useMessages } from '../i18n/index.ts';
 import { useSim } from '../sim/store.ts';
+import { Why } from './Why.tsx';
 import { LineChart } from './LineChart.tsx';
 import type { ChartSeries } from './LineChart.tsx';
 import { formatClock, formatCount, formatDuration, formatPercent } from './format.ts';
@@ -13,6 +14,7 @@ export function Dock() {
   const m = useMessages();
   const samples = useSim((state) => state.samples);
   const inFlight = useSim((state) => state.totals.created - state.totals.ok - state.totals.failed);
+  const monthlyCost = useSim((state) => state.monthlyCost);
   const [view, setView] = useState<'chart' | 'table'>('chart');
 
   const last = samples[samples.length - 1];
@@ -32,14 +34,14 @@ export function Dock() {
     // The one row is pinned to the dock's height, so a long table scrolls inside it instead of
     // stretching it.
     <section
-      className="grid h-64 grid-cols-[auto_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] border-t border-line bg-plate"
+      className="grid h-64 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(0,1fr)] border-t border-line bg-plate"
       aria-labelledby="metrics-title"
     >
-      <div className="flex min-h-0 w-[25rem] flex-col gap-2 border-e border-line p-3">
+      <div className="flex min-h-0 w-[30rem] flex-col gap-2 border-e border-line p-3">
         <h2 id="metrics-title" className="marking">
           {m.metrics.title}
         </h2>
-        <dl className="grid flex-1 grid-cols-3 content-between gap-x-4 gap-y-2">
+        <dl className="grid flex-1 grid-cols-4 content-between gap-x-4 gap-y-2">
           <Tile label={m.metrics.requests} value={last ? formatCount(last.created) : '–'} note={m.metrics.perSecond} />
           <Tile label={m.metrics.succeeded} value={last ? formatCount(last.ok) : '–'} note={m.metrics.perSecond} />
           <Tile
@@ -48,6 +50,7 @@ export function Dock() {
             note={m.metrics.lastSecond}
             alert={failing > 0}
           />
+          <Tile label={m.metrics.cost} value={m.metrics.dollars(formatCount(monthlyCost))} note={m.metrics.costNote} />
           <Tile label={m.metrics.series.p50} value={last && last.ok > 0 ? formatDuration(last.p50) : '–'} note={m.metrics.median} />
           <Tile label={m.metrics.series.p99} value={last && last.ok > 0 ? formatDuration(last.p99) : '–'} note={m.metrics.tail} />
           <Tile label={m.metrics.inFlight} value={formatCount(inFlight)} />
@@ -84,6 +87,8 @@ export function Dock() {
           )}
         </div>
       </div>
+
+      <Why />
     </section>
   );
 }

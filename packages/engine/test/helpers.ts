@@ -69,7 +69,8 @@ export function run(target: Design, input: RunInput): { sim: Simulation; report:
   const phases = [...(input.workload?.phases ?? [])];
   const drainMs = input.drainMs ?? 0;
   if (drainMs > 0) phases.push({ atMs: input.sendMs, multiplier: 0 });
-  const sim = createSimulation(target, { seed: input.seed ?? 1, workload: workloadSchema.parse({ phases }) });
+  const workload = workloadSchema.parse({ ...input.workload, phases });
+  const sim = createSimulation(target, { seed: input.seed ?? 1, workload });
   sim.advance(input.sendMs + drainMs);
   return { sim, report: buildReport(sim) };
 }
@@ -80,4 +81,50 @@ export const fixed = (mean: number): Dist => ({ kind: 'const', mean });
 /** Asserts closeness as a fraction of the expected value. */
 export function relativeError(actual: number, expected: number): number {
   return Math.abs(actual - expected) / Math.abs(expected);
+}
+
+type EdgeInput = NonNullable<DesignInput['edges']>[number];
+
+/**
+ * A design from a list of nodes and `[from, to, policy]` connections. As in `chain`, a connection
+ * has no latency and no timeout unless the test asks for them. Its id is `from-to`.
+ */
+export function system(
+  nodes: NonNullable<DesignInput['nodes']>,
+  links: [from: string, to: string, params?: EdgeInput['params']][],
+): Design {
+  return design({
+    nodes,
+    edges: links.map(([from, to, params]) => ({
+      id: `${from}-${to}`,
+      from,
+      to,
+      params: { latencyMs: 0, timeoutMs: 0, ...params },
+    })),
+  });
+}
+
+/** The node with this id in a report. */
+export function nodeOf(report: Report, id: string): Report['nodes'][number] {
+  const found = report.nodes.find((node) => node.id === id);
+  if (!found) throw new Error(`no node "${id}" in the report`);
+  return found;
+}
+
+/** The edge with this id in a report. */
+export function edgeOf(report: Report, id: string): Report['edges'][number] {
+  const found = report.edges.find((edge) => edge.id === id);
+  if (!found) throw new Error(`no edge "${id}" in the report`);
+  return found;
+}
+
+/** Sums one number over the sampling windows that ended in `(fromMs, toMs]`. */
+export function during(report: Report, fromMs: number, toMs: number, pick: (sample: Report['samples'][number]) => number): number {
+  return report.samples.filter((sample) => sample.t > fromMs && sample.t <= toMs).reduce((sum, s) => sum + pick(s), 0);
+}
+
+/** One node's numbers in each sampling window, by the node's position in the design. */
+export function windowsOf(target: Design, report: Report, id: string): Report['samples'][number]['nodes'] {
+  const index = target.nodes.findIndex((node) => node.id === id);
+  return report.samples.map((sample) => sample.nodes[index]!);
 }

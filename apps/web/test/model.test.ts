@@ -1,6 +1,15 @@
-import { designSchema, hasErrors, lintDesign } from '@loadline/engine';
+import { NODE_TYPES, designSchema, hasErrors, lintDesign } from '@loadline/engine';
 import { describe, expect, it } from 'vitest';
-import { STARTER, canConnect, createEdge, createNode, fromDesign, simulationKey, toDesign } from '../src/design/model.ts';
+import {
+  STARTER,
+  canConnect,
+  createEdge,
+  createNode,
+  fromDesign,
+  simulationKey,
+  structureKey,
+  toDesign,
+} from '../src/design/model.ts';
 
 const starter = () => fromDesign(designSchema.parse(STARTER));
 
@@ -45,6 +54,15 @@ describe('the simulation key', () => {
     expect(simulationKey(toDesign(moved, edges))).toBe(before);
   });
 
+  it('has a part that only changes with the structure, so settings can be applied to a live run', () => {
+    const { nodes, edges } = starter();
+    const before = structureKey(toDesign(nodes, edges));
+    const retried = edges.map((edge) => (edge.data ? { ...edge, data: { params: { ...edge.data.params, retries: 2 } } } : edge));
+    expect(structureKey(toDesign(nodes, retried))).toBe(before);
+    expect(structureKey(toDesign(nodes, edges.slice(0, 1)))).not.toBe(before);
+    expect(structureKey(toDesign(nodes.slice(0, 2), edges.slice(0, 1)))).not.toBe(before);
+  });
+
   it('changes when a setting or a connection changes', () => {
     const { nodes, edges } = starter();
     const before = simulationKey(toDesign(nodes, edges));
@@ -57,20 +75,28 @@ describe('the simulation key', () => {
 describe('adding parts', () => {
   it('gives each new part an unused id, a name and the default settings', () => {
     const { nodes } = starter();
-    const first = createNode('service', nodes, { x: 10, y: 20 });
-    const second = createNode('service', [...nodes, first], { x: 0, y: 0 });
+    const first = createNode('service', 'Service', nodes, { x: 10, y: 20 });
+    const second = createNode('service', 'Service', [...nodes, first], { x: 0, y: 0 });
     expect(first).toMatchObject({ id: 'service-1', type: 'service', position: { x: 10, y: 20 } });
-    expect(first.data).toEqual({
+    expect(first.data).toMatchObject({
       name: 'Service 1',
-      params: { instances: 1, concurrency: 8, queue: 256, serviceTime: { kind: 'exp', mean: 20 } },
+      params: { instances: 1, concurrency: 8, queue: 256, serviceTime: { kind: 'exp', mean: 20 }, autoscale: { enabled: false } },
     });
     expect(second.id).toBe('service-2');
-    expect(createNode('client', nodes, { x: 0, y: 0 }).data).toEqual({ name: 'Client 1', params: { rps: 100 } });
+    expect(createNode('client', 'Client', nodes, { x: 0, y: 0 }).data).toMatchObject({ name: 'Client 1', params: { rps: 100 } });
+  });
+
+  it('can add every kind of part', () => {
+    for (const type of NODE_TYPES) {
+      const node = createNode(type, 'Part', [], { x: 0, y: 0 });
+      expect(node).toMatchObject({ id: `${type}-1`, type, data: { name: 'Part 1' } });
+      expect(toDesign([node], []).nodes[0]).toMatchObject({ type, params: node.data.params });
+    }
   });
 
   it('produces a design the engine accepts', () => {
     const { nodes, edges } = starter();
-    const added = createNode('service', nodes, { x: 0, y: 0 });
+    const added = createNode('service', 'Service', nodes, { x: 0, y: 0 });
     const design = toDesign([...nodes, added], [...edges, createEdge('store', added.id)]);
     expect(hasErrors(lintDesign(design))).toBe(false);
   });
@@ -78,7 +104,7 @@ describe('adding parts', () => {
 
 describe('connecting parts', () => {
   const { nodes, edges } = starter();
-  const extra = createNode('service', nodes, { x: 0, y: 0 });
+  const extra = createNode('service', 'Service', nodes, { x: 0, y: 0 });
   const all = [...nodes, extra];
 
   it('allows a new call between two services', () => {

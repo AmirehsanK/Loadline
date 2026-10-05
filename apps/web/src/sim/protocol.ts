@@ -1,4 +1,4 @@
-import type { Design, Gauge, WindowSample } from '@loadline/engine';
+import type { BlameReport, Bottleneck, Command, Design, Gauge, WindowSample } from '@loadline/engine';
 
 /** Running totals since the start of the run. */
 export interface Totals {
@@ -12,10 +12,14 @@ export interface Totals {
 /** What the page sends to the worker. */
 export type ToWorker =
   | { type: 'load'; design: Design; seed: number; multiplier: number }
+  /** New settings for the design that is running; its nodes and edges are the same. */
+  | { type: 'reconfigure'; design: Design }
   | { type: 'play' }
   | { type: 'pause' }
   | { type: 'speed'; value: number }
-  | { type: 'multiplier'; value: number };
+  | { type: 'multiplier'; value: number }
+  /** Inject a fault. */
+  | { type: 'command'; command: Command };
 
 /** The state of a run, posted about ten times a second while it plays. */
 export interface Frame {
@@ -31,6 +35,12 @@ export interface Frame {
   /** One entry per node, in design order. */
   gauges: Gauge[];
   totals: Totals;
+  /** The failures clients have seen since the run started, most common first. */
+  blame: BlameReport[];
+  /** Where the time has been going over the last few seconds. */
+  bottleneck: Bottleneck | null;
+  /** What the design has cost to run so far, in dollars a month. */
+  monthlyCost: number;
 }
 
 /** What the worker sends to the page. */

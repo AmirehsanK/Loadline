@@ -15,13 +15,19 @@ export interface NodeReport {
   failedBy: FailureCounts;
   /** Calls finished after a caller upstream had stopped waiting. */
   wasted: number;
-  /** Time from arrival to completion, for calls that succeeded. */
+  /** Time from arrival to completion, for calls that succeeded. For a queue: time a message waited. */
   meanMs: number;
   p50: number;
   p99: number;
   utilization: number;
   meanQueued: number;
   maxQueued: number;
+  /** Instances up at the end of the run. */
+  instances: number;
+  /** Average cost over the run, in dollars a month. */
+  monthlyCost: number;
+  /** Numbers particular to the kind of node: a cache's hits and misses, a queue's deliveries. */
+  detail: Record<string, number>;
 }
 
 export interface EdgeReport {
@@ -31,6 +37,13 @@ export interface EdgeReport {
   failed: number;
   timeouts: number;
   retried: number;
+  /** Attempts left unfinished because the caller's instance went away. */
+  abandoned: number;
+  /** How many times the edge's circuit breaker opened. */
+  breakerOpened: number;
+  /** Time callers spent on calls over the edge, and the part of it spent waiting for a connection. */
+  waitMs: number;
+  poolWaitMs: number;
 }
 
 /** A group of failed requests with the same cause, attributed to the same place. */
@@ -61,6 +74,8 @@ export interface Report {
   /** Latency of the requests that succeeded, as clients saw it. */
   latency: { meanMs: number; p50: number; p90: number; p95: number; p99: number; p999: number; maxMs: number };
   rates: { offeredRps: number; goodputRps: number; errorRate: number; attemptsPerRequest: number };
+  /** What the whole design cost to run, averaged over the run, in dollars a month. */
+  monthlyCost: number;
   nodes: NodeReport[];
   edges: EdgeReport[];
   blame: BlameReport[];
@@ -73,9 +88,44 @@ function failureCounts(counts: Float64Array): FailureCounts {
   return result;
 }
 
+/** The failures clients have seen so far, most common first, with each node named by its id. */
+export function describeBlame(sim: Simulation): BlameReport[] {
+  return sim.blames().map((blame) => ({
+    cause: OUTCOMES[blame.cause] as FailureName,
+    nodeId: sim.nodes[blame.node]!.id,
+    where: blame.cause === TIMEOUT ? CALL_STATES[blame.stuck]! : null,
+    count: blame.count,
+  }));
+}
+
+/** What the whole design has cost to run so far, in dollars a month. */
+export function totalMonthlyCost(sim: Simulation): number {
+  return sim.nodes.reduce((total, node) => total + node.monthlyCost(), 0);
+}
+
 export function buildReport(sim: Simulation): Report {
   const seconds = sim.now / 1000;
   const finished = sim.ok + sim.failed;
+  const nodes = sim.nodes.map(
+    (node): NodeReport => ({
+      id: node.id,
+      type: node.type,
+      arrivals: node.arrivals,
+      ok: node.ok,
+      failed: node.failed,
+      failedBy: failureCounts(node.failedBy),
+      wasted: node.wasted,
+      meanMs: node.latency.mean(),
+      p50: node.latency.quantile(0.5),
+      p99: node.latency.quantile(0.99),
+      utilization: node.utilization(),
+      meanQueued: node.meanQueued(),
+      maxQueued: node.maxQueued,
+      instances: node.instanceCount,
+      monthlyCost: node.monthlyCost(),
+      detail: node.detail(),
+    }),
+  );
   return {
     version: 1,
     seed: sim.seed,
@@ -104,21 +154,8 @@ export function buildReport(sim: Simulation): Report {
       errorRate: finished > 0 ? sim.failed / finished : 0,
       attemptsPerRequest: sim.created > 0 ? sim.attempts / sim.created : 0,
     },
-    nodes: sim.nodes.map((node) => ({
-      id: node.id,
-      type: node.type,
-      arrivals: node.arrivals,
-      ok: node.ok,
-      failed: node.failed,
-      failedBy: failureCounts(node.failedBy),
-      wasted: node.wasted,
-      meanMs: node.latency.mean(),
-      p50: node.latency.quantile(0.5),
-      p99: node.latency.quantile(0.99),
-      utilization: node.utilization(),
-      meanQueued: node.meanQueued(),
-      maxQueued: node.maxQueued,
-    })),
+    monthlyCost: nodes.reduce((total, node) => total + node.monthlyCost, 0),
+    nodes,
     edges: sim.edges.map((edge) => ({
       id: edge.id,
       calls: edge.calls,
@@ -126,13 +163,12 @@ export function buildReport(sim: Simulation): Report {
       failed: edge.failed,
       timeouts: edge.timeouts,
       retried: edge.retried,
+      abandoned: edge.abandoned,
+      breakerOpened: edge.opened,
+      waitMs: edge.waitMs,
+      poolWaitMs: edge.poolWaitMs,
     })),
-    blame: sim.blames().map((blame) => ({
-      cause: OUTCOMES[blame.cause] as FailureName,
-      nodeId: sim.nodes[blame.node]!.id,
-      where: blame.cause === TIMEOUT ? CALL_STATES[blame.stuck]! : null,
-      count: blame.count,
-    })),
+    blame: describeBlame(sim),
     samples: sim.samples.slice(),
   };
 }

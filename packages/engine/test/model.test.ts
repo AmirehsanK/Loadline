@@ -18,14 +18,20 @@ describe('the design schema', () => {
       version: 1,
       name: '',
       nodes: [
-        { id: 'users', name: '', x: 0, y: 0, type: 'client', params: { rps: 100 } },
+        { id: 'users', name: '', x: 0, y: 0, type: 'client', params: { rps: 100, readRatio: 0.9, keys: 10_000, skew: 1 } },
         {
           id: 'api',
           name: '',
           x: 0,
           y: 0,
           type: 'service',
-          params: { instances: 1, concurrency: 8, queue: 256, serviceTime: { kind: 'exp', mean: 20 } },
+          params: {
+            instances: 1,
+            concurrency: 8,
+            queue: 256,
+            serviceTime: { kind: 'exp', mean: 20 },
+            autoscale: { enabled: false, min: 1, max: 10, target: 0.6, bootMs: 30_000, cooldownMs: 60_000 },
+          },
         },
       ],
       edges: [
@@ -33,7 +39,18 @@ describe('the design schema', () => {
           id: 'e',
           from: 'users',
           to: 'api',
-          params: { latencyMs: 1, timeoutMs: 3000, retries: 0, backoffMs: 100, backoffFactor: 2, jitter: 0 },
+          params: {
+            latencyMs: 1,
+            timeoutMs: 3000,
+            retries: 0,
+            backoffMs: 100,
+            backoffFactor: 2,
+            jitter: 0,
+            appliesTo: 'all',
+            mode: 'sync',
+            poolSize: 0,
+            breaker: { enabled: false, failureRate: 0.5, window: 20, openMs: 5000 },
+          },
         },
       ],
     });
@@ -122,7 +139,7 @@ describe('the design lint', () => {
 
   it('warns about parts that will do nothing', () => {
     expect(codes({ nodes: [users] })).toEqual(['warning:client-unconnected']);
-    expect(codes({ nodes: [api] })).toEqual(['warning:no-client', 'warning:unreachable']);
+    expect(codes({ nodes: [api] })).toEqual(['warning:unreachable', 'warning:no-client']);
     const issues = lintDesign(designSchema.parse({ nodes: [users] }));
     expect(hasErrors(issues)).toBe(false);
   });

@@ -1,9 +1,9 @@
 import { useId } from 'react';
 import { useDesign } from '../design/store.ts';
 import { useMessages } from '../i18n/index.ts';
-import { LoadMark, PauseIcon, PlayIcon, RestartIcon } from '../icons.tsx';
+import { BoltIcon, LoadMark, PauseIcon, PlayIcon, RestartIcon } from '../icons.tsx';
 import { formatClock, formatCount } from '../metrics/format.ts';
-import { pause, play, restart, setMultiplier, setSpeed } from '../sim/controller.ts';
+import { inject, pause, play, restart, setMultiplier, setSpeed } from '../sim/controller.ts';
 import { useSim } from '../sim/store.ts';
 
 const SPEEDS = [1, 2, 5, 10];
@@ -99,6 +99,7 @@ function TrafficControl() {
   const m = useMessages();
   const id = useId();
   const multiplier = useSim((state) => state.multiplier);
+  const running = useSim((state) => state.status === 'running');
   const base = useDesign((state) =>
     state.nodes.reduce((sum, node) => (node.type === 'client' ? sum + node.data.params.rps : sum), 0),
   );
@@ -122,6 +123,17 @@ function TrafficControl() {
       <output htmlFor={id} className="w-44 font-mono whitespace-nowrap tabular-nums">
         {m.run.trafficValue(multiplier.toFixed(1), formatCount(base * multiplier))}
       </output>
+      <button
+        type="button"
+        disabled={!running}
+        onClick={() => {
+          inject({ type: 'traffic', multiplier: 3, durationMs: 10_000 });
+        }}
+        className="flex items-center gap-1.5 rounded-[3px] border border-line px-2.5 py-1 hover:border-oxide hover:text-oxide disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line"
+      >
+        <BoltIcon />
+        {m.run.spike}
+      </button>
     </div>
   );
 }

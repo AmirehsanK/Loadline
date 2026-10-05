@@ -17,7 +17,7 @@ the same design and seed give the same numbers.
 | 0 — Scaffold | done |
 | 1 — Engine kernel | done |
 | 2 — Walking skeleton | done |
-| 3 — Full component set | |
+| 3 — Full component set | done |
 | 4 — Levels | |
 | 5 — Share links, embed, deploy | |
 | 6 — Persian / RTL | |

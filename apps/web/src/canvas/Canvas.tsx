@@ -8,9 +8,8 @@ import { useMessages } from '../i18n/index.ts';
 import { useSim } from '../sim/store.ts';
 import { FlowEdgeView } from './FlowEdgeView.tsx';
 import { PART_MIME } from './Palette.tsx';
-import { ClientNodeView, ServiceNodeView } from './nodes.tsx';
+import { NODE_VIEWS } from './nodes.tsx';
 
-const nodeTypes = { client: ClientNodeView, service: ServiceNodeView };
 const edgeTypes = { flow: FlowEdgeView };
 
 export function Canvas() {
@@ -28,7 +27,7 @@ export function Canvas() {
     const type = event.dataTransfer.getData(PART_MIME) as NodeType | '';
     if (type === '') return;
     event.preventDefault();
-    addNode(type, screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    addNode(type, m.parts.types[type].name, screenToFlowPosition({ x: event.clientX, y: event.clientY }));
   };
 
   return (
@@ -44,7 +43,7 @@ export function Canvas() {
       <ReactFlow<FlowNode, FlowEdge>
         nodes={nodes}
         edges={edges}
-        nodeTypes={nodeTypes}
+        nodeTypes={NODE_VIEWS}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}

@@ -31,6 +31,8 @@ export default tseslint.config(
       // The kernel indexes typed arrays by number; those accesses are checked by hand.
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+      // A leading underscore marks a parameter that a method takes for its overrides to use.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
   {

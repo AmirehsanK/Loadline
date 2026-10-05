@@ -6,10 +6,10 @@ interface FieldShell {
   hint?: string;
 }
 
-function Field({ id, label, hint, children }: FieldShell & { id: string; children: ReactNode }) {
+function Field({ id, label, hint, hideLabel = false, children }: FieldShell & { id: string; hideLabel?: boolean; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="field-label">
+      <label htmlFor={id} className={hideLabel ? 'sr-only' : 'field-label'}>
         {label}
       </label>
       {children}
@@ -47,6 +47,8 @@ interface NumberFieldProps extends FieldShell {
   /** Whole numbers only. */
   integer?: boolean;
   unit?: string;
+  /** Keep the label for screen readers only, when something next to the field already says it. */
+  hideLabel?: boolean;
   onChange: (value: number) => void;
 }
 
@@ -54,7 +56,7 @@ interface NumberFieldProps extends FieldShell {
  * A number with bounds. The text follows what is typed, including a half-finished or out-of-range
  * entry, but only a valid number is passed on; leaving the field restores the last valid one.
  */
-export function NumberField({ label, hint, value, min, max, step = 1, integer = false, unit, onChange }: NumberFieldProps) {
+export function NumberField({ label, hint, value, min, max, step = 1, integer = false, unit, hideLabel = false, onChange }: NumberFieldProps) {
   const id = useId();
   // What is being typed, while the field has focus. Otherwise the field shows the value itself,
   // so it follows changes made elsewhere.
@@ -74,7 +76,7 @@ export function NumberField({ label, hint, value, min, max, step = 1, integer = 
   const valid = accepts(text);
 
   return (
-    <Field id={id} label={label} {...(hint === undefined ? {} : { hint })}>
+    <Field id={id} label={label} hideLabel={hideLabel} {...(hint === undefined ? {} : { hint })}>
       <div className="relative">
         <input
           id={id}
@@ -134,5 +136,31 @@ export function SelectField<T extends string>({
         ))}
       </select>
     </Field>
+  );
+}
+
+export function ToggleField({ label, hint, value, onChange }: FieldShell & { value: boolean; onChange: (value: boolean) => void }) {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="flex cursor-pointer items-start gap-2">
+        <input
+          id={id}
+          type="checkbox"
+          className="mt-0.5 size-4 shrink-0 accent-ink"
+          checked={value}
+          aria-describedby={hint === undefined ? undefined : `${id}-hint`}
+          onChange={(event) => {
+            onChange(event.target.checked);
+          }}
+        />
+        <span>{label}</span>
+      </label>
+      {hint !== undefined && (
+        <p id={`${id}-hint`} className="text-[0.85rem] text-ink-3">
+          {hint}
+        </p>
+      )}
+    </div>
   );
 }

@@ -14,11 +14,13 @@ interface DesignState {
   onNodesChange: (changes: NodeChange<FlowNode>[]) => void;
   onEdgesChange: (changes: EdgeChange<FlowEdge>[]) => void;
   connect: (connection: Connection) => void;
-  addNode: (type: NodeType, position: { x: number; y: number }) => void;
+  /** Adds a part. `name` is what its kind is called, to name it "Service 2" and so on. */
+  addNode: (type: NodeType, name: string, position: { x: number; y: number }) => void;
   renameNode: (id: string, name: string) => void;
-  /** Merges `patch` into a node's parameters. */
-  patchNode: (id: string, patch: Record<string, unknown>) => void;
-  patchEdge: (id: string, patch: Partial<DesignEdge['params']>) => void;
+  /** Replaces a node's settings. */
+  patchNode: (id: string, params: FlowNode['data']['params']) => void;
+  /** Replaces an edge's settings. */
+  patchEdge: (id: string, params: DesignEdge['params']) => void;
   remove: (kind: 'node' | 'edge', id: string) => void;
   replace: (design: Design) => void;
 }
@@ -54,9 +56,9 @@ export const useDesign = create<DesignState>((set) => ({
         : state,
     );
   },
-  addNode: (type, position) => {
+  addNode: (type, name, position) => {
     set((state) => {
-      const node = createNode(type, state.nodes, position);
+      const node = createNode(type, name, state.nodes, position);
       // Select the new node, so its settings are in front of the user straight away.
       return {
         nodes: [...state.nodes.map((other) => ({ ...other, selected: false })), { ...node, selected: true }],
@@ -71,20 +73,14 @@ export const useDesign = create<DesignState>((set) => ({
       ),
     }));
   },
-  patchNode: (id, patch) => {
+  patchNode: (id, params) => {
     set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === id
-          ? ({ ...node, data: { ...node.data, params: { ...node.data.params, ...patch } } } as FlowNode)
-          : node,
-      ),
+      nodes: state.nodes.map((node) => (node.id === id ? ({ ...node, data: { ...node.data, params } } as FlowNode) : node)),
     }));
   },
-  patchEdge: (id, patch) => {
+  patchEdge: (id, params) => {
     set((state) => ({
-      edges: state.edges.map((edge) =>
-        edge.id === id && edge.data ? { ...edge, data: { params: { ...edge.data.params, ...patch } } } : edge,
-      ),
+      edges: state.edges.map((edge) => (edge.id === id ? { ...edge, data: { params } } : edge)),
     }));
   },
   remove: (kind, id) => {

@@ -1,4 +1,4 @@
-import type { Gauge, Issue, WindowSample } from '@loadline/engine';
+import type { BlameReport, Bottleneck, Gauge, Issue, WindowSample } from '@loadline/engine';
 import { create } from 'zustand';
 import type { Totals } from './protocol.ts';
 
@@ -23,22 +23,36 @@ export interface SimState {
   totals: Totals;
   samples: WindowSample[];
   gauges: Gauge[];
+  /** The failures clients have seen since the run started, most common first. */
+  blame: BlameReport[];
+  /** Where the time has been going over the last few seconds. */
+  bottleneck: Bottleneck | null;
+  /** What the design has cost to run so far, in dollars a month. */
+  monthlyCost: number;
   /** Position of each node and edge in the arrays of a sample. */
   nodeIndex: Record<string, number>;
   edgeIndex: Record<string, number>;
 }
 
-export const useSim = create<SimState>(() => ({
-  status: 'paused',
-  failure: null,
-  issues: [],
+/** What a run that has not produced anything yet looks like. */
+export const EMPTY_RUN = {
   now: 0,
-  speed: 1,
   measuredSpeed: 0,
-  multiplier: 1,
   totals: NO_TOTALS,
-  samples: [],
-  gauges: [],
+  samples: [] as WindowSample[],
+  gauges: [] as Gauge[],
+  blame: [] as BlameReport[],
+  bottleneck: null,
+  failure: null,
+} satisfies Partial<SimState>;
+
+export const useSim = create<SimState>(() => ({
+  ...EMPTY_RUN,
+  status: 'paused',
+  issues: [],
+  speed: 1,
+  multiplier: 1,
+  monthlyCost: 0,
   nodeIndex: {},
   edgeIndex: {},
 }));

@@ -233,13 +233,13 @@ describe('sampling', () => {
     const target = chain(100, [{ serviceTime: fixed(20) }]);
     const sim = createSimulation(target, { seed: 1 });
     expect(sim.gauges()).toEqual([
-      { inFlight: 0, queued: 0 },
-      { inFlight: 0, queued: 0 },
+      { inFlight: 0, queued: 0, instances: 1 },
+      { inFlight: 0, queued: 0, instances: 1 },
     ]);
     sim.advance(5000);
     const [users, service] = sim.gauges();
     const last = sim.samples[sim.samples.length - 1]!;
-    expect(service).toEqual({ inFlight: 1, queued: last.nodes[1]!.queued });
+    expect(service).toEqual({ inFlight: 1, queued: last.nodes[1]!.queued, instances: 1 });
     // Every request the client is waiting on is either in the service's slot or in its queue.
     expect(users!.inFlight).toBe(service!.inFlight + service!.queued);
   });

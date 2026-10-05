@@ -1,11 +1,13 @@
-import { createSimulation } from '@loadline/engine';
-import type { Design, Simulation } from '@loadline/engine';
+import { createSimulation, describeBlame, findBottleneck, summarize, totalMonthlyCost } from '@loadline/engine';
+import type { Command, Design, Simulation } from '@loadline/engine';
 import type { Frame } from './protocol.ts';
 
 // A slice of work is cut into chunks this size, so the time budget is checked often enough.
 const CHUNK_EVENTS = 20_000;
 // After a long gap between steps (a sleeping tab), do not try to catch up on all of it.
 const MAX_GAP_MS = 250;
+/** How many sampling windows the bottleneck is judged over. */
+const BOTTLENECK_WINDOWS = 5;
 
 /**
  * Drives a simulation against real time.
@@ -17,6 +19,7 @@ const MAX_GAP_MS = 250;
  */
 export class Runner {
   private sim: Simulation | null = null;
+  private design: Design | null = null;
   private run = 0;
   private playing = false;
   private speed = 1;
@@ -30,11 +33,18 @@ export class Runner {
   load(run: number, design: Design, seed: number, multiplier: number): void {
     this.run = run;
     this.sim = null;
+    this.design = design;
     this.target = 0;
     this.framedNow = 0;
     const sim = createSimulation(design, { seed });
     if (multiplier !== 1) sim.setMultiplier(multiplier);
     this.sim = sim;
+  }
+
+  /** Applies new settings to the run in progress. The design's nodes and edges must be the same. */
+  reconfigure(design: Design): void {
+    this.sim?.reconfigure(design);
+    this.design = design;
   }
 
   play(wallNow: number): void {
@@ -52,6 +62,11 @@ export class Runner {
 
   setMultiplier(value: number): void {
     this.sim?.setMultiplier(value);
+  }
+
+  /** Injects a fault into the run in progress. */
+  command(command: Command): void {
+    this.sim?.command(command);
   }
 
   get isPlaying(): boolean {
@@ -87,6 +102,7 @@ export class Runner {
     const measuredSpeed = this.playing && elapsed > 0 ? (now - this.framedNow) / elapsed : 0;
     this.framedAt = wallNow;
     this.framedNow = now;
+    const recent = sim ? summarize(sim.samples.slice(-BOTTLENECK_WINDOWS)) : undefined;
     return {
       run: this.run,
       now,
@@ -101,6 +117,9 @@ export class Runner {
         attempts: sim?.attempts ?? 0,
         events: sim?.events ?? 0,
       },
+      blame: sim ? describeBlame(sim) : [],
+      bottleneck: recent && this.design ? findBottleneck(this.design, recent) : null,
+      monthlyCost: sim ? totalMonthlyCost(sim) : 0,
     };
   }
 }

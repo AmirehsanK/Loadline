@@ -46,6 +46,12 @@ self.onmessage = (event: MessageEvent<ToWorker>) => {
       case 'multiplier':
         runner.setMultiplier(message.value);
         break;
+      case 'reconfigure':
+        runner.reconfigure(message.design);
+        break;
+      case 'command':
+        runner.command(message.command);
+        break;
     }
     // Answer every message straight away, so the page never shows a state the worker has left.
     postFrame();

@@ -81,3 +81,79 @@ export function LoadMark({ size = 22 }: { size?: number }) {
     </svg>
   );
 }
+
+export function LoadBalancerIcon() {
+  return (
+    <Icon size={16}>
+      <path
+        d="M2 8h4M6 8l4-4.5h3.5M6 8h7.5M6 8l4 4.5h3.5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Icon>
+  );
+}
+
+export function RateLimiterIcon() {
+  return (
+    <Icon size={16}>
+      <path
+        d="M2.5 3.5h11L9.5 8.5v4l-3 1.5v-5.5L2.5 3.5Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </Icon>
+  );
+}
+
+export function CacheIcon() {
+  return (
+    <Icon size={16}>
+      <path d="M9 1.5 3.5 9H8l-1 5.5L12.5 7H8l1-5.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </Icon>
+  );
+}
+
+export function DatabaseIcon() {
+  return (
+    <Icon size={16}>
+      <ellipse cx="8" cy="4" rx="5" ry="2" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2" stroke="currentColor" strokeWidth="1.3" />
+    </Icon>
+  );
+}
+
+export function QueueIcon() {
+  return (
+    <Icon size={16}>
+      <rect x="1.5" y="5" width="3.5" height="6" rx="0.8" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="6.25" y="5" width="3.5" height="6" rx="0.8" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="11" y="5" width="3.5" height="6" rx="0.8" stroke="currentColor" strokeWidth="1.3" />
+    </Icon>
+  );
+}
+
+export function WorkerIcon() {
+  return (
+    <Icon size={16}>
+      <circle cx="8" cy="8" r="2.6" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6 5 5M11 11l1.4 1.4M12.4 3.6 11 5M5 11l-1.4 1.4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </Icon>
+  );
+}
+
+export function BoltIcon() {
+  return (
+    <Icon>
+      <path d="M9 1.5 3.5 9H8l-1 5.5L12.5 7H8l1-5.5Z" fill="currentColor" />
+    </Icon>
+  );
+}

@@ -1,4 +1,4 @@
-import { designSchema } from '@loadline/engine';
+import { commandSchema, designSchema } from '@loadline/engine';
 import { describe, expect, it } from 'vitest';
 import { STARTER } from '../src/design/model.ts';
 import { Runner } from '../src/sim/runner.ts';
@@ -125,6 +125,44 @@ describe('Runner', () => {
     const frame = quiet.frame(clock.read());
     expect(frame.run).toBe(3);
     expect(frame.totals.created).toBeGreaterThan(300);
+  });
+
+  it('reports what the design costs, where the time goes, and why requests fail', () => {
+    const { runner, clock } = loaded();
+    expect(runner.frame(clock.read())).toMatchObject({ monthlyCost: 63 + 27, bottleneck: null, blame: [] });
+
+    runner.play(clock.read());
+    runner.setSpeed(10);
+    for (let i = 0; i < 100; i++) runner.step(clock.tick(100), 1000, clock.read);
+    // The starter spends most of its time on the API's own 20 ms of work, and has room to spare.
+    expect(runner.frame(clock.read()).bottleneck).toMatchObject({ nodeId: 'api', kind: 'work', path: ['api'] });
+
+    runner.command(commandSchema.parse({ type: 'kill', nodeId: 'store' }));
+    for (let i = 0; i < 100; i++) runner.step(clock.tick(100), 1000, clock.read);
+    const frame = runner.frame(clock.read());
+    expect(frame.bottleneck).toMatchObject({ nodeId: 'store', kind: 'down' });
+    expect(frame.blame[0]).toMatchObject({ cause: 'node-down', nodeId: 'store' });
+    expect(frame.gauges[2]).toMatchObject({ instances: 0 });
+  });
+
+  it('applies new settings to the run in progress', () => {
+    const { runner, clock } = loaded();
+    runner.play(clock.read());
+    for (let i = 0; i < 50; i++) runner.step(clock.tick(100), 1000, clock.read);
+    const before = runner.frame(clock.read());
+
+    const slower = designSchema.parse({
+      ...design,
+      nodes: design.nodes.map((node) => (node.type === 'client' ? { ...node, params: { ...node.params, rps: 20 } } : node)),
+    });
+    runner.reconfigure(slower);
+    for (let i = 0; i < 50; i++) runner.step(clock.tick(100), 1000, clock.read);
+    const after = runner.frame(clock.read());
+
+    // The clock carried on, and the last five seconds saw a tenth of the traffic.
+    expect(after.now).toBeCloseTo(10_000, 6);
+    expect(before.totals.created).toBeGreaterThan(800);
+    expect(after.totals.created - before.totals.created).toBeLessThan(160);
   });
 
   it('gives the same run for the same seed, whatever the pace of the steps', () => {

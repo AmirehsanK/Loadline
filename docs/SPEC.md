@@ -100,13 +100,13 @@ user retrying and a service retrying its database.
 
 | Type | Main parameters | What emerges |
 |---|---|---|
-| Client | rate, read/write mix, keyspace and skew | overload, retry storms |
+| Client | rate, share of reads, number of items and how unevenly they are asked for | overload, retry storms |
 | Load balancer | algorithm (round-robin, random, least-connections, two-choices), health-check interval | uneven load, failover delay |
 | Service | instances, concurrency, queue, service-time distribution, autoscaling (target, min/max, boot time, cooldown) | thread starvation, scaling lag |
 | Cache | capacity, TTL and jitter, single-flight toggle | hit ratio, cold start, stampede |
-| Database | size tier, replicas, concurrency limit with contention, read/write times, failover time | pool exhaustion, write outage |
+| Database | queries at full speed, connection limit, read and write times, replicas, failover time | contention, write outage |
 | Queue | max depth, overflow policy | backlog, drain time |
-| Worker | instances, concurrency, processing time, failure rate with redelivery | consumer lag |
+| Worker | instances, concurrency, processing time, failure rate, tries before giving up | consumer lag |
 | Rate limiter | token-bucket rate and burst | load shedding |
 
 - **Edges** carry network latency, a filter (all, read, write), a mode (sync, async), and the
@@ -114,12 +114,15 @@ user retrying and a service retrying its database.
   edges.
 - **A multi-instance service needs a load balancer in front.** Without one, only the first
   instance gets traffic and the lint says so.
-- **Chaos commands:** traffic spike, kill instance, kill node, slow node, flush cache, sever edge,
-  add edge latency, database failover, injected error rate. They can be triggered by hand or
-  scripted in a level.
-- **Cost** uses abstract size tiers with a monthly price, accrued by instance-time.
-- **Live edits:** parameter changes and chaos apply mid-run; adding or removing nodes restarts the
-  run.
+- **Faults:** traffic spike, node or instances down, node slowed, a share of calls failed, cache
+  emptied, database failover, connection cut, connection delayed. They can be triggered by hand or
+  scheduled in a workload, and a scheduled fault is part of the run.
+- **Cost** is a made-up monthly price per part (`src/cost.ts`): a fixed amount per instance or
+  server plus an amount per slot, core or thousand cached items, accrued over the run.
+- **Live edits:** setting changes and faults apply mid-run; adding or removing nodes or edges
+  restarts the run.
+- **Where the time goes:** `findBottleneck` follows the waiting from a client to the part the time
+  is really spent in, and says what is short there.
 
 ### 4.4 Performance budget
 

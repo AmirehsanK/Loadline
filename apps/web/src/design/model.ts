@@ -1,14 +1,14 @@
-import { designSchema, edgeSchema, nodeSchema } from '@loadline/engine';
-import type { ClientNode, Design, DesignEdge, DesignInput, NodeType, ServiceNode } from '@loadline/engine';
+import { designSchema, edgeSchema, lintDesign, nodeSchema } from '@loadline/engine';
+import type { Design, DesignEdge, DesignInput, DesignNode, NodeType } from '@loadline/engine';
 import { MarkerType } from '@xyflow/react';
 import type { Edge, Node } from '@xyflow/react';
 
 // The canvas keeps the design in React Flow's shape; the engine wants its own. These functions
 // convert between the two, and hold the rules for what may be added or connected.
 
-export type ClientFlowNode = Node<{ name: string; params: ClientNode['params'] }, 'client'>;
-export type ServiceFlowNode = Node<{ name: string; params: ServiceNode['params'] }, 'service'>;
-export type FlowNode = ClientFlowNode | ServiceFlowNode;
+/** The canvas node for one kind of part: its name and its settings. */
+export type FlowNodeOf<T extends NodeType> = Node<{ name: string; params: Extract<DesignNode, { type: T }>['params'] }, T>;
+export type FlowNode = { [T in NodeType]: FlowNodeOf<T> }[NodeType];
 export type FlowEdge = Edge<{ params: DesignEdge['params'] }, 'flow'>;
 
 /** What a new visitor sees: a small system that copes at normal traffic and saturates at about 1.6x. */
@@ -39,29 +39,33 @@ export const STARTER: DesignInput = {
   ],
 };
 
-const DEFAULT_NAMES: Record<NodeType, string> = { client: 'Client', service: 'Service' };
-
 // The arrowhead that shows which way calls go. An SVG marker cannot read a CSS variable, so this
 // repeats the value of --color-ink-3.
 const ARROW = { type: MarkerType.ArrowClosed, width: 18, height: 18, color: '#5e7183' } as const;
 
+const toFlowEdge = (edge: DesignEdge): FlowEdge => ({
+  id: edge.id,
+  type: 'flow',
+  source: edge.from,
+  target: edge.to,
+  markerEnd: ARROW,
+  data: { params: edge.params },
+});
+
 export function fromDesign(design: Design): { nodes: FlowNode[]; edges: FlowEdge[] } {
   return {
-    nodes: design.nodes.map((node): FlowNode => {
-      const shared = { id: node.id, position: { x: node.x, y: node.y }, ariaLabel: node.name || node.id };
-      // Spelled out per type so that each node's params keep their own type.
-      return node.type === 'client'
-        ? { ...shared, type: 'client', data: { name: node.name, params: node.params } }
-        : { ...shared, type: 'service', data: { name: node.name, params: node.params } };
-    }),
-    edges: design.edges.map((edge) => ({
-      id: edge.id,
-      type: 'flow',
-      source: edge.from,
-      target: edge.to,
-      markerEnd: ARROW,
-      data: { params: edge.params },
-    })),
+    nodes: design.nodes.map(
+      (node) =>
+        ({
+          id: node.id,
+          type: node.type,
+          position: { x: node.x, y: node.y },
+          ariaLabel: node.name || node.id,
+          data: { name: node.name, params: node.params },
+          // Each kind of node pairs its type with its own params; the union cannot see that here.
+        }) as FlowNode,
+    ),
+    edges: design.edges.map(toFlowEdge),
   };
 }
 
@@ -81,8 +85,19 @@ export function toDesign(nodes: FlowNode[], edges: FlowEdge[], name = ''): Desig
 }
 
 /**
- * The part of a design the simulation depends on, as a string. Moving or renaming a node leaves it
- * unchanged, so those edits do not restart a run.
+ * The nodes and edges of a design, without their settings, as a string. While this is unchanged a
+ * run can take on new settings without starting again.
+ */
+export function structureKey(design: Design): string {
+  return JSON.stringify({
+    nodes: design.nodes.map((node) => [node.id, node.type]),
+    edges: design.edges.map((edge) => [edge.id, edge.from, edge.to]),
+  });
+}
+
+/**
+ * Everything about a design the simulation depends on, as a string. Moving or renaming a node
+ * leaves it unchanged, so those edits do not touch a run at all.
  */
 export function simulationKey(design: Design): string {
   return JSON.stringify({
@@ -91,43 +106,31 @@ export function simulationKey(design: Design): string {
   });
 }
 
-/** A new node of the given type, with the schema's default parameters and an unused id. */
-export function createNode(type: NodeType, nodes: FlowNode[], position: { x: number; y: number }): FlowNode {
+/** A new node of the given type, with the schema's default settings and an unused id. */
+export function createNode(type: NodeType, name: string, nodes: FlowNode[], position: { x: number; y: number }): FlowNode {
   const taken = new Set(nodes.map((node) => node.id));
   let n = 1;
   while (taken.has(`${type}-${n}`)) n++;
-  const parsed = nodeSchema.parse({ id: `${type}-${n}`, type, name: `${DEFAULT_NAMES[type]} ${n}` });
-  const design = designSchema.parse({ nodes: [{ ...parsed, x: position.x, y: position.y }] });
-  return fromDesign(design).nodes[0]!;
+  const parsed = nodeSchema.parse({ id: `${type}-${n}`, type, name: `${name} ${n}`, x: position.x, y: position.y });
+  return fromDesign(designSchema.parse({ nodes: [parsed] })).nodes[0]!;
 }
 
 /** A new edge with the schema's default policy. */
 export function createEdge(source: string, target: string): FlowEdge {
-  const parsed = edgeSchema.parse({ id: `${source}--${target}`, from: source, to: target });
-  return { id: parsed.id, type: 'flow', source, target, markerEnd: ARROW, data: { params: parsed.params } };
+  return toFlowEdge(edgeSchema.parse({ id: `${source}--${target}`, from: source, to: target }));
 }
 
-/** Whether dragging a connection from `source` to `target` should be allowed. */
+/**
+ * Whether dragging a connection from `source` to `target` should be allowed: it is, when the
+ * design with that connection added has no error the design without it did not have. The engine's
+ * own check decides, so the canvas can never allow what the engine would refuse.
+ */
 export function canConnect(nodes: FlowNode[], edges: FlowEdge[], source: string, target: string): boolean {
-  if (source === target) return false;
-  const from = nodes.find((node) => node.id === source);
-  const to = nodes.find((node) => node.id === target);
-  if (!from || !to || to.type === 'client') return false;
-  if (edges.some((edge) => edge.source === source && edge.target === target)) return false;
-  // A client sends to one entry point.
-  if (from.type === 'client' && edges.some((edge) => edge.source === source)) return false;
-  // Following calls from the target must not lead back to the source.
-  const seen = new Set<string>([target]);
-  const pending = [target];
-  while (pending.length > 0) {
-    const current = pending.pop()!;
-    if (current === source) return false;
-    for (const edge of edges) {
-      if (edge.source === current && !seen.has(edge.target)) {
-        seen.add(edge.target);
-        pending.push(edge.target);
-      }
-    }
+  try {
+    const errors = (list: FlowEdge[]) =>
+      lintDesign(toDesign(nodes, list)).filter((issue) => issue.level === 'error').length;
+    return errors([...edges, createEdge(source, target)]) <= errors(edges);
+  } catch {
+    return false;
   }
-  return true;
 }
