@@ -7,8 +7,8 @@ it. Where the code and the spec disagree, that is a bug in one of them — resol
 not silently diverge. `docs/ENGINE.md` explains each engine mechanism and how it was validated; it
 is written alongside the engine, one mechanism at a time.
 
-`Loadline` is a working name. It appears in package names (`@loadline/*`), so a rename is a
-find-and-replace before the repo goes public.
+The repository is public at <https://github.com/AmirehsanK/Loadline>. The name also appears in
+package names (`@loadline/*`), so a rename would be a find-and-replace and a repository rename.
 
 ## Environment facts
 
@@ -51,6 +51,10 @@ npm run bench -w @loadline/engine
 - Comments explain *why*, especially where the design departs from the obvious approach.
 - A new engine behaviour needs a test that shows it emerging, and a level that teaches it. Realism
   has no natural end; that pairing is the boundary.
+- A level's numbers are tuned, not derived. `packages/scenarios/test/attempts.ts` lists what a
+  player might try on each level and the stars it should earn. If an engine change moves a row,
+  the lesson has changed: retune the level and re-read its brief, hints and debrief against the
+  new numbers before touching the table.
 - Technical proper nouns stay English in the Persian UI: component names, p99, RPS, ms.
 - Every word the interface shows comes from `apps/web/src/i18n`. A message that takes values is a
   function in the catalog, never a string glued together in a component.
@@ -91,5 +95,6 @@ These are the rules that make failures emerge instead of being scripted. Each ha
 
 ## Commit and publish
 
-Commit locally at each milestone. Creating the public GitHub repository, pushing to it and enabling
-Pages are outward-facing: ask first.
+Commit at each milestone and push `main` to `origin`; the owner created the repository and asked
+for the commits to be pushed there (5 October 2026). Enabling GitHub Pages, changing the
+repository's settings and publishing a package are still outward-facing: ask first.

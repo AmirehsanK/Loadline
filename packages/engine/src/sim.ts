@@ -56,6 +56,22 @@ export interface SimOptions {
   maxSamples?: number;
   /** Calls allowed in flight at once before the run is stopped. */
   maxLiveCalls?: number;
+  /** When the scored period starts; what happens before it is warm-up. Zero by default. */
+  scoreFromMs?: number;
+}
+
+/** What clients saw over the scored period: from `scoreFromMs` to now. */
+export interface Score {
+  /** When the period started, in simulated milliseconds. */
+  fromMs: number;
+  /** Requests that finished in the period, one way or the other. */
+  ok: number;
+  failed: number;
+  /** Latency of the ones that succeeded. */
+  meanMs: number;
+  p50: number;
+  p95: number;
+  p99: number;
 }
 
 export interface EdgeWindow {
@@ -145,6 +161,10 @@ export class Simulation {
   private readonly sampleMs: number;
   private readonly maxSamples: number;
   private readonly windowLatency = new Histogram();
+  private readonly scoreLatency = new Histogram();
+  private readonly scoreFrom: number;
+  private scoreOk = 0;
+  private scoreFailed = 0;
   private windowCreated = 0;
   private windowOk = 0;
   private windowFailed = 0;
@@ -168,6 +188,7 @@ export class Simulation {
     this.seed = options.seed;
     this.sampleMs = options.sampleMs ?? 1000;
     this.maxSamples = options.maxSamples ?? 3600;
+    this.scoreFrom = Math.max(0, options.scoreFromMs ?? 0);
     this.calls = new CallPool(options.maxLiveCalls ?? 2_097_152);
     this.phases = [...(options.workload?.phases ?? [])].sort((a, b) => a.atMs - b.atMs);
     this.chaos = [...(options.workload?.chaos ?? [])].sort((a, b) => a.atMs - b.atMs);
@@ -484,11 +505,17 @@ export class Simulation {
     this.windowOk++;
     this.latency.record(latencyMs);
     this.windowLatency.record(latencyMs);
+    // A request belongs to the period it finished in.
+    if (this.now >= this.scoreFrom) {
+      this.scoreOk++;
+      this.scoreLatency.record(latencyMs);
+    }
   }
 
   requestFailed(result: number, origin: number, stuck: number): void {
     this.failed++;
     this.windowFailed++;
+    if (this.now >= this.scoreFrom) this.scoreFailed++;
     this.failedBy[result]!++;
     const key = (origin * OUTCOMES.length + result) * CALL_STATES.length + stuck;
     this.blame.set(key, (this.blame.get(key) ?? 0) + 1);
@@ -507,6 +534,20 @@ export class Simulation {
       });
     }
     return list.sort((a, b) => b.count - a.count || a.node - b.node || a.cause - b.cause || a.stuck - b.stuck);
+  }
+
+  /** What clients have seen since the scored period began: nothing, until it has. */
+  score(): Score {
+    const latency = this.scoreLatency;
+    return {
+      fromMs: this.scoreFrom,
+      ok: this.scoreOk,
+      failed: this.scoreFailed,
+      meanMs: latency.mean(),
+      p50: latency.quantile(0.5),
+      p95: latency.quantile(0.95),
+      p99: latency.quantile(0.99),
+    };
   }
 
   /** The sampling windows closed since the last call. */

@@ -59,17 +59,17 @@ describe('autoscaling', () => {
     expect(during(fast, 30_000, 120_000, (sample) => sample.failed)).toBe(0);
   });
 
-  it('gives instances back slowly once the load has gone', () => {
+  it('keeps its instances for a cooldown after the load has gone, then gives them back', () => {
     const target = fleet(30_000);
     const { report } = run(target, { sendMs: 400_000, workload: surge });
     const instances = windowsOf(target, report, 'api').map((window) => window.instances);
 
-    // One at a time, a cooldown apart: it would rather pay for too many than be caught short.
+    // It keeps what the busiest look of the last minute wanted: it would rather pay for too many
+    // than be caught short. The last look of the surge was at 120 s, so at 180 s they all go.
     const after = instances.slice(120);
-    const steps = after.flatMap((count, i) => (i > 0 && count !== after[i - 1] ? [i] : []));
     expect(after.every((count, i) => i === 0 || count <= after[i - 1]!)).toBe(true);
-    expect(steps.length).toBe(after[0]! - 2);
-    for (let i = 1; i < steps.length; i++) expect(steps[i]! - steps[i - 1]!).toBeGreaterThanOrEqual(55);
+    expect(instances[178]).toBeGreaterThanOrEqual(5);
+    expect(instances[182]).toBe(2);
     expect(instances[399]).toBe(2);
     expect(during(report, 120_000, 400_000, (sample) => sample.failed)).toBe(0);
 
@@ -77,6 +77,24 @@ describe('autoscaling', () => {
     const cost = nodeOf(report, 'api').monthlyCost;
     expect(cost).toBeGreaterThan(2 * instancePrice(4));
     expect(cost).toBeLessThan(4 * instancePrice(4));
+  });
+
+  it('does not give instances back in a lull shorter than the cooldown', () => {
+    // Two surges with twenty quiet seconds between them.
+    const twice = {
+      phases: [
+        { atMs: 20_000, multiplier: 6 },
+        { atMs: 100_000, multiplier: 1 },
+        { atMs: 120_000, multiplier: 6 },
+        { atMs: 180_000, multiplier: 1 },
+      ],
+    };
+    const target = fleet(30_000);
+    const { report } = run(target, { sendMs: 180_000, workload: twice });
+    const instances = windowsOf(target, report, 'api').map((window) => window.instances);
+
+    expect(instances[118]).toBe(instances[99]);
+    expect(during(report, 100_000, 180_000, (sample) => sample.failed)).toBe(0);
   });
 
   it('stays within its limits', () => {

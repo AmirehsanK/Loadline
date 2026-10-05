@@ -139,10 +139,10 @@ describe('a stampede', () => {
     expect(report.requests.failed).toBe(0);
   });
 
-  it('is far smaller when one call fetches each missing item for everyone waiting on it', () => {
+  it('is an outage, unless one call fetches each missing item for everyone waiting on it', () => {
     // A few very popular items and a slow store: while the first read of an item is still out,
     // dozens more requests for the same item arrive. Without sharing, each of them reads it too.
-    const reads = (singleFlight: boolean) => {
+    const outcome = (singleFlight: boolean) => {
       const target = system(
         [
           { id: 'users', type: 'client', params: { rps: 2000, readRatio: 1, keys: 200, skew: 1.2 } },
@@ -157,17 +157,26 @@ describe('a stampede', () => {
         ],
       );
       const { sim, report } = run(target, { sendMs: 40_000, drainMs: 20_000, workload: { chaos: [{ atMs: 30_000, command: flush }] } });
-      expect(report.requests.ok).toBe(report.requests.created);
       expect(sim.calls.live).toBe(0);
-      return during(report, 30_000, 40_000, (sample) => sample.nodes[3]!.arrivals);
+      return { report, db: nodeOf(report, 'db') };
     };
-    const alone = reads(false);
-    const shared = reads(true);
+    const alone = outcome(false);
+    const shared = outcome(true);
 
-    // Sharing reads each of the 200 items once, give or take: a request can still slip in between
-    // the read coming back and the item reaching the cache.
-    expect(shared).toBeLessThan(220);
-    expect(alone).toBeGreaterThan(shared * 3);
+    // Sharing reads each of the 200 items once after the cache is emptied, give or take: a request
+    // can still slip in between the read coming back and the item reaching the cache. One second
+    // is slow, and nothing fails.
+    expect(during(shared.report, 30_000, 40_000, (sample) => sample.nodes[3]!.arrivals)).toBeLessThan(220);
+    expect(shared.report.requests.failed).toBe(0);
+    expect(shared.db.maxQueued).toBeLessThan(200);
+    expect(shared.report.samples[32]!.p99).toBeLessThan(10);
+
+    // Without it the cache never gets to fill in the first place. Every request misses and adds
+    // one more query to cores that are already shared thousands of ways, so no query finishes for
+    // half a minute, and what cannot even be queued is turned away.
+    expect(alone.db.maxQueued).toBeGreaterThan(4000);
+    expect(during(alone.report, 0, 20_000, (sample) => sample.ok)).toBeLessThan(100);
+    expect(alone.report.requests.failed).toBeGreaterThan(alone.report.requests.created * 0.3);
   });
 
   it('repeats on its own when items that were stored together expire together', () => {

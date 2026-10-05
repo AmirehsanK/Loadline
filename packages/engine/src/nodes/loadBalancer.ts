@@ -13,6 +13,9 @@ const TIMER_HEALTH = 0;
  *
  * It only knows which instances are alive as of its last health check. An instance that dies is
  * sent calls, which fail, until the next check notices. That window is the cost of a slow check.
+ *
+ * A retry does not wait for the check: it goes to a different instance from the one that has just
+ * failed the call, if there is another. A call's `tag` holds the instance it was last sent to.
  */
 export class LoadBalancerRuntime extends NodeRuntime {
   private algorithm: LoadBalancerNode['params']['algorithm'];
@@ -52,6 +55,7 @@ export class LoadBalancerRuntime extends NodeRuntime {
     this.touch();
     this.busy++;
     this.sim.calls.attempt[call] = 0;
+    this.sim.calls.tag[call] = -1;
     this.sim.issue(call, edgeIndex);
   }
 
@@ -70,33 +74,44 @@ export class LoadBalancerRuntime extends NodeRuntime {
     this.sim.queue.push(this.sim.now + this.healthCheckMs, EV_TIMER, this.index, TIMER_HEALTH, 0);
   }
 
-  override route(): number {
+  override route(call: number): number {
     const target = this.target;
     if (!target) return -1;
-    const slots = target.instanceSlots;
-    let candidates = 0;
-    for (let i = 0; i < slots; i++) if (this.eligible(target, i)) candidates++;
+    const calls = this.sim.calls;
+    // On a retry, the instance that has just failed this call is passed over if there is another.
+    let avoid = calls.attempt[call]! > 0 ? calls.tag[call]! : -1;
+    let candidates = this.count(target, avoid);
+    if (candidates === 0 && avoid >= 0) {
+      avoid = -1;
+      candidates = this.count(target, avoid);
+    }
     if (candidates === 0) return NO_ROUTE;
+    const chosen = this.pick(target, candidates, avoid);
+    calls.tag[call] = chosen;
+    return chosen;
+  }
 
+  private pick(target: ServiceRuntime, candidates: number, avoid: number): number {
+    const slots = target.instanceSlots;
     switch (this.algorithm) {
       case 'round-robin': {
         for (let i = 0; i < slots; i++) {
           const index = (this.turn + i) % slots;
-          if (!this.eligible(target, index)) continue;
+          if (index === avoid || !this.eligible(target, index)) continue;
           this.turn = index + 1;
           return index;
         }
         return NO_ROUTE;
       }
       case 'random':
-        return this.nth(target, this.pickRng.below(candidates));
+        return this.nth(target, this.pickRng.below(candidates), avoid);
       case 'least-connections': {
         // Start from a different instance each time, so equally loaded ones share the calls.
         let best = -1;
         let least = Infinity;
         for (let i = 0; i < slots; i++) {
           const index = (this.turn + i) % slots;
-          if (!this.eligible(target, index)) continue;
+          if (index === avoid || !this.eligible(target, index)) continue;
           const load = target.loadOf(index);
           if (load < least) {
             least = load;
@@ -108,8 +123,8 @@ export class LoadBalancerRuntime extends NodeRuntime {
       }
       case 'two-choices': {
         // Look at two instances picked at random and take the less loaded of them.
-        const first = this.nth(target, this.pickRng.below(candidates));
-        const second = this.nth(target, this.pickRng.below(candidates));
+        const first = this.nth(target, this.pickRng.below(candidates), avoid);
+        const second = this.nth(target, this.pickRng.below(candidates), avoid);
         return target.loadOf(second) < target.loadOf(first) ? second : first;
       }
     }
@@ -129,11 +144,18 @@ export class LoadBalancerRuntime extends NodeRuntime {
     return (this.healthy[index] ??= target.isUp(index));
   }
 
-  /** The `n`-th eligible instance, counting from zero. */
-  private nth(target: ServiceRuntime, n: number): number {
+  /** How many instances the balancer would send a call to, leaving out `avoid`. */
+  private count(target: ServiceRuntime, avoid: number): number {
+    let candidates = 0;
+    for (let i = 0; i < target.instanceSlots; i++) if (i !== avoid && this.eligible(target, i)) candidates++;
+    return candidates;
+  }
+
+  /** The `n`-th eligible instance, counting from zero and leaving out `avoid`. */
+  private nth(target: ServiceRuntime, n: number, avoid: number): number {
     let seen = 0;
     for (let i = 0; i < target.instanceSlots; i++) {
-      if (!this.eligible(target, i)) continue;
+      if (i === avoid || !this.eligible(target, i)) continue;
       if (seen === n) return i;
       seen++;
     }

@@ -144,25 +144,41 @@ falls behind, the UI shows the real speed; fidelity is never dropped silently.
 
 ## 6. Levels
 
-Each level is data: starter design, allowed palette, workload timeline with scripted chaos,
-objectives (p99, error rate, monthly budget), star thresholds, hints and a debrief. The same
-`runScenario` scores it in the web app, the CLI and the MCP server. Every level ships with a
-reference solution, and CI proves the starter fails and the reference passes.
+Each level is data (`packages/scenarios`): a starter design, the parts the player may add, a
+workload timeline with scripted faults, objectives, two bonus tiers, hints and a debrief. The same
+`runScenario` scores it in the web app, the CLI and the MCP server.
+
+- **Objectives** are a p99 limit, an error-rate limit, a monthly budget, a limit on what is left in
+  the queues at the end, and a limit on messages lost. All must be met to pass. They are judged over
+  the **scored period**, which starts after a warm-up; a request belongs to the period it finished
+  in.
+- **Stars.** A pass is one star. Meeting the first bonus tier as well is two, and the second on top
+  of that is three. The tiers reward a better answer to the same lesson, not a different trick.
+- **Rules.** A level locks the settings that would make its problem go away (the traffic, how fast
+  a part works) and the parts that must stay. A design that changes one cannot pass, however well
+  it does. A part the player adds can be given settings it must keep. Rules that settings cannot
+  express are a function of the design.
+- **Seeds.** A level is played on its own seed, so the same design always scores the same.
+
+Every level ships with a reference solution. CI proves that on five seeds the starter fails and the
+reference earns three stars, and checks a table of what a player might try against the stars each
+attempt should get (`packages/scenarios/test/attempts.ts`). That table is the lessons, written as
+tests: an engine change that moves a row has changed what a level teaches.
 
 | # | Level | Lesson |
 |---|---|---|
-| 1 | First traffic | Horizontal scaling, and why latency explodes near full utilization |
-| 2 | Read-heavy | Cache-aside, hit ratio, TTL |
-| 3 | Pool party | Connection pools and read replicas |
-| 4 | Slow dependency | Timeouts and circuit breakers |
-| 5 | Retry storm | Backoff, jitter, retry limits |
-| 6 | Write burst | Queues, workers, backlog |
-| 7 | Stampede | Surviving a cache flush at peak |
-| 8 | Black Friday | Autoscaling lag under a budget |
-| 9 | Node down | Redundancy and health checks |
-| 10 | The bill | Cutting cost while holding the SLO |
+| 1 | First traffic | Horizontal scaling, and why waiting explodes near full utilization |
+| 2 | Read-heavy | A cache in front of a store that cannot grow; a few items get most of the traffic |
+| 3 | Pool party | Connection pools: too many queries at once make a database slower, not busier |
+| 4 | Slow dependency | Timeouts and circuit breakers; a breaker counts failures, not slowness |
+| 5 | Retry storm | Retries multiply load; what ends a storm is less work |
+| 6 | Write burst | Queues and workers: store now, do later, and size for the catch-up |
+| 7 | Stampede | Surviving a cache flush at peak: fetch each item once |
+| 8 | Black Friday | Autoscaling is late; headroom buys time, under a budget |
+| 9 | Node down | One more instance than the load needs, health checks, and a retry |
+| 10 | The bill | Sizing every part to its load line, at the peak, while holding the objectives |
 
-Sandbox mode has every component, manual chaos and no objectives.
+Sandbox mode has every component, manual faults and no objectives.
 
 ## 7. Extras
 

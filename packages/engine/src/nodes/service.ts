@@ -30,8 +30,6 @@ const TIMER_SCALE = 0;
 const TIMER_BOOTED = 1;
 /** How often an autoscaled service looks at its load. */
 const SCALE_PERIOD_MS = 5000;
-/** An instance is surplus when load is below this share of the target. */
-const SCALE_IN_BELOW = 0.6;
 
 export interface Instance {
   readonly index: number;
@@ -97,10 +95,11 @@ export class ServiceRuntime extends NodeRuntime {
   /** Instances that have been started and are not up yet. */
   private booting = 0;
   private scaleTimerSet = false;
-  private scaledAt = 0;
   // Slot-time at the autoscaler's last look.
   private seenBusy = 0;
   private seenCapacity = 0;
+  /** How many instances each recent look wanted, oldest first, as far back as the cooldown reaches. */
+  private readonly looks: { at: number; wanted: number }[] = [];
   private readonly flights = new Map<number, Flight>();
   /** The calls that are fetching an item for others. */
   private readonly leading = new Set<number>();
@@ -219,7 +218,10 @@ export class ServiceRuntime extends NodeRuntime {
       return;
     }
     this.scaleTimerSet = false;
-    if (!this.scaling.enabled) return;
+    if (!this.scaling.enabled) {
+      this.looks.length = 0;
+      return;
+    }
     this.scale();
     this.armScaling();
   }
@@ -550,6 +552,10 @@ export class ServiceRuntime extends NodeRuntime {
    * just ended, so it is always reacting to what has already happened, and a new instance takes
    * `bootMs` to arrive. A service that is flat out cannot show more busy slots than it has, so
    * under a large surge it under-orders and has to look again.
+   *
+   * It adds instances as soon as a look asks for them and is slow to give them back: it keeps what
+   * the busiest look of the last `cooldownMs` wanted, so a lull in a surge does not cost it the
+   * instances it is about to need again.
    */
   private scale(): void {
     const { busy, capacity } = this.slotTime();
@@ -560,24 +566,30 @@ export class ServiceRuntime extends NodeRuntime {
     if (room <= 0) return;
 
     const { min, max, target, bootMs, cooldownMs } = this.scaling;
+    const now = this.sim.now;
     const serving = this.serving();
-    const load = used / room;
     const planned = serving + this.booting;
     const busySlots = used / SCALE_PERIOD_MS;
     const wanted = Math.min(max, Math.max(min, Math.ceil(busySlots / (this.concurrency * target))));
 
+    const looks = this.looks;
+    looks.push({ at: now, wanted });
+    while (looks.length > 1 && looks[0]!.at <= now - cooldownMs) looks.shift();
+
     if (wanted > planned) {
       for (let i = planned; i < wanted; i++) {
         this.booting++;
-        this.sim.queue.push(this.sim.now + bootMs, EV_TIMER, this.index, TIMER_BOOTED, 0);
+        this.sim.queue.push(now + bootMs, EV_TIMER, this.index, TIMER_BOOTED, 0);
       }
-      this.scaledAt = this.sim.now;
-    } else if (load < target * SCALE_IN_BELOW && serving > min && this.sim.now - this.scaledAt >= cooldownMs) {
-      // One at a time, and only once things have been quiet for a while.
-      const surplus = this.instances.findLast((instance) => instance.up && !instance.draining);
-      if (surplus) this.retire(surplus);
+      return;
+    }
+    // Nothing is given back until it has watched for a whole cooldown.
+    if (looks[0]!.at - SCALE_PERIOD_MS > now - cooldownMs) return;
+    let keep = wanted;
+    for (const look of looks) keep = Math.max(keep, look.wanted);
+    if (keep < serving) {
+      this.resize(keep);
       this.recount();
-      this.scaledAt = this.sim.now;
     }
   }
 }

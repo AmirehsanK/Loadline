@@ -245,6 +245,34 @@ describe('sampling', () => {
   });
 });
 
+describe('the scored period', () => {
+  it('leaves out what clients saw during warm-up', () => {
+    // Twenty slow seconds, then the work gets ten times quicker.
+    const target = chain(50, [{ concurrency: 100, serviceTime: fixed(200) }]);
+    const workload = workloadSchema.parse({});
+    const sim = createSimulation(target, { seed: 1, workload, scoreFromMs: 20_000 });
+    sim.advance(10_000);
+    expect(sim.ok).toBeGreaterThan(400);
+    expect(sim.score()).toMatchObject({ fromMs: 20_000, ok: 0, failed: 0, p99: 0 });
+    sim.advance(19_999);
+    expect(sim.score()).toMatchObject({ fromMs: 20_000, ok: 0, failed: 0, p99: 0 });
+
+    sim.advance(40_000);
+    const all = buildReport(sim).requests;
+    const scored = sim.score();
+    expect(scored.fromMs).toBe(20_000);
+    expect(scored.ok).toBeGreaterThan(900);
+    expect(scored.ok).toBeLessThan(all.ok - 900);
+    expect(scored.p99).toBeCloseTo(200, 0);
+  });
+
+  it('covers the whole run when there is no warm-up', () => {
+    const sim = createSimulation(chain(50, [{ concurrency: 100, serviceTime: fixed(20) }]), { seed: 1 });
+    sim.advance(10_000);
+    expect(sim.score()).toMatchObject({ fromMs: 0, ok: sim.ok, failed: 0 });
+  });
+});
+
 describe('the limit on calls in flight', () => {
   it('stops a run whose work piles up without bound', () => {
     const target = chain(1000, [{ serviceTime: fixed(1000) }]);

@@ -143,7 +143,12 @@ change nothing, and the lint says so.
 and sizes the service so that they would be `target` of the total. New instances take `bootMs` to
 arrive. So it always reacts to load that has already happened, and a service that is flat out
 cannot show more busy slots than it has: under a large surge it under-orders and has to look again.
-Instances are given back one at a time, a cooldown apart.
+
+It is quick to add and slow to give back. The service keeps as many instances as the busiest look
+of the last `cooldownMs` wanted, so a lull in the middle of a surge does not cost it the instances
+it is about to need again, and what it no longer needs all goes at once when the cooldown has
+passed. A lower `target` buys time during a climb, because the order goes in earlier; the price is
+a larger fleet at the peak, which `max` caps.
 
 ### 3.2 Load balancer
 
@@ -152,6 +157,13 @@ loaded, or to the less loaded of two picked at random.
 
 It only knows which instances are alive as of its last health check. An instance that dies keeps
 being sent calls, which fail, until the next check notices.
+
+A retry on the balancer's edge does not wait for the check: it goes to a different instance from
+the one that has just failed the call, if there is another. So one retry is enough to hide a dead
+instance from every caller, at the cost of one wasted trip for each call that found it.
+
+Counting connections has a trap. A dead instance refuses at once and so never has any, which makes
+it look like the least busy of all: until the check notices, it is sent more than its share.
 
 ### 3.3 Cache
 
@@ -178,8 +190,17 @@ a little more for getting in each other's way: with twice as many queries as cor
 times as long instead of 2. The loss stops growing at five times as many queries as cores, where
 the server does half the work it could.
 
-This is an approximation. A query's slowdown is fixed when it starts, from the number running
-then, where a real server divides its time continuously.
+The sharing is exact: the cores are divided among whatever is running at each moment, so a query
+that starts alone and is then joined by forty others slows down from that moment, and speeds up
+again as they finish. This is what makes a stampede an outage and not a blip. Each new query slows
+every query already there, so the ones that would have emptied the server stay, and more arrive.
+
+Simulating that directly would mean rescheduling every running query whenever one starts or ends.
+Instead each server keeps one running total, the work a query has received since the server
+started (`progress`), which advances at the speed every query is currently getting. A query that
+needs `w` of work and starts when the total is `p` is finished when the total reaches `p + w`.
+The queries sit in a heap ordered by that number (`src/kernel/tagHeap.ts`), and the server has one
+timer, for the first of them. A query starting or finishing only moves the timer.
 
 On **failover** the primary goes away. Writes are refused for `failoverMs`. Then a replica becomes
 the primary, or if there is none, the old primary comes back.
@@ -255,6 +276,9 @@ A run schedules millions of events a second, so the hot structures avoid allocat
   time, so the series is part of the deterministic report and is the same at any playback speed.
 - **Cost.** Each node has a price in made-up dollars a month (`src/cost.ts`), integrated over the
   run, so an autoscaled service costs what was actually running.
+- **The scored period.** A run can be given a time from which it is scored (`scoreFromMs`). What
+  clients saw before it is warm-up: it is in the report and the samples, and not in `score()`. A
+  request belongs to the period it finished in. Levels are judged on this.
 - **Conservation.** Every request ends in exactly one outcome. At any moment,
   `created = ok + failed + in flight`, and for every node `arrivals = ok + failed + in a slot +
   queued`. For every edge, `calls = ok + failed + abandoned`, where abandoned are the calls whose
@@ -337,12 +361,20 @@ a test.
   comparing two instances, and comparing all of them each do markedly better than the one before.
 - **A dead instance costs until it is noticed.** With three instances and a check every five
   seconds, a third of the calls fail from the moment one dies until the next check.
+- **Counting connections makes it worse.** The dead instance has none, so it looks the least busy
+  and is sent well over half of the calls instead of a third.
+- **One retry hides it.** With a single retry on the balancer's edge, no request fails at all: each
+  call that finds the dead instance is made again, to another.
 - **A cache starts cold.** The store carries the whole load until the cache has filled.
-- **A stampede.** Empty a warm cache and the store's load goes from about 10 calls a second to 755
-  in the next second, far more than it can run at once, and p99 goes from 1.5 ms to over a second.
-  It passes in a few seconds, because the popular items are fetched first.
-- **Sharing a fetch tames it.** With a few very popular items and a slow store, single flight reads
-  each item once where the plain version reads it more than three times over.
+- **A stampede.** Empty a warm cache and the store's load goes from about 10 calls a second to
+  over 900 in the next second, far more than it can run at once. The queries share its cores
+  hundreds of ways, and p99 goes from 2 ms to several seconds. It passes in about fifteen seconds,
+  because the popular items are fetched first and are then answered by the cache again.
+- **A stampede that does not pass.** With a few very popular items and a slow store, the cache
+  never gets to fill: every request misses and adds one more query to cores already shared
+  thousands of ways, almost nothing finishes, and nearly half of all requests fail.
+- **Sharing a fetch prevents it.** In the same system with single flight, each of the 200 items is
+  read once, one second is slow, and nothing fails.
 - **Items stored together expire together.** With a fixed lifetime the stampede repeats by itself;
   randomising lifetimes spreads it out.
 - **The right pool size is the database's, not the caller's.** A database with four cores is asked
@@ -365,6 +397,8 @@ a test.
   then refuses the reads the replica could have served.
 - **Autoscaling arrives late.** With instances that take 30 s to start, a sixfold surge is 35
   seconds of errors before the first new instance is ready. With 2 s it is a quarter of that.
+- **And leaves late, on purpose.** When the surge ends the instances stay for a cooldown and then
+  all go. A second surge twenty seconds after the first finds them still there.
 
 ## 10. Performance
 

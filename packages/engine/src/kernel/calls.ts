@@ -44,7 +44,10 @@ export class CallPool {
   cls: Uint8Array;
   /** The item the request is about. Downstream calls inherit it. */
   key: Int32Array;
-  /** Meaning depends on the node: the operation asked of a cache, a message's delivery count. */
+  /**
+   * Meaning depends on the node: the operation asked of a cache, a message's delivery count, the
+   * instance a balancer last sent the call to.
+   */
   tag: Int32Array;
   /** Outcome, set when the call finishes. */
   result: Uint8Array;

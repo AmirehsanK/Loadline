@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { lintDesign } from '../src/index.ts';
 import type { LoadBalancerNode } from '../src/index.ts';
-import { during, exp, nodeOf, run, system } from './helpers.ts';
+import { during, edgeOf, exp, nodeOf, run, system } from './helpers.ts';
 
 type Algorithm = LoadBalancerNode['params']['algorithm'];
 
@@ -86,6 +86,69 @@ describe('a load balancer', () => {
     expect(report.blame).toEqual([{ cause: 'node-down', nodeId: 'api', where: null, count: report.requests.failed }]);
     expect(nodeOf(report, 'api').instances).toBe(2);
     expect(report.requests.inFlight).toBe(0);
+  });
+
+  // Three instances, one of which dies at 11 s; the checks run at 5, 10, 15 s.
+  const withADeath = (algorithm: Algorithm, retries: number) => {
+    const target = system(
+      [
+        { id: 'users', type: 'client', params: { rps: 300 } },
+        { id: 'lb', type: 'load-balancer', params: { algorithm, healthCheckMs: 5000 } },
+        { id: 'api', type: 'service', params: { instances: 3, concurrency: 8, serviceTime: exp(10) } },
+      ],
+      [
+        ['users', 'lb'],
+        ['lb', 'api', { retries, backoffMs: 0 }],
+      ],
+    );
+    const chaos = [{ atMs: 11_000, command: { type: 'kill', nodeId: 'api', count: 1 } as const }];
+    return run(target, { sendMs: 30_000, drainMs: 2000, workload: { chaos } }).report;
+  };
+
+  it('retries on another instance, so a dead one that has not been noticed fails nobody', () => {
+    // The share of the 1,200 calls of those four seconds that went to the dead instance first.
+    const sentToTheDeadOne: Record<Algorithm, [number, number]> = {
+      random: [0.28, 0.39],
+      // A retry takes a turn like any other call, so it is every second new call, not every third.
+      'round-robin': [0.45, 0.55],
+      // Whenever it is one of the two, it is the one with fewer calls.
+      'two-choices': [0.4, 0.6],
+      'least-connections': [0.8, 1],
+    };
+    for (const [algorithm, [least, most]] of Object.entries(sentToTheDeadOne) as [Algorithm, [number, number]][]) {
+      const report = withADeath(algorithm, 1);
+      expect(report.requests.failed, algorithm).toBe(0);
+      const retried = edgeOf(report, 'lb-api').retried;
+      expect(retried / 1200, algorithm).toBeGreaterThan(least);
+      expect(retried / 1200, algorithm).toBeLessThan(most);
+    }
+  });
+
+  it('sends a dead instance more than its share when it counts connections, because a dead one has none', () => {
+    const failed = (algorithm: Algorithm) => during(withADeath(algorithm, 0), 11_000, 15_000, (sample) => sample.failed);
+    // Taking turns loses a third of the 1,200 calls. Counting connections, the dead instance
+    // always looks the least busy, and it loses to the other two only when they are idle as well.
+    expect(failed('round-robin')).toBeLessThan(480);
+    expect(failed('least-connections')).toBeGreaterThan(600);
+  });
+
+  it('retries on the same instance when it is the only one', () => {
+    const target = system(
+      [
+        { id: 'users', type: 'client', params: { rps: 100 } },
+        { id: 'lb', type: 'load-balancer' },
+        { id: 'api', type: 'service', params: { instances: 1, concurrency: 8, serviceTime: exp(10) } },
+      ],
+      [
+        ['users', 'lb'],
+        ['lb', 'api', { retries: 2, backoffMs: 0 }],
+      ],
+    );
+    const chaos = [{ atMs: 2000, command: { type: 'errors', nodeId: 'api', rate: 0.5 } as const }];
+    const { report } = run(target, { sendMs: 20_000, drainMs: 2000, workload: { chaos } });
+    // Three tries at an even chance each: one request in eight fails.
+    expect(report.requests.failed / report.requests.created).toBeGreaterThan(0.08);
+    expect(report.requests.failed / report.requests.created).toBeLessThan(0.15);
   });
 
   it('fails every call at once when no instance is left', () => {

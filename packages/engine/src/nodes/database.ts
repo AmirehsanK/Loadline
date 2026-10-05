@@ -1,20 +1,23 @@
-import { EV_SERVICE_DONE, EV_TIMER, FREE, IN_SERVICE, NODE_DOWN, OK, QUEUE_FULL, READ } from '../codes.ts';
+import { EV_TIMER, FREE, IN_SERVICE, NODE_DOWN, OK, QUEUE_FULL, READ } from '../codes.ts';
 import { databaseServerPrice } from '../cost.ts';
 import { makeSampler } from '../kernel/dist.ts';
 import type { Sampler } from '../kernel/dist.ts';
 import { RandomStream } from '../kernel/rng.ts';
+import { TagHeap } from '../kernel/tagHeap.ts';
 import type { DatabaseNode, DesignNode } from '../model/schema.ts';
 import type { Simulation } from '../sim.ts';
 import { NodeRuntime } from './base.ts';
 
 const TIMER_FAILOVER = 0;
+// Timer ids from here up mean "a query finishes on server (id - 1)".
+const TIMER_FINISH = 1;
 
 /**
  * How much throughput is lost to queries getting in each other's way once there are more of them
  * than cores: locks, context switches, a cache that no longer fits. With twice as many queries as
- * cores each takes 2.5 times as long instead of 2, so the server completes a fifth less work. The
- * loss stops growing at five times as many queries as cores, where the server does half the work
- * it could.
+ * cores each runs at 40% of full speed instead of 50%, so the server completes a fifth less work.
+ * The loss stops growing at five times as many queries as cores, where the server does half the
+ * work it could.
  */
 const CONTENTION = 0.25;
 const WORST_OVERLOAD = 4;
@@ -27,15 +30,31 @@ interface Server {
   gone: boolean;
   /** Taken down by a fault, and to be brought back by the matching `revive`. */
   killed: boolean;
+  /**
+   * How much work, in milliseconds at full speed, each running query has been given so far. Every
+   * query gets the same share, so one number serves for all of them.
+   */
+  progress: number;
+  /** When `progress` was last brought up to date. */
+  progressAt: number;
+  /** The running queries, each tagged with the `progress` at which it will be done. */
+  running: TagHeap;
+  /** Bumped whenever the next finish is rescheduled, so the event for the old one is ignored. */
+  epoch: number;
 }
 
 /**
  * A primary that takes every write, and optional replicas that share the reads.
  *
- * A server has no queue of its own: every query it accepts runs at once. Up to `concurrency`
- * queries run at full speed. Beyond that they share the same cores, so each slows down in
- * proportion, and a little more for getting in each other's way. That is why a connection pool
+ * A server has no queue of its own: every query it accepts runs at once, and they share its cores
+ * equally. Up to `concurrency` queries each have a core and run at full speed. Beyond that each gets
+ * a fraction of a core, and a little less still for getting in each other's way, so all of them
+ * slow down together, including the ones that were already running. That is why a connection pool
  * larger than the database can use makes everything slower rather than faster.
+ *
+ * Sharing is tracked with one running total per server (`progress`) rather than by revisiting
+ * every query whenever one starts or ends: a query that needs `w` milliseconds of work is done
+ * when the total has moved on by `w` from where it started.
  */
 export class DatabaseRuntime extends NodeRuntime {
   private cores: number;
@@ -68,8 +87,7 @@ export class DatabaseRuntime extends NodeRuntime {
   }
 
   arrive(call: number): void {
-    const sim = this.sim;
-    const calls = sim.calls;
+    const calls = this.sim.calls;
     if (!this.admit(call)) return;
 
     const chosen = calls.cls[call] === READ ? this.pickReader() : this.primary;
@@ -83,43 +101,44 @@ export class DatabaseRuntime extends NodeRuntime {
       return;
     }
 
+    const work = (calls.cls[call] === READ ? this.readTime(this.workRng) : this.writeTime(this.workRng)) * this.slowFactor;
+    this.catchUp(server);
     server.active++;
-    this.recount();
+    server.running.push(server.progress + work, call);
     calls.inst[call] = chosen;
     calls.state[call] = IN_SERVICE;
-    const base = calls.cls[call] === READ ? this.readTime(this.workRng) : this.writeTime(this.workRng);
-    const work = base * this.slowdown(server.active) * this.slowFactor;
-    sim.queue.push(sim.now + work, EV_SERVICE_DONE, call, calls.gen[call]!, 0);
+    this.recount();
+    this.scheduleFinish(server, chosen);
   }
 
-  override serviceDone(call: number): void {
+  override timer(id: number, arg: number): void {
+    if (id === TIMER_FAILOVER) {
+      this.endFailover(arg);
+      return;
+    }
+    const index = id - TIMER_FINISH;
+    const server = this.servers[index]!;
+    // The set of running queries has changed since this was scheduled, and so has the finish time.
+    if (arg !== server.epoch || server.running.size === 0) return;
+
     const sim = this.sim;
     const calls = sim.calls;
-    this.servers[calls.inst[call]!]!.active--;
+    this.catchUp(server);
+    const call = server.running.minItem();
+    server.running.pop();
+    server.active--;
     this.recount();
     if (calls.orphan[call] === 1) this.wasted++;
     this.countOk(sim.now - calls.tArrive[call]!);
     sim.finish(call, OK, -1, 0);
-  }
-
-  override timer(id: number, arg: number): void {
-    if (id !== TIMER_FAILOVER) return;
-    const failed = this.servers[arg]!;
-    if (failed.up || failed.gone || this.primary !== arg) return;
-    // A replica takes over if there is one; otherwise the old primary has to come back.
-    const successor = this.servers.findIndex((server, index) => index !== arg && server.up);
-    if (successor >= 0) {
-      failed.gone = true;
-      this.primary = successor;
-    } else {
-      failed.up = true;
-    }
-    this.recount();
+    this.scheduleFinish(server, index);
   }
 
   reconfigure(node: DesignNode): void {
     if (node.type !== 'database') return;
     const params = node.params;
+    // The number of cores sets how fast queries progress, so settle the old rate first.
+    for (const server of this.servers) this.catchUp(server);
     this.cores = params.concurrency;
     this.maxConnections = params.maxConnections;
     this.failoverMs = params.failoverMs;
@@ -140,6 +159,9 @@ export class DatabaseRuntime extends NodeRuntime {
       replicas--;
     }
     this.recount();
+    this.servers.forEach((server, index) => {
+      this.scheduleFinish(server, index);
+    });
   }
 
   /** Takes replicas down, or the whole database when `count` is undefined. */
@@ -200,11 +222,43 @@ export class DatabaseRuntime extends NodeRuntime {
     return { replicas, primaryUp: this.servers[this.primary]!.up && !this.down ? 1 : 0 };
   }
 
-  /** How many times longer a query takes with `active` of them running. */
+  /** How many milliseconds one of `active` queries needs to do a millisecond of work. */
   private slowdown(active: number): number {
     if (active <= this.cores) return 1;
     const over = Math.min((active - this.cores) / this.cores, WORST_OVERLOAD);
     return (active / this.cores) * (1 + CONTENTION * over);
+  }
+
+  /** Credits the running queries with the work they have been given since the last look. */
+  private catchUp(server: Server): void {
+    const now = this.sim.now;
+    if (server.active > 0) server.progress += (now - server.progressAt) / this.slowdown(server.active);
+    server.progressAt = now;
+  }
+
+  /**
+   * Schedules the moment the query closest to done will finish, at the pace the server is going
+   * now. Anything that changes the pace calls this again, which makes the earlier event stale.
+   */
+  private scheduleFinish(server: Server, index: number): void {
+    server.epoch = (server.epoch + 1) | 0;
+    if (server.running.size === 0 || !server.up) return;
+    const left = Math.max(server.running.minTag() - server.progress, 0);
+    this.sim.queue.push(this.sim.now + left * this.slowdown(server.active), EV_TIMER, this.index, index + TIMER_FINISH, server.epoch);
+  }
+
+  private endFailover(index: number): void {
+    const failed = this.servers[index]!;
+    if (failed.up || failed.gone || this.primary !== index) return;
+    // A replica takes over if there is one; otherwise the old primary has to come back.
+    const successor = this.servers.findIndex((server, other) => other !== index && server.up);
+    if (successor >= 0) {
+      failed.gone = true;
+      this.primary = successor;
+    } else {
+      failed.up = true;
+    }
+    this.recount();
   }
 
   /** The next replica that is up, in turn; the primary if there is none. */
@@ -220,13 +274,23 @@ export class DatabaseRuntime extends NodeRuntime {
   }
 
   private addServer(): void {
-    this.servers.push({ active: 0, up: true, gone: false, killed: false });
+    this.servers.push({
+      active: 0,
+      up: true,
+      gone: false,
+      killed: false,
+      progress: 0,
+      progressAt: this.sim.now,
+      running: new TagHeap(),
+      epoch: 0,
+    });
   }
 
   /** Fails every query a server is running, because the server is gone. */
   private failServer(index: number): void {
     const sim = this.sim;
     const calls = sim.calls;
+    const server = this.servers[index]!;
     for (let call = 0; call < calls.capacity; call++) {
       const state = calls.state[call]!;
       if (state === FREE || state !== IN_SERVICE || calls.node[call] !== this.index || calls.inst[call] !== index) continue;
@@ -234,7 +298,9 @@ export class DatabaseRuntime extends NodeRuntime {
       this.countFailure(NODE_DOWN);
       sim.abort(call, NODE_DOWN, this.index);
     }
-    this.servers[index]!.active = 0;
+    server.active = 0;
+    server.running.clear();
+    server.epoch = (server.epoch + 1) | 0;
   }
 
   /**
