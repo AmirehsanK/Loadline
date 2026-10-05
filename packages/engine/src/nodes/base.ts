@@ -14,6 +14,9 @@ export interface NodeWindow {
   queued: number;
   /** Calls holding a slot at the end of the window. */
   inFlight: number;
+  /** Time from arrival to completion, for the calls that succeeded in this window. */
+  meanMs: number;
+  p99: number;
 }
 
 /**
@@ -55,12 +58,23 @@ export abstract class NodeRuntime {
   private windowFailed = 0;
   private windowBusyArea = 0;
   private windowCapacityArea = 0;
+  private readonly windowLatency = new Histogram();
 
   constructor(sim: Simulation, index: number, id: string, type: NodeType) {
     this.sim = sim;
     this.index = index;
     this.id = id;
     this.type = type;
+  }
+
+  /** Calls holding a slot right now. */
+  get inFlight(): number {
+    return this.busy;
+  }
+
+  /** Calls waiting for a slot right now. */
+  get waiting(): number {
+    return this.queued;
   }
 
   /** Called once at time zero. */
@@ -102,6 +116,7 @@ export abstract class NodeRuntime {
     this.ok++;
     this.windowOk++;
     this.latency.record(latencyMs);
+    this.windowLatency.record(latencyMs);
   }
 
   protected countFailure(result: number): void {
@@ -122,7 +137,10 @@ export abstract class NodeRuntime {
       utilization: capacity > 0 ? busy / capacity : 0,
       queued: this.queued,
       inFlight: this.busy,
+      meanMs: this.windowLatency.mean(),
+      p99: this.windowLatency.quantile(0.99),
     };
+    this.windowLatency.reset();
     this.windowArrivals = 0;
     this.windowOk = 0;
     this.windowFailed = 0;

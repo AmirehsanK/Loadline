@@ -177,6 +177,22 @@ describe('workload phases', () => {
     expect(created(0, 30_000)).toBe(report.requests.created);
   });
 
+  it('can be overridden while the run is in progress', () => {
+    const target = chain(100, [{ concurrency: 100, serviceTime: fixed(1) }]);
+    const sim = createSimulation(target, { seed: 8 });
+    sim.advance(10_000);
+    sim.setMultiplier(5);
+    sim.advance(20_000);
+    sim.setMultiplier(0);
+    sim.advance(30_000);
+
+    const created = (from: number, to: number) =>
+      sim.samples.filter((sample) => sample.t > from && sample.t <= to).reduce((sum, s) => sum + s.created, 0);
+    expect(Math.abs(created(0, 10_000) - 1000)).toBeLessThan(4 * Math.sqrt(1000));
+    expect(Math.abs(created(10_000, 20_000) - 5000)).toBeLessThan(4 * Math.sqrt(5000));
+    expect(created(20_000, 30_000)).toBe(0);
+  });
+
   it('start at the rate of a phase placed at time zero', () => {
     const target = chain(100, [{ concurrency: 100, serviceTime: fixed(1) }]);
     const { report } = run(target, { sendMs: 5000, workload: { phases: [{ atMs: 0, multiplier: 0 }] } });
@@ -211,6 +227,21 @@ describe('sampling', () => {
     expect(last.nodes[1]!.queued).toBeGreaterThan(150);
     expect(last.nodes[1]!.ok).toBe(50);
     expect(last.edges[0]!.calls).toBe(last.created);
+  });
+
+  it('exposes what each node is holding right now', () => {
+    const target = chain(100, [{ serviceTime: fixed(20) }]);
+    const sim = createSimulation(target, { seed: 1 });
+    expect(sim.gauges()).toEqual([
+      { inFlight: 0, queued: 0 },
+      { inFlight: 0, queued: 0 },
+    ]);
+    sim.advance(5000);
+    const [users, service] = sim.gauges();
+    const last = sim.samples[sim.samples.length - 1]!;
+    expect(service).toEqual({ inFlight: 1, queued: last.nodes[1]!.queued });
+    // Every request the client is waiting on is either in the service's slot or in its queue.
+    expect(users!.inFlight).toBe(service!.inFlight + service!.queued);
   });
 });
 

@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 const deterministic = 'The engine must be deterministic (docs/SPEC.md, rule 7).';
@@ -16,6 +17,11 @@ export default tseslint.config(
   },
   js.configs.recommended,
   {
+    // Repository scripts run on Node.js.
+    files: ['scripts/**'],
+    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
+  },
+  {
     files: ['**/*.ts', '**/*.tsx'],
     extends: [...tseslint.configs.strictTypeChecked],
     languageOptions: {
@@ -26,6 +32,10 @@ export default tseslint.config(
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     },
+  },
+  {
+    files: ['apps/web/src/**/*.ts', 'apps/web/src/**/*.tsx'],
+    extends: [reactHooks.configs.flat.recommended],
   },
   {
     files: ['packages/engine/src/**/*.ts'],

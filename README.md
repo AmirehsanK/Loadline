@@ -16,7 +16,7 @@ the same design and seed give the same numbers.
 |---|---|
 | 0 — Scaffold | done |
 | 1 — Engine kernel | done |
-| 2 — Walking skeleton | |
+| 2 — Walking skeleton | done |
 | 3 — Full component set | |
 | 4 — Levels | |
 | 5 — Share links, embed, deploy | |
@@ -33,7 +33,8 @@ Requires Node 22.18 or newer.
 
 ```bash
 npm install
-npm run check
+npm run check                    # typecheck, lint, tests, build
+npm run dev -w @loadline/web     # the playground, on http://localhost:5183
 ```
 
 ## License

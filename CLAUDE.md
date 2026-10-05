@@ -26,6 +26,14 @@ find-and-replace before the repo goes public.
   columns.
 - The connection is slow and its DNS is intermittent. An `npm install` that hangs is usually the
   network, not the lockfile.
+- The web app's dev server is the `loadline-web` entry in `D:\Git\.claude\launch.json`, on port
+  5183.
+- **Vite's file watcher misses the second of two saves made within a few milliseconds**, which is
+  what two edits to one file in the same tool batch are. The server then keeps serving the first
+  save, and the browser reports an error that is no longer in the file. `touch` the file (or every
+  file under `apps/web/src`) and reload before believing such an error.
+- The preview pane returns screenshots 800 pixels wide. Emulating a larger viewport scales the
+  whole page down to fit; click coordinates are in the screenshot's pixels, not the viewport's.
 
 ## Commands
 
@@ -44,6 +52,14 @@ npm run bench -w @loadline/engine
 - A new engine behaviour needs a test that shows it emerging, and a level that teaches it. Realism
   has no natural end; that pairing is the boundary.
 - Technical proper nouns stay English in the Persian UI: component names, p99, RPS, ms.
+- Every word the interface shows comes from `apps/web/src/i18n`. A message that takes values is a
+  function in the catalog, never a string glued together in a component.
+- Styles use logical directions (`ms-`, `pe-`, `start-`, `text-end`), so the interface can mirror
+  for Persian. `npm run lint` fails on a physical one (`ml-`, `text-left`, ...). The canvas and the
+  charts are the exception: they set `dir="ltr"` and are always drawn left to right.
+- The look is a painted hull (see the comment at the top of `apps/web/src/styles.css`). Sea blue
+  and violet are chart series colours and were validated for colour-blind separation; hull red and
+  signal amber mean failing and at risk, and are never used for a series.
 
 ## Load-bearing decisions that look optional but are not
 

@@ -1,0 +1,165 @@
+@import 'tailwindcss';
+
+/*
+ * The palette is a painted hull: cool deck white, navy ink, sea blue for load being carried, and
+ * the red of the paint below the waterline for load past the mark.
+ *
+ * Sea and violet are the two chart series; they are checked for colour-blind separation and
+ * contrast. Oxide and signal are status colours (failing, at risk) and are never used for a series.
+ */
+@theme {
+  --color-deck: #f2f5f7;
+  --color-plate: #ffffff;
+  --color-shallows: #e8eff3;
+  --color-grid: #d6e0e6;
+  --color-line: #c5d1da;
+  --color-ink: #0f2233;
+  --color-ink-2: #44586a;
+  --color-ink-3: #5e7183;
+  --color-sea: #0e8aa0;
+  --color-sea-wash: #d3eaef;
+  --color-violet: #4a3aa7;
+  --color-oxide: #b3402a;
+  --color-oxide-wash: #f7e3de;
+  --color-signal: #b87400;
+  --color-signal-wash: #fbefd5;
+
+  --font-sans: 'B612', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'B612 Mono', ui-monospace, 'Cascadia Mono', monospace;
+  --font-display: 'Big Shoulders Stencil Variable', 'B612', sans-serif;
+}
+
+@layer base {
+  html {
+    font-size: 13px;
+  }
+
+  body {
+    background: var(--color-deck);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  input[type='number'] {
+    appearance: textfield;
+  }
+  input[type='number']::-webkit-inner-spin-button {
+    appearance: none;
+  }
+}
+
+@layer components {
+  /* Panel titles are stencilled on, like the markings on a hull. */
+  .marking {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .field-label {
+    color: var(--color-ink-2);
+    font-size: 0.92rem;
+  }
+
+  .field-input {
+    width: 100%;
+    border: 1px solid var(--color-line);
+    border-radius: 3px;
+    background: var(--color-plate);
+    padding-block: 0.3rem;
+    padding-inline: 0.5rem;
+    font-family: var(--font-mono);
+    color: var(--color-ink);
+  }
+  .field-input:hover {
+    border-color: var(--color-ink-3);
+  }
+  .field-input[aria-invalid='true'] {
+    border-color: var(--color-oxide);
+    background: var(--color-oxide-wash);
+  }
+}
+
+/* --- The canvas ---------------------------------------------------------------------------- */
+
+.react-flow {
+  --xy-background-color: var(--color-shallows);
+  --xy-edge-stroke: var(--color-line);
+  --xy-connectionline-stroke: var(--color-ink);
+  --xy-connectionline-stroke-width: 1.5;
+  --xy-handle-background-color: var(--color-plate);
+  --xy-handle-border-color: var(--color-ink);
+  --xy-controls-button-background-color: var(--color-plate);
+  --xy-controls-button-border-color: var(--color-line);
+  --xy-controls-button-color: var(--color-ink);
+  --xy-attribution-background-color: transparent;
+  font-family: var(--font-sans);
+}
+
+.react-flow__handle {
+  width: 11px;
+  height: 11px;
+  border-width: 1.5px;
+}
+.react-flow__handle:hover,
+.react-flow__handle.connectingto {
+  background: var(--color-ink);
+}
+
+.react-flow__controls {
+  border-radius: 3px;
+  box-shadow: none;
+  border: 1px solid var(--color-line);
+  overflow: hidden;
+}
+
+/* Traffic moving along a connection. The dashes only move while the run does. */
+.flow-traffic {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 2 12;
+  animation: flow-traffic linear infinite;
+  animation-play-state: paused;
+  pointer-events: none;
+}
+.is-running .flow-traffic {
+  animation-play-state: running;
+}
+@keyframes flow-traffic {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+.gauge-level {
+  transition: height 600ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-traffic {
+    animation: none;
+  }
+  .gauge-level {
+    transition: none;
+  }
+}
+
+/* --- Charts -------------------------------------------------------------------------------- */
+
+.uplot,
+.uplot * {
+  font-family: var(--font-mono);
+}
+.u-cursor-x {
+  border-inline-end: 1px solid var(--color-ink-3) !important;
+}

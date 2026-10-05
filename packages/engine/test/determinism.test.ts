@@ -77,7 +77,7 @@ describe('determinism', () => {
     const { report } = run(busy(), { seed: 2026, sendMs: 30_000, drainMs: 5000 });
     expect({ hash: hashReport(report), requests: report.requests, latency: report.latency }).toMatchInlineSnapshot(`
       {
-        "hash": "50aa742acbd5a0b6",
+        "hash": "0450779918b5de49",
         "latency": {
           "maxMs": 408.2882309296547,
           "meanMs": 38.0282840596446,

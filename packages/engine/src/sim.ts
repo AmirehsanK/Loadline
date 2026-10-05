@@ -43,6 +43,14 @@ export interface EdgeWindow {
   failed: number;
 }
 
+/** What one node is holding at an instant. */
+export interface Gauge {
+  /** Calls holding a slot. For a client: requests it is waiting on. */
+  inFlight: number;
+  /** Calls waiting for a slot. */
+  queued: number;
+}
+
 /** What happened during one sampling window. */
 export interface WindowSample {
   /** End of the window, in simulated milliseconds. */
@@ -232,8 +240,7 @@ export class Simulation {
           nodes[a]!.timer(queue.poppedB, queue.poppedC);
           break;
         case EV_PHASE:
-          this.multiplier = this.phases[a]!.multiplier;
-          for (const node of nodes) node.rateChanged();
+          this.setMultiplier(this.phases[a]!.multiplier);
           break;
         case EV_SAMPLE:
           this.closeWindow();
@@ -244,6 +251,17 @@ export class Simulation {
     this.events += processed;
     if (untilMs > this.now) this.now = untilMs;
     return true;
+  }
+
+  /** Scales every client's rate from now on. A later workload phase replaces it. */
+  setMultiplier(value: number): void {
+    this.multiplier = value;
+    for (const node of this.nodes) node.rateChanged();
+  }
+
+  /** What each node is holding right now, in design order. */
+  gauges(): Gauge[] {
+    return this.nodes.map((node) => ({ inFlight: node.inFlight, queued: node.waiting }));
   }
 
   /**
