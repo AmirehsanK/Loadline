@@ -4,7 +4,7 @@ import type { FieldText, Messages } from './en.ts';
 // The Persian catalog. It has the type of the English one, so a message that is missing here, or
 // takes different values, does not compile.
 //
-// Names of parts (Client, Cache, Load balancer, ...), p50 and p99, ms and req/s stay as they are in
+// Names of parts (Client, Cache, Load balancer, ...), p50 and p99, ms and /s stay as they are in
 // English: they are what the same things are called in every tool and every job posting. Numbers
 // that are read off the system (a rate, a latency, a cost) keep Latin digits; numbers that are part
 // of a sentence are written in Persian digits.
@@ -200,9 +200,9 @@ export const fa: Messages = {
     again: 'اجرای دوباره',
     progress: (now: string, end: string) => `${now} از ${end}`,
     traffic: 'ترافیک',
-    trafficValue: (factor: string, rate: string) => `${factor}× · ${rate} req/s`,
+    trafficValue: (factor: string, rate: string) => `${factor}× · ${rate}/s`,
     spike: 'جهش ۳ برابری به مدت ۱۰ ثانیه',
-    clock: 'زمان شبیه‌سازی',
+    clock: 'زمان',
     behind: (speed: string) => `سرعت اجرا ${speed}× است. شبیه‌سازی به سرعتی که انتخاب کرده‌اید نمی‌رسد.`,
     blocked: 'برای اجرا، مشکل‌های طرح را برطرف کنید.',
     failed: 'اجرا متوقف شد',
@@ -369,7 +369,7 @@ export const fa: Messages = {
     costNote: 'در ماه',
     dollars: (amount: string) => `$${amount}`,
     median: 'نیمی سریع‌ترند',
-    tail: 'یکی از هر ۱۰۰ کندتر است',
+    tail: '۱٪ کندترند',
     latencyTitle: 'زمان پاسخ',
     series: { p50: 'p50', p99: 'p99' },
     perSecond: 'در ثانیه',

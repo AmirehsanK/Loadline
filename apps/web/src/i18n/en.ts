@@ -1,7 +1,7 @@
 // Every word the interface shows comes from a catalog like this one. A message that takes values
 // is a function, so each language can order and inflect it as it needs.
 //
-// Technical proper nouns and units stay English in every language: p50, p99, ms, req/s.
+// Technical proper nouns and units stay English in every language: p50, p99, ms, /s.
 
 /** The words for one setting: its label, an optional line of help, and the names of its choices. */
 export interface FieldText {
@@ -202,9 +202,9 @@ export const en = {
     again: 'Run again',
     progress: (now: string, end: string) => `${now} of ${end}`,
     traffic: 'Traffic',
-    trafficValue: (factor: string, rate: string) => `${factor}× · ${rate} req/s`,
+    trafficValue: (factor: string, rate: string) => `${factor}× · ${rate}/s`,
     spike: 'Spike ×3 for 10 s',
-    clock: 'Simulated time',
+    clock: 'Time',
     behind: (speed: string) => `Running at ${speed}×. The simulation cannot keep up with the speed you chose.`,
     blocked: 'Fix the problems in the design to run it.',
     failed: 'The run stopped',
@@ -371,7 +371,7 @@ export const en = {
     costNote: 'a month',
     dollars: (amount: string) => `$${amount}`,
     median: 'half are faster',
-    tail: '1 in 100 is slower',
+    tail: '1% are slower',
     latencyTitle: 'Response time',
     series: { p50: 'p50', p99: 'p99' },
     perSecond: 'per second',

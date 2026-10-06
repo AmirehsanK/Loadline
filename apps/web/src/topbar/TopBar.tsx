@@ -27,7 +27,7 @@ export function TopBar() {
   const running = status === 'running';
 
   return (
-    <header className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-plate px-4 py-2">
+    <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-plate px-4 py-2">
       <a href="#canvas" className="sr-only focus:not-sr-only">
         {m.app.skipToCanvas}
       </a>
@@ -67,17 +67,12 @@ export function TopBar() {
       <ShareButton />
       <ReviewButton />
       <SpeedPicker ends={level !== null} />
-      {level ? (
-        <Timeline script={scriptOfLevel(level)} />
-      ) : workload ? (
-        <Scripted />
-      ) : (
-        <>
-          <TrafficControl />
-          <Clock />
-        </>
-      )}
-      <LocaleSwitch />
+      {level ? <Timeline script={scriptOfLevel(level)} /> : workload ? <Scripted /> : <TrafficControl />}
+      {/* Kept together at the far end, so that a bar too narrow for one row does not strand either. */}
+      <div className="ms-auto flex items-center gap-4">
+        {!level && !workload && <Clock />}
+        <LocaleSwitch />
+      </div>
 
       <RunNotice />
       <SharedNotice />
@@ -111,7 +106,7 @@ function Clock() {
   const m = useMessages();
   const now = useSim((state) => state.now);
   return (
-    <div className="ms-auto flex items-baseline gap-2">
+    <div className="flex items-baseline gap-2">
       <span className="text-[0.85rem] text-ink-2">{m.run.clock}</span>
       <span className="text-[1.15rem] font-bold tabular-nums">{formatClock(now)}</span>
     </div>
@@ -190,9 +185,9 @@ function TrafficControl() {
         onChange={(event) => {
           setMultiplier(Number(event.target.value));
         }}
-        className="w-40 accent-ink"
+        className="w-28 accent-ink"
       />
-      <output htmlFor={id} className="w-44 font-mono whitespace-nowrap tabular-nums">
+      <output htmlFor={id} className="min-w-[15ch] font-mono whitespace-nowrap tabular-nums">
         {m.run.trafficValue(multiplier.toFixed(1), formatCount(base * multiplier))}
       </output>
       <button

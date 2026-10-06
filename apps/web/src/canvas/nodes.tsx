@@ -112,7 +112,7 @@ function Plate({ id, type, name, selected, level, children, calls = true }: Plat
   const m = useMessages();
   const instances = useSim(gaugeOf(id))?.instances;
   return (
-    <div className={`flex h-[4.6rem] w-52 overflow-hidden rounded-[3px] border border-ink bg-plate ${outline(selected)}`}>
+    <div className={`flex h-[5.3rem] w-52 overflow-hidden rounded-[3px] border border-ink bg-plate ${outline(selected)}`}>
       <Handle type="target" position={Position.Left} />
       {level !== undefined && <LoadGauge level={level} label={m.node.load(formatPercent(level))} lineLabel={m.node.loadLine} />}
       <div className="flex min-w-0 flex-1 flex-col justify-between py-1.5 ps-2.5 pe-3">
