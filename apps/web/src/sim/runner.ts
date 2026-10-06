@@ -1,8 +1,8 @@
-import { createSimulation, describeBlame, findBottleneck, summarize, totalMonthlyCost } from '@loadline/engine';
+import { buildReport, createSimulation, describeBlame, findBottleneck, summarize, totalMonthlyCost } from '@loadline/engine';
 import type { Command, Design, Simulation, Workload } from '@loadline/engine';
 import { evaluate, startScenario } from '@loadline/scenarios';
 import type { Scenario } from '@loadline/scenarios';
-import type { Frame } from './protocol.ts';
+import type { Frame, FullReport } from './protocol.ts';
 
 // A slice of work is cut into chunks this size, so the time budget is checked often enough.
 const CHUNK_EVENTS = 20_000;
@@ -125,6 +125,13 @@ export class Runner {
     if (sim.now < this.endMs) return false;
     this.playing = false;
     return true;
+  }
+
+  /** The whole report of the run so far, as the command line would print it, or null with no run. */
+  report(): FullReport | null {
+    const sim = this.sim;
+    if (!sim) return null;
+    return { report: buildReport(sim), outcome: this.level && this.design ? evaluate(this.level, this.design, sim) : null };
   }
 
   /** The state of the run, with the samples closed since the previous frame. */

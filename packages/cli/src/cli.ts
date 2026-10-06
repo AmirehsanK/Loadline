@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { DesignError } from '@loadline/engine';
-import { LEVELS } from '@loadline/scenarios';
+import { LEVELS, buildReviewPrompt } from '@loadline/scenarios';
 import { ShareError, encodeShare } from '@loadline/share';
 import { AssertionSyntaxError, check, parseAssertion } from './assert.ts';
 import { readText } from './document.ts';
@@ -19,6 +19,8 @@ export const USAGE = `Usage: loadline <command> [options]
   test <file> --assert <cond>...   Run a design and check conditions on the result.
                                    Exits 1 if any fails, so it can gate a build.
   share <file> [--base <url>]      Print a link that opens the design in the playground.
+  review <file> [options]          Run a design and print a prompt that asks a language model
+                                   to review the run. Pipe it into the assistant you use.
   levels                           List the levels.
 
 A file is JSON or YAML: a design, or a document with a "design" and optionally a
@@ -30,6 +32,7 @@ Options for simulate and test:
   --seed <number>     The seed. The same seed gives the same numbers. Default 2026.
   --level <id>        Run the design against a level and score it.
   --json              Print the result as JSON.
+  --language <en|fa>  For review: the language the review should be written in. Default en.
   --assert <cond>     For test. May be repeated. A condition is a metric, a comparison
                       and a number: p99<200ms, errors<=1%, cost<300, stars>=2.
                       Metrics: p50 p95 p99 mean max (ms or s), errors (% or a fraction),
@@ -100,6 +103,7 @@ export async function cli(argv: string[], io: Io): Promise<number> {
         level: { type: 'string' },
         base: { type: 'string' },
         assert: { type: 'string', multiple: true },
+        language: { type: 'string' },
         json: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
       },
@@ -162,6 +166,23 @@ export async function cli(argv: string[], io: Io): Promise<number> {
         const document = load(file, io);
         const base = values.base ?? PLAYGROUND_URL;
         io.out(`${base.endsWith('/') ? base : `${base}/`}#/d/${await encodeShare(document)}`);
+        return EXIT_OK;
+      }
+
+      case 'review': {
+        const document = load(file, io);
+        const language = values.language ?? 'en';
+        if (language !== 'en' && language !== 'fa') throw new UsageError(`"${language}" is not a language a review can be asked for in. Use en or fa.`);
+        const run = runWith(document, values);
+        const prompt = buildReviewPrompt({
+          design: document.design,
+          report: run.report,
+          bottleneck: run.bottleneck,
+          ...(run.level ? { level: run.level } : {}),
+          ...(document.workload ? { workload: document.workload } : {}),
+          language,
+        });
+        io.out(`${prompt.system}\n\n${prompt.user}`);
         return EXIT_OK;
       }
 

@@ -5,6 +5,7 @@ import { LocaleSwitch } from '../i18n/LocaleSwitch.tsx';
 import { useLevelText, useMessages } from '../i18n/index.ts';
 import { BackIcon, BoltIcon, LoadMark, PauseIcon, PlayIcon, RedoIcon, RestartIcon, UndoIcon } from '../icons.tsx';
 import { Timeline, scriptOfLevel, scriptOfWorkload } from '../level/Timeline.tsx';
+import { ReviewButton } from '../review/ReviewDialog.tsx';
 import { ShareButton } from '../share/ShareDialog.tsx';
 import { formatClock, formatCount } from '../metrics/format.ts';
 import { HOME, hrefOf } from '../route.ts';
@@ -64,6 +65,7 @@ export function TopBar() {
 
       <History />
       <ShareButton />
+      <ReviewButton />
       <SpeedPicker ends={level !== null} />
       {level ? (
         <Timeline script={scriptOfLevel(level)} />

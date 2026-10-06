@@ -1,4 +1,4 @@
-import type { BlameReport, Bottleneck, Command, Design, Gauge, WindowSample, Workload } from '@loadline/engine';
+import type { BlameReport, Bottleneck, Command, Design, Gauge, Report, WindowSample, Workload } from '@loadline/engine';
 import type { Outcome } from '@loadline/scenarios';
 
 /** Running totals since the start of the run. */
@@ -31,7 +31,9 @@ export type ToWorker =
   | { type: 'speed'; value: number }
   | { type: 'multiplier'; value: number }
   /** Inject a fault. */
-  | { type: 'command'; command: Command };
+  | { type: 'command'; command: Command }
+  /** Ask for the whole report of the run so far. The answer carries the same `id`. */
+  | { type: 'report'; id: number };
 
 /** How a run of a level stands. */
 export interface LevelFrame {
@@ -68,6 +70,15 @@ export interface Frame {
 }
 
 /** What the worker sends to the page. */
+/** Everything a run has produced: what the command line prints, and what a review is given. */
+export interface FullReport {
+  report: Report;
+  /** How the run stands against its level, when it is a run of one. */
+  outcome: Outcome | null;
+}
+
 export type FromWorker =
   | { type: 'frame'; frame: Frame }
-  | { type: 'failed'; run: number; message: string };
+  | { type: 'failed'; run: number; message: string }
+  /** The answer to a `report` request; null when there is no run to report on. */
+  | { type: 'report'; id: number; full: FullReport | null };

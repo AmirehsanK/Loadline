@@ -4,7 +4,7 @@ import { simulationKey, structureKey } from '../design/model.ts';
 import { currentDesign, useDesign } from '../design/store.ts';
 import { useProgress } from '../level/progress.ts';
 import { DEFAULT_SEED, FULL_SPEED } from './protocol.ts';
-import type { FromWorker, ToWorker } from './protocol.ts';
+import type { FromWorker, FullReport, ToWorker } from './protocol.ts';
 import { EMPTY_RUN, HISTORY, useSim } from './store.ts';
 
 // Owns the worker. The design store says what to simulate, the sim store holds what came back, and
@@ -32,8 +32,17 @@ function runKey(state: { seed: number | null; workload: unknown }, design: Desig
   return `${simulationKey(design)}|${String(state.seed)}|${JSON.stringify(state.workload)}`;
 }
 
+// Requests for a full report that the worker has not answered yet, by their id.
+const awaited = new Map<number, (full: FullReport | null) => void>();
+let requests = 0;
+
 worker.onmessage = (event: MessageEvent<FromWorker>) => {
   const message = event.data;
+  if (message.type === 'report') {
+    awaited.get(message.id)?.(message.full);
+    awaited.delete(message.id);
+    return;
+  }
   if (message.type === 'failed') {
     if (message.run === run) useSim.setState({ status: 'failed', failure: message.message });
     return;
@@ -170,6 +179,16 @@ export function setSpeed(value: number): void {
 export function setMultiplier(value: number): void {
   useSim.setState({ multiplier: value });
   send({ type: 'multiplier', value });
+}
+
+/** The whole report of the run as it stands, or null when there is nothing to report on. */
+export function requestReport(): Promise<FullReport | null> {
+  if (useSim.getState().status === 'blocked') return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const id = ++requests;
+    awaited.set(id, resolve);
+    send({ type: 'report', id });
+  });
 }
 
 /** Injects a fault into the run in progress. */

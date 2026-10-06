@@ -272,12 +272,26 @@ Sandbox mode has every component, manual faults and no objectives.
 
 ### 7.5 AI reviewer (no backend)
 
-- One shared prompt builder: design, level brief, run report (KPIs, per-node utilization, failure
-  causes, bottleneck, a few sampled traces). The reply follows the UI language.
-- Three paths: copy the prompt into any assistant; bring your own Anthropic key (kept in that
-  browser's localStorage, sent only to `api.anthropic.com`, never in share links or exports); or
-  the MCP server with the user's own agent.
-- Responses render as plain markdown, no raw HTML. A CSP meta tag limits `connect-src`.
+- One prompt builder (`buildReviewPrompt` in `packages/scenarios`), used by every path: the
+  design in words, what was asked of it (the level's brief, objectives and fixed settings, or the
+  traffic it followed), and what the run measured (totals, each part, the connections where
+  something went wrong, why requests failed, where the time went, and a dozen moments over time).
+  Everything in it is a setting or a measurement, and the model is told to add nothing to it. The
+  reply is asked for in the language of the interface.
+- Three paths. Copy the prompt into any assistant (`loadline review <file>` prints the same
+  prompt at the command line). Or bring an Anthropic API key: it is typed into the visitor's own
+  browser, kept there only if they ask, sent only to `api.anthropic.com`, and is never part of a
+  link, an export or an embed. Or connect an agent to the MCP server and let it run designs itself.
+- The call is made with the official SDK from the browser, to `claude-opus-5-5`, streamed, with
+  the API's default fallback switched on so that a declined request is retried on the model
+  Anthropic recommends instead of coming back empty. A refusal, a refused key, a full rate limit
+  and a dropped connection are each reported in their own words.
+- A reply is text from outside and is shown as text: the small part of Markdown a review uses is
+  read into a tree and drawn with the app's own elements. Nothing in it reaches the page as markup.
+- The content security policy lets the built pages call `api.anthropic.com` and nowhere else.
+- It is tested end to end against a provider that is not there: the real SDK makes the request and
+  a stand-in for the network answers as the API does. **A review with a real key has not been run
+  yet; that check is Amirehsan's.**
 
 ## 8. Milestones
 

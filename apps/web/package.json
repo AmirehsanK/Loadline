@@ -13,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
     "@fontsource-variable/big-shoulders-stencil": "5.3.0",
     "@fontsource-variable/estedad": "5.3.0",
     "@fontsource/b612": "5.3.0",

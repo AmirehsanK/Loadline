@@ -4,9 +4,10 @@ import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
 
 /**
- * What a built page may load and run: its own files and nothing else. The app talks to no server,
- * so anything that tries to (through a bug, or a design from a link that found a hole) is stopped
- * by the browser. Inline styles are allowed because the canvas positions its parts with them.
+ * What a built page may load and run: its own files and nothing else. The app talks to no server
+ * of its own, so anything that tries to (through a bug, or a design from a link that found a hole)
+ * is stopped by the browser. Inline styles are allowed because the canvas positions its parts
+ * with them. The one address it may call is Anthropic's API, for a review with the visitor's key.
  */
 const POLICY = [
   "default-src 'self'",
@@ -14,7 +15,7 @@ const POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' https://api.anthropic.com",
   "worker-src 'self'",
   "object-src 'none'",
   "base-uri 'none'",

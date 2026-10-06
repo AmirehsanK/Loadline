@@ -61,6 +61,40 @@ export const en = {
     imported: 'Imported.',
     close: 'Close',
   },
+  review: {
+    button: 'Review',
+    title: 'Ask for a review',
+    intro:
+      'A language model reads the design and what the last run measured, and says what it would change. It is given what is on this screen and nothing else.',
+    needRun: 'Run the design first. A review is of a run.',
+    copyTitle: 'With any assistant',
+    copyHint: 'Copy the prompt and paste it into the assistant you use.',
+    copy: 'Copy the prompt',
+    copied: 'Copied',
+    keyTitle: 'With Claude, using your own key',
+    keyHint:
+      'Your Anthropic API key is sent only to api.anthropic.com, straight from this browser. It is never part of a link or an exported file. The review is billed to your key.',
+    keyLabel: 'Anthropic API key',
+    remember: 'Keep the key in this browser',
+    ask: 'Ask Claude',
+    asking: 'Reading the run...',
+    stop: 'Stop',
+    answeredBy: (model: string) => `Answered by ${model}.`,
+    cutShort: 'The reply stops here; it was cut short.',
+    // Why a review did not come back.
+    failed: {
+      key: 'The key was not accepted. Check that it is an Anthropic API key and that it is still active.',
+      permission: 'This key is not allowed to use the model.',
+      rate: 'The account is over its rate limit, or out of credit. Try again later.',
+      network: 'Could not reach api.anthropic.com. Check the connection and try again.',
+      refused: 'The model declined to review this run.',
+      other: (message: string) => `The request failed: ${message}`,
+    },
+    agentTitle: 'With your own agent',
+    agentHint:
+      'The repository has an MCP server that gives an agent the same tools as this page: it can read the levels, run a design and score it itself.',
+    close: 'Close',
+  },
   shared: {
     opening: 'Opening the shared design…',
     banner: 'This design came from a link. Changes to it are not saved.',

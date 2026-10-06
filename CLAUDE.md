@@ -103,6 +103,9 @@ These are the rules that make failures emerge instead of being scripted. Each ha
 - **A share link is untrusted input.** Decoding caps the decompressed size, then validates with the
   schema, before anything renders or runs. The same goes for an imported file and for anything
   read back from localStorage.
+- **An API key is never entered by Claude.** The reviewer is tested against a mocked provider
+  (`apps/web/test/review.test.ts`); the one live check with a real key is the owner's to do. The
+  key is not part of a design, so it must never reach a share link, an export or an embed.
 - **Every web entry point imports `src/strict.ts` first** (`main.tsx`, `embed/main.tsx`, the
   worker). It tells the schema library not to compile parsers from text, which the content
   security policy forbids; imported any later, a schema has already tried.

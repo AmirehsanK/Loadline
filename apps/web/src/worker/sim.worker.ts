@@ -58,6 +58,10 @@ self.onmessage = (event: MessageEvent<ToWorker>) => {
       case 'command':
         runner.command(message.command);
         break;
+      case 'report':
+        send({ type: 'report', id: message.id, full: runner.report() });
+        // A report is an answer in itself; no frame follows it.
+        return;
     }
     // Answer every message straight away, so the page never shows a state the worker has left.
     postFrame();

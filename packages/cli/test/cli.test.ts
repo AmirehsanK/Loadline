@@ -168,6 +168,28 @@ describe('loadline share and levels', () => {
   });
 });
 
+describe('loadline review', () => {
+  it('prints a prompt for a language model: how to review, then this run', async () => {
+    const { code, out } = await run(['review', 'shop.yaml', '--duration', '20s']);
+    expect(code).toBe(0);
+    expect(out).toMatch(/^You are reviewing a system design/);
+    expect(out).toContain('Reply in English.');
+    expect(out).toContain('## The design');
+    expect(out).toContain('- db ("Database"): database, 8 cores');
+    expect(out).toContain("- at 30 s: traffic becomes 2 times the clients' base rate");
+    expect(out).toContain('## What the run measured');
+  });
+
+  it('asks for the review in Persian when told to, and for a level it includes the result', async () => {
+    const files = { 'start.json': JSON.stringify(firstTraffic.starter) };
+    const { out } = await run(['review', 'start.json', '--level', 'first-traffic', '--language', 'fa'], files);
+    expect(out).toContain('Reply in Persian (Farsi).');
+    expect(out).toContain('This was the level "First traffic".');
+    expect(out).toContain('Not passed.');
+    expect((await run(['review', 'start.json', '--language', 'tlh'], files)).code).toBe(2);
+  });
+});
+
 describe('conditions', () => {
   it('are read with their units', () => {
     expect(parseAssertion('p99<200ms')).toMatchObject({ metric: 'p99', operator: '<', limit: 200 });
