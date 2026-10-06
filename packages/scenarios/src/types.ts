@@ -11,7 +11,12 @@ export type Objective =
   /** The queues hold no more than this many messages between them when the run ends. */
   | { kind: 'backlog'; maxDepth: number }
   /** No more than this many messages were refused, discarded or given up on by the queues. */
-  | { kind: 'lost'; max: number };
+  | { kind: 'lost'; max: number }
+  /**
+   * No message waited in a queue longer than this before a worker took it. It says how far behind
+   * the work was allowed to fall, where `backlog` only says whether it had caught up by the end.
+   */
+  | { kind: 'wait'; maxMs: number };
 
 /** The words of a level, in English. Other languages are in the web app's catalogs, by level id. */
 export interface ScenarioText {

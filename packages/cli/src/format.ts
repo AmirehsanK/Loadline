@@ -78,6 +78,8 @@ function describeObjective({ objective, value, met }: ObjectiveResult): string {
       return `${mark}  no more than ${count(objective.maxDepth)} messages left waiting: ${count(value)}`;
     case 'lost':
       return `${mark}  no more than ${count(objective.max)} messages lost: ${count(value)}`;
+    case 'wait':
+      return `${mark}  no message waiting more than ${duration(objective.maxMs)}: ${duration(value)}`;
   }
 }
 

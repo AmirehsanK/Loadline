@@ -167,11 +167,18 @@ workload timeline with scripted faults, objectives, two bonus tiers, hints and a
 `runScenario` scores it in the web app, the CLI and the MCP server.
 
 - **Objectives** are a p99 limit, an error-rate limit, a monthly budget, a limit on what is left in
-  the queues at the end, and a limit on messages lost. All must be met to pass. They are judged over
+  the queues at the end, a limit on messages lost, and a limit on how long any message waited in a
+  queue before a worker took it. All must be met to pass. They are judged over
   the **scored period**, which starts after a warm-up; a request belongs to the period it finished
   in.
 - **Stars.** A pass is one star. Meeting the first bonus tier as well is two, and the second on top
   of that is three. The tiers reward a better answer to the same lesson, not a different trick.
+  They have to tell answers apart: on every level but Write burst, the table of attempts has an
+  answer that passes with one or two stars, and a test checks that it stays so. Where a level had
+  only a pass mark, the fix was a real cost on the other side of the right answer, not a tighter
+  number: a timeout far past the slow answers waits for them, randomising lifetimes completely
+  doubles the fetches, a retry by the user repeats work a retry inside does not, and a worker
+  whose waits keep doubling sleeps through the recovery.
 - **Rules.** A level locks the settings that would make its problem go away (the traffic, how fast
   a part works) and the parts that must stay. A design that changes one cannot pass, however well
   it does. A part the player adds can be given settings it must keep. Rules that settings cannot

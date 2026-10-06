@@ -92,6 +92,15 @@ function judge(objective: Objective, design: Design, sim: Simulation): Objective
       });
       return { objective, value, met: value <= objective.max };
     }
+    case 'wait': {
+      // The longest wait of any message a worker has taken. One that is still waiting when the run
+      // ends is not in it; that is what the backlog is for.
+      let value = 0;
+      design.nodes.forEach((node, index) => {
+        if (node.type === 'queue') value = Math.max(value, sim.nodes[index]!.latency.max());
+      });
+      return { objective, value, met: value <= objective.maxMs };
+    }
   }
 }
 

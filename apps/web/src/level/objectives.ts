@@ -18,6 +18,8 @@ export function describeObjective(objective: Objective, m: Messages): string {
       return text.backlog(formatCount(objective.maxDepth));
     case 'lost':
       return objective.max === 0 ? text.noneLost : text.lost(formatCount(objective.max));
+    case 'wait':
+      return text.wait(formatDuration(objective.maxMs));
   }
 }
 
@@ -35,6 +37,8 @@ export function describeValue(result: ObjectiveResult, m: Messages): string {
       return text.backlog(formatCount(result.value));
     case 'lost':
       return text.lost(formatCount(result.value));
+    case 'wait':
+      return text.wait(formatDuration(result.value));
   }
 }
 

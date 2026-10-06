@@ -65,6 +65,14 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('%s', (_id, lev
     }
   });
 
+  it('has an answer that passes without earning every star', () => {
+    // The stars are meant to tell a good answer from a better one. A level where every answer that
+    // passes earns all three has a pass mark and nothing else.
+    const passingShort = ATTEMPTS[level.id]!.filter(([, , stars]) => stars === 1 || stars === 2);
+    // Write burst is the one such level left: only two worker instances pass, and they earn three.
+    if (level.id !== 'write-burst') expect(passingShort.length).toBeGreaterThan(0);
+  });
+
   it('gives the same result every time', () => {
     expect(runScenario(level, level.reference)).toEqual(runScenario(level, level.reference));
   });

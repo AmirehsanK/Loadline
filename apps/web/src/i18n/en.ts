@@ -203,6 +203,7 @@ export const en = {
       backlog: (limit: string) => `No more than ${limit} messages still waiting at the end`,
       lost: (limit: string) => `No more than ${limit} messages lost`,
       noneLost: 'No message lost',
+      wait: (limit: string) => `No message waits more than ${limit} for a worker`,
     },
     // What the run has achieved against it.
     value: {
@@ -211,6 +212,7 @@ export const en = {
       cost: (value: string) => `${value} a month`,
       backlog: (value: string) => `${value} waiting`,
       lost: (value: string) => `${value} lost`,
+      wait: (value: string) => `longest wait ${value}`,
     },
     met: 'Met',
     missed: 'Not met',

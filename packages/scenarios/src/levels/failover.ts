@@ -25,7 +25,7 @@ const db = (replicas: number, column = 3, row = 1) =>
       replicas,
       readTime: { kind: 'exp', mean: 10 },
       writeTime: { kind: 'exp', mean: 15 },
-      failoverMs: 15_000,
+      failoverMs: 18_000,
     },
   } as const);
 /** What a worker that writes purchases down does for each one, apart from the write itself. */
@@ -76,16 +76,16 @@ export const failover: Scenario = {
   id: 'failover',
   text: {
     title: 'Failover',
-    summary: 'The only database server dies, and takes fifteen seconds to come back.',
+    summary: 'The only database server dies, and takes eighteen seconds to come back.',
     brief:
-      'The shop has one database server. Twenty seconds in it fails, and the database takes fifteen seconds to be usable again: ' +
-      'fifteen seconds in which nobody can browse and nobody can buy. Make the shop ride through it. ' +
+      'The shop has one database server. Twenty seconds in it fails, and the database takes eighteen seconds to be usable ' +
+      'again: eighteen seconds in which nobody can browse and nobody can buy. Make the shop ride through it. ' +
       'Keep failures under 0.5% and 99% of requests under 200 ms, lose no purchase, have every purchase written down by the ' +
       'end, and spend no more than $500 a month.',
     hints: [
       'Two things stop when the server fails: reading and writing. A read replica is a second server. What can it do while the first is gone, and what can it not?',
-      'With a replica, browsing survives and purchases still fail for fifteen seconds. Does the customer need the purchase written down before being answered, or only to know that it will be? Think of Write burst.',
-      'Give the Database a read replica. Send purchases to a Queue and have a Worker write them to the database, and use the shop\'s own connection to the database for reads only. Then make the worker patient: on its connection to the database, several retries with a second or more between them.',
+      'With a replica, browsing survives and purchases still fail for eighteen seconds. Does the customer need the purchase written down before being answered, or only to know that it will be? Think of Write burst.',
+      'Give the Database a read replica. Send purchases to a Queue and have a Worker write them to the database, and use the shop\'s own connection to the database for reads only. Then make the worker patient: on its connection to the database, enough retries to outlast the outage, a couple of seconds apart.',
     ],
     debrief:
       'One server is a single point of failure, however large. A replica is a second copy that can answer reads at once and ' +
@@ -93,14 +93,16 @@ export const failover: Scenario = {
       'nowhere to write, replica or not. What saved the purchases was not having to write them at that moment. The queue took ' +
       'each one and answered the customer, and the worker wrote them down when it could. The worker had to be patient. One ' +
       'that fails and tries again at once goes through every chance a purchase has in a few milliseconds, and then drops it. ' +
-      'Waiting between tries, longer each time, is what carried each purchase across the fifteen seconds. In Retry storm ' +
-      'waiting between retries did not help, because users were waiting and the work only grew. Here nobody is waiting, so waiting is free.',
+      'Waiting between tries is what carried each purchase across the eighteen seconds. How it waits matters too. A worker ' +
+      'whose waits keep doubling is asleep in a long one when the database comes back, and the purchases wait with it; steady ' +
+      'waits of a couple of seconds notice almost at once. In Retry storm waiting between retries did not help, because users ' +
+      'were waiting and the work only grew. Here nobody is waiting, so waiting is free.',
     rules: {
       'purchases-stored': 'Every purchase has to reach the database: the shop must write it there itself, or hand it to a queue whose worker writes it there.',
     },
   },
   starter: standby({}),
-  reference: standby({ replicas: 1, queued: { retries: 5, backoffMs: 1000, backoffFactor: 2 } }),
+  reference: standby({ replicas: 1, queued: { retries: 10, backoffMs: 2000, backoffFactor: 1 } }),
   palette: ['queue', 'worker'],
   workload: workload({ chaos: [{ atMs: 20_000, command: { type: 'failover', nodeId: 'db' } }] }),
   durationMs: 90_000,
@@ -113,7 +115,9 @@ export const failover: Scenario = {
     { kind: 'p99', maxMs: 200 },
     { kind: 'cost', maxMonthly: 500 },
   ],
-  bonus: [[{ kind: 'cost', maxMonthly: 450 }], [{ kind: 'p99', maxMs: 100 }]],
+  // Any worker patient enough to lose nothing passes. The stars are for how soon after the database
+  // is back the purchases are being written again: a worker asleep in a long wait does not notice.
+  bonus: [[{ kind: 'wait', maxMs: 28_000 }], [{ kind: 'wait', maxMs: 23_000 }]],
   locked: {
     users: '*',
     api: ['instances', 'concurrency', 'serviceTime', 'autoscale.enabled'],

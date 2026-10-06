@@ -206,6 +206,7 @@ export const fa: Messages = {
       backlog: (limit: string) => `در پایان بیش از ${limit} پیام در صف نمانده باشد`,
       lost: (limit: string) => `بیش از ${limit} پیام از دست نرود`,
       noneLost: 'هیچ پیامی از دست نرود',
+      wait: (limit: string) => `هیچ پیامی بیش از ${limit} منتظر Worker نماند`,
     },
     value: {
       p99: (value: string) => `p99 ${value}`,
@@ -213,6 +214,7 @@ export const fa: Messages = {
       cost: (value: string) => `${value} در ماه`,
       backlog: (value: string) => `${value} در صف`,
       lost: (value: string) => `${value} ازدست‌رفته`,
+      wait: (value: string) => `بیشترین انتظار ${value}`,
     },
     met: 'برآورده شد',
     missed: 'برآورده نشد',

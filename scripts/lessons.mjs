@@ -191,7 +191,7 @@ const LESSONS = {
   },
   patience: async () => {
     await selectConnection('api', 'search');
-    await set('Give up after', 600);
+    await set('Give up after', 300);
   },
   'full-house': async () => {
     await add('Rate limiter', 'Rate limiter 1', ...BELOW);
@@ -211,7 +211,7 @@ const LESSONS = {
   },
   clockwork: async () => {
     await select('Cache');
-    await set('Randomise lifetimes', 0.2);
+    await set('Randomise lifetimes', 0.1);
   },
   'nine-times': async () => {
     await selectConnection('users', 'web');
@@ -237,8 +237,9 @@ const LESSONS = {
     await selectConnection('api', 'db');
     await choose('Used by', 'Reads only');
     await selectConnection('worker-1', 'db');
-    await set('Retries', 5);
-    await set('Wait before the first retry', 1000);
+    await set('Retries', 10);
+    await set('Wait before the first retry', 2000);
+    await set('Each further wait is longer by', 1);
   },
 };
 

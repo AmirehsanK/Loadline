@@ -289,25 +289,28 @@ export const guideEn: Record<string, LevelGuide> = {
   },
   patience: {
     problem:
-      'Search answers in 60 ms on average, but unevenly: half its answers take under 40 ms, and about one in six takes more ' +
-      'than 100 ms. That is exactly where the site gives up. It calls each of those slow answers a failure and asks again, up ' +
-      'to twice, while Search carries on with the first. Search has room for 233 calls a second and gets 200; the repeats push ' +
-      'it past what it can do. Then everything is late, everything is retried, and it never recovers. Nothing broke. The ' +
-      'timeout did this.',
+      'Search answers in 60 ms on average, but very unevenly: half its answers take under 30 ms, and about one in six takes ' +
+      'more than 100 ms. That is exactly where the site gives up. It calls each of those slow answers a failure and asks ' +
+      'again, up to twice, while Search carries on with the first. Search has room for 1,200 calls a second and gets 1,000; ' +
+      'the repeats push it past what it can do. Then everything is late, everything is retried, and it never recovers. ' +
+      'Nothing broke. The timeout did this.',
     idea:
-      'A timeout is a statement about how long a healthy answer can take. Set it from the slow end of what the service really ' +
-      'does, its p99 or beyond, not from its average. Too short, and you fail requests that were about to succeed, and every ' +
-      'retry adds load to a service that was fine.',
-    steps: ['Select the connection from Site to Search.', 'Set "Give up after" to 600 ms.'],
+      'A timeout is a statement about how long a healthy answer can take. Set it from what the service really does: just ' +
+      'past the point where nearly all its answers have arrived. Too early, and you fail requests that were about to succeed ' +
+      'and load a service that was fine. Far too late, and you sit waiting for its slowest answers when asking again would ' +
+      'have been quicker. Cutting off the slowest few and asking again is a way of trimming the tail.',
+    steps: ['Select the connection from Site to Search.', 'Set "Give up after" to 300 ms. Leave the two retries as they are.'],
     why:
-      'The slowest one in a hundred healthy answers takes about 350 ms, so at 600 ms almost nothing is cut off. The two ' +
-      'retries can stay: when a call really does fail they help, and when hardly any call times out they cost nothing. Search ' +
-      'goes back to the 200 calls a second it can carry.',
+      'By 300 ms all but three answers in a hundred have arrived. Those three are asked for again, and the second answer ' +
+      'usually comes in a few tens of milliseconds, so the slowest 1% of requests take about 360 ms instead of over half a ' +
+      'second. Three extra calls in a hundred is load Search can carry. At 150 ms it would be nine in a hundred, and that is ' +
+      'enough to start the storm again.',
     others: [
-      'Taking out the retries and leaving the timeout at 100 ms: it fails. The storm is gone, and one request in four is still cut off.',
-      'Waiting between retries: it fails. The repeats are spread out, and there are just as many.',
-      'A timeout of 150, 200 or 300 ms: it fails. Each still cuts off enough healthy answers to overload Search.',
-      'A timeout of one second or of three: three stars as well. Past the slow end of a healthy answer, longer changes nothing here. Slow dependency showed what a long timeout costs when the service really is slow.',
+      'A timeout of 150 ms: it fails. Too many healthy answers are cut off, and the storm starts again.',
+      'A timeout of 250 ms: three stars as well.',
+      'A timeout of 400 ms: two stars. Of 500 ms, of one second or of three: one star. Nothing fails, and the slowest answers are simply waited for.',
+      'A timeout of 300 ms and no retries: it fails. Three requests in a hundred are cut off and nobody asks again.',
+      'A timeout of 300 ms with a tenth of a second between retries: two stars. The wait is added to exactly the requests that were already slow.',
     ],
   },
   'full-house': {
@@ -369,28 +372,30 @@ export const guideEn: Record<string, LevelGuide> = {
     problem:
       'A hundred prices are each asked for twenty times a second, and the cache keeps each for exactly twenty seconds. When ' +
       'the site starts, all hundred are fetched in the same moment. So they all expire in the same moment and are all fetched ' +
-      'again together: a hundred queries at once on a database of 4 cores that needs 40 ms for each. Until they are done, ' +
+      'again together: a hundred queries at once on a database of 16 cores that needs 130 ms for each. Until they are done, ' +
       'nobody gets a price. Twenty seconds later it happens again, and again, because being fetched together is what keeps ' +
       'them together.',
     idea:
       'Things that are stored at the same time with the same lifetime expire at the same time. Give each item a slightly ' +
       'different lifetime and they drift apart, so the store sees a steady trickle instead of a wave. This is called adding ' +
       'jitter to the expiry, and it applies to anything on a timer: caches, scheduled jobs, clients that all reconnect after ' +
-      'an outage.',
-    steps: ['Select the Cache.', 'Set "Randomise lifetimes" to 0.2.'],
+      'an outage. A little is enough. Randomising also shortens lifetimes, and every expiry is a fetch that somebody waits for.',
+    steps: ['Select the Cache.', 'Set "Randomise lifetimes" to 0.1.'],
     why:
-      'A price now lives somewhere between sixteen and twenty seconds, so the hundred no longer run out together. The first ' +
-      'time round they spread over four seconds, the next time over more, and within a minute the database is fetching about ' +
-      'five prices a second, which it does without anyone waiting. No price is ever older than the twenty seconds allowed.',
+      'A price now lives somewhere between eighteen and twenty seconds, so the hundred no longer run out together. The first ' +
+      'time round they spread over two seconds, the next time over more, and within a minute the database is fetching about ' +
+      'five prices a second with nobody held up. A tenth is enough to do that and costs almost nothing: prices still live ' +
+      'nineteen seconds on average.',
     others: [
       'Randomised by 0.01 or 0.02: it fails. The prices drift apart too slowly to help within the run.',
-      'By 0.05: two stars. By 0.1, by 0.5, or completely: three, like 0.2.',
+      'By 0.2: three stars as well.',
+      'By 0.5: two stars. By 0.7, or completely: one. The waves are gone either way, but prices live a shorter time, so there are more fetches and more requests that arrive while one is under way.',
       'Fetching a missing price only once is already on, and does not help: these are a hundred different prices, not one price asked for a hundred times.',
     ],
   },
   'nine-times': {
     problem:
-      'Users call Web, and Web calls the API. Web gives the API 200 ms and tries twice more if a call fails. The user tries ' +
+      'Users call Web, and Web calls the API. Web gives the API 150 ms and tries twice more if a call fails. The user tries ' +
       'twice more as well, and every one of those tries is three calls by Web. So when the API has a bad five seconds, each ' +
       'request can turn into nine calls. The API can handle 375 a second and normally gets 100. Nine times that is 900, so it ' +
       'never clears its queue, every call is late, and every late call is retried.',
@@ -403,11 +408,14 @@ export const guideEn: Record<string, LevelGuide> = {
     why:
       'Now the worst the API can be handed is three times its usual load, 300 calls a second, and it has room for 375. After ' +
       'the bad five seconds it works through what has piled up and is back to normal a few seconds later. The retries that ' +
-      'remain are worth keeping: even a healthy API is now and then slower than 200 ms, and a second try answers those requests.',
+      'remain are worth keeping, and they are in the right place: even a healthy API is now and then slower than 150 ms, and ' +
+      'when Web asks again only that one call is repeated.',
     others: [
-      'Two retries at the edge and none inside: three stars as well. What matters is that only one layer retries.',
+      'Two retries at the edge and none inside, or one: two stars. Only one layer retries, so the storm cannot start. But each retry by the user makes Web do its 60 ms of work again, so the slow requests are slower.',
+      'One retry inside and none at the edge: three stars as well.',
       'One retry at each layer: it fails. It looks more careful than two at one layer, and is four times the load instead of three, more than the API can carry.',
       'No retries anywhere: it fails. The storm cannot start, but the requests that a healthy API answers late simply fail.',
+      'Two inside with a tenth of a second between them: one star. The wait is added to the requests that were already slow.',
       'Two at each layer with a wait between them: it fails. The calls are spread out, and there are still nine.',
       'Two at each layer and a circuit breaker on the connection to the API: three stars. The breaker stops the calls themselves instead of the retries.',
     ],
@@ -443,33 +451,35 @@ export const guideEn: Record<string, LevelGuide> = {
   },
   failover: {
     problem:
-      'There is one database server, and at twenty seconds it fails. Fifteen seconds pass before the database can be used ' +
+      'There is one database server, and at twenty seconds it fails. Eighteen seconds pass before the database can be used ' +
       'again, and in that time every request fails: browsing, which only reads, and buying, which writes. That is 300 ' +
-      'requests a second for fifteen seconds.',
+      'requests a second for eighteen seconds.',
     idea:
       'Two different things have stopped, and they need two different answers. Reads need a second copy to read from: a ' +
       'replica, which also takes over as the new primary. Writes cannot be saved that way, because while the new primary is ' +
       'being chosen there is nowhere to write. They need somewhere to wait: a queue, with a worker that writes each purchase ' +
-      'down once the database is back. A user cannot wait fifteen seconds. A message can.',
+      'down once the database is back. A user cannot wait eighteen seconds. A message can.',
     steps: [
       'Select the Database and set "Read replicas" to 1.',
       'Add a Queue and a Worker from the parts on the left.',
       'Connect Shop to the Queue, the Queue to the Worker, and the Worker to the Database.',
       'Select the connection from Shop to the Queue. Set "Used by" to "Writes only" and "The caller" to "Hands it over and moves on".',
       'Select the connection from Shop to the Database and set "Used by" to "Reads only".',
-      'Select the connection from the Worker to the Database. Set "Retries" to 5 and "Wait before the first retry" to 1,000 ms.',
+      'Select the connection from the Worker to the Database. Set "Retries" to 10, "Wait before the first retry" to 2,000 ms and "Each further wait is longer by" to 1.',
     ],
     why:
       'The replica answers every read while the primary is gone, and then becomes the primary, so browsing never notices. ' +
-      'Purchases go into the queue and the customer is answered at once. The worker tries to write each one, fails, and waits: ' +
-      'one second, then two, then four, eight and sixteen, which is longer than the fifteen seconds the database is away. ' +
-      'When it is back, the purchases that piled up are written within a few seconds. Nothing is lost and nobody was kept waiting.',
+      'Purchases go into the queue and the customer is answered at once. The worker tries to write each one, fails, waits two ' +
+      'seconds and tries again, ten times if it has to: twenty seconds, which is longer than the database is away. And ' +
+      'because no wait is longer than two seconds, it finds out almost at once when the database is back, and the purchases ' +
+      'that piled up are written within a few seconds. Nothing is lost and nobody was kept waiting.',
     others: [
-      'A replica and nothing else: it fails. Browsing survives, and every purchase made in those fifteen seconds is refused.',
+      'A replica and nothing else: it fails. Browsing survives, and every purchase made in those eighteen seconds is refused.',
       'A replica, and the shop itself retrying its writes with long waits: it fails badly. Each waiting purchase holds a slot of the shop, the slots run out, and browsing fails too.',
       'The queue and a patient worker, but no replica: it fails. Purchases are safe and nobody can browse.',
       'A queue with a worker that does not retry, or that retries five times at once: it fails. The worker uses up every chance a purchase has in a few milliseconds and sets it aside, and hundreds are lost.',
-      'Two worker instances: one star. One is enough, and the second is paid for.',
+      'Waits that double each time, from one second: one star. Nothing is lost, but the worker is in the middle of a sixteen-second wait when the database comes back, and every purchase waits with it.',
+      'Waits that grow by half each time, from two seconds: two stars. A steady five seconds: three, like two.',
       'Two replicas: it fails, on cost.',
     ],
   },

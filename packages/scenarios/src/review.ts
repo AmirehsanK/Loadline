@@ -145,6 +145,8 @@ function describeObjective(objective: Objective): string {
       return `no more than ${count(objective.maxDepth)} messages left in a queue at the end`;
     case 'lost':
       return `no more than ${count(objective.max)} messages lost`;
+    case 'wait':
+      return `no message waiting in a queue for more than ${duration(objective.maxMs)}`;
   }
 }
 

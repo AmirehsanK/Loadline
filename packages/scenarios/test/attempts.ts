@@ -129,15 +129,20 @@ export const ATTEMPTS: Record<string, Attempt[]> = {
   ],
   patience: [
     ['no retries, the timeout left at 100 ms', searching({ ...hasty, retries: 0 }), 0],
-    ['waiting between retries, the timeout left at 100 ms', searching({ ...hasty, backoffMs: 200, jitter: 1 }), 0],
     ['a timeout of 150 ms', searching({ ...hasty, timeoutMs: 150 }), 0],
-    ['a timeout of 200 ms', searching({ ...hasty, timeoutMs: 200 }), 0],
-    ['a timeout of 300 ms', searching({ ...hasty, timeoutMs: 300 }), 0],
-    ['a timeout of 600 ms', searching({ ...hasty, timeoutMs: 600 }), 3],
-    ['a timeout of one second', searching({ ...hasty, timeoutMs: 1000 }), 3],
-    ['a timeout of three seconds', searching({ ...hasty, timeoutMs: 3000 }), 3],
-    ['a timeout of 600 ms and no retries', searching({ timeoutMs: 600, retries: 0 }), 3],
+    ['a timeout of 250 ms', searching({ ...hasty, timeoutMs: 250 }), 3],
+    ['a timeout of 300 ms', searching({ ...hasty, timeoutMs: 300 }), 3],
+    ['a timeout of 400 ms', searching({ ...hasty, timeoutMs: 400 }), 2],
+    ['a timeout of 500 ms', searching({ ...hasty, timeoutMs: 500 }), 1],
+    ['a timeout of one second', searching({ ...hasty, timeoutMs: 1000 }), 1],
+    ['a timeout of three seconds', searching({ ...hasty, timeoutMs: 3000 }), 1],
+    // Cutting the slow answers off only helps if somebody asks again.
+    ['300 ms and no retries', searching({ timeoutMs: 300, retries: 0 }), 0],
+    ['300 ms and one retry', searching({ timeoutMs: 300, retries: 1, backoffMs: 0 }), 3],
+    ['300 ms, waiting a tenth of a second before each retry', searching({ ...hasty, timeoutMs: 300, backoffMs: 100, backoffFactor: 1 }), 2],
   ],
+
+
 
   'full-house': [
     ['a door that lets 300 a second through', door(300), 0],
@@ -171,24 +176,30 @@ export const ATTEMPTS: Record<string, Attempt[]> = {
   clockwork: [
     ['lifetimes randomised by a hundredth', priced({ jitter: 0.01 }), 0],
     ['by a fiftieth', priced({ jitter: 0.02 }), 0],
-    ['by a twentieth', priced({ jitter: 0.05 }), 2],
     ['by a tenth', priced({ jitter: 0.1 }), 3],
     ['by a fifth', priced({ jitter: 0.2 }), 3],
-    ['by half', priced({ jitter: 0.5 }), 3],
-    ['altogether', priced({ jitter: 1 }), 3],
+    // Prices now live fifteen seconds on average instead of nineteen, and are fetched that much more often.
+    ['by half', priced({ jitter: 0.5 }), 2],
+    ['by seven tenths', priced({ jitter: 0.7 }), 1],
+    ['altogether', priced({ jitter: 1 }), 1],
   ],
+
+
 
 
   'nine-times': [
     ['no retries anywhere', layered(0, 0), 0],
-    ['two at the edge and none inside', layered(2, 0), 3],
     ['none at the edge and two inside', layered(0, 2), 3],
     ['none at the edge and one inside', layered(0, 1), 3],
+    ['two at the edge and none inside', layered(2, 0), 2],
+    ['one at the edge and none inside', layered(1, 0), 2],
+    ['two inside, a tenth of a second apart', layered(0, 2, {}, { backoffMs: 100, backoffFactor: 1 }), 1],
     ['one at each layer', layered(1, 1), 0],
     ['two at the edge and one inside', layered(2, 1), 0],
     ['two at each, waiting between them', layered(2, 2, { backoffMs: 200, jitter: 1 }, { backoffMs: 100, jitter: 1 }), 0],
     ['two at each, and a breaker inside', layered(2, 2, {}, { breaker: { enabled: true, window: 20, openMs: 2000 } }), 3],
   ],
+
   'wrong-suspect': [
     ['twice the slots on Web', tiers({ webSlots: 80 }), 0],
     ['two Web instances behind a balancer', tiers({ web: 2 }), 0],
@@ -205,14 +216,17 @@ export const ATTEMPTS: Record<string, Attempt[]> = {
     ['a replica and nothing else', standby({ replicas: 1 }), 0],
     // Each purchase holds a slot of the shop while it waits, and its customer has long since given up.
     ['a replica, and the shop retrying its own writes for half a minute', standby({ replicas: 1, direct: { retries: 5, backoffMs: 1000 } }), 0],
-    ['a queue and a patient worker, and no replica', standby({ queued: { retries: 5, backoffMs: 1000 } }), 0],
+    ['a queue and a patient worker, and no replica', standby({ queued: { retries: 10, backoffMs: 2000, backoffFactor: 1 } }), 0],
     ['a replica and a queue, the worker not retrying', standby({ replicas: 1, queued: {} }), 0],
     ['the worker retrying five times at once', standby({ replicas: 1, queued: { retries: 5, backoffMs: 0 } }), 0],
-    ['the worker retrying four times, a second apart at first', standby({ replicas: 1, queued: { retries: 4, backoffMs: 1000 } }), 3],
-    ['five times, a second apart at first', standby({ replicas: 1, queued: { retries: 5, backoffMs: 1000 } }), 3],
-    ['ten times, half a second apart at first', standby({ replicas: 1, queued: { retries: 10, backoffMs: 500 } }), 3],
-    ['five times a second apart, and two worker instances', standby({ replicas: 1, workers: 2, queued: { retries: 5, backoffMs: 1000 } }), 1],
-    ['two replicas', standby({ replicas: 2, queued: { retries: 5, backoffMs: 1000 } }), 0],
+    // It loses nothing, and is asleep in a sixteen-second wait when the database comes back.
+    ['waits that double from one second, five times', standby({ replicas: 1, queued: { retries: 5, backoffMs: 1000 } }), 1],
+    ['waits half as long again each time, from two seconds', standby({ replicas: 1, queued: { retries: 6, backoffMs: 2000, backoffFactor: 1.5 } }), 2],
+    ['every two seconds, ten times', standby({ replicas: 1, queued: { retries: 10, backoffMs: 2000, backoffFactor: 1 } }), 3],
+    ['every five seconds, five times', standby({ replicas: 1, queued: { retries: 5, backoffMs: 5000, backoffFactor: 1 } }), 3],
+    ['two replicas', standby({ replicas: 2, queued: { retries: 10, backoffMs: 2000, backoffFactor: 1 } }), 0],
   ],
+
+
 
 };
