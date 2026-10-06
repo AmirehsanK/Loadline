@@ -30,3 +30,18 @@ jobs:
       # The command line as a build would use it: a condition that holds, and one that must not.
       - run: npm run loadline -- test examples/storefront.yaml --assert "p99<250ms" --assert "errors<1%"
       - run: "! npm run loadline -- test examples/storefront.yaml --assert 'cost<200'"
+
+  browsers:
+    name: Same numbers in Firefox and Chrome as in Node
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      # Eleven runs, made in Node and in each browser's own engine, must give the same report to
+      # the last bit. Both browsers come with the runner. Firefox is the one that is not V8.
+      - run: npm run browsers -- Firefox Chrome

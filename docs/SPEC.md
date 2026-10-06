@@ -59,7 +59,8 @@ apps/web/
   src/worker/             the engine in a Web Worker
   src/canvas/  src/inspector/  src/metrics/  src/level/  src/share/  src/embed/
   src/review/  src/i18n/
-scripts/                  the check for physical-direction classes; the README's screenshots
+scripts/                  the check for physical-direction classes; the README's screenshots;
+                          the same runs in each installed browser as in Node
 .github/workflows/        ci.yml, pages.yml
 ```
 
@@ -336,6 +337,12 @@ What is automated, and runs in CI on every push:
   request are unit-tested without a browser.
 - **CLI:** `loadline test` against an example file with a passing and a failing assertion.
 - **MCP:** every tool is called through the protocol, in memory and from a separate process.
+- **Between JavaScript engines:** `npm run browsers` makes eleven runs (the engine's reference
+  system, and the reference answer to each level) in Node and in each installed browser, and the
+  hash of every report must be the same. CI runs it in Firefox and Chrome. On the development
+  machine Edge is checked as well. Safari's engine is not: it cannot be started from a script.
+  This replaces the Playwright run in three engines that was planned, which would have needed
+  browsers downloaded; this one uses the browsers that are there.
 
 What is checked by hand, in a real browser:
 
@@ -343,12 +350,6 @@ What is checked by hand, in a real browser:
   in both languages in the built app (the starting design failing, then the reference passing), and
   each milestone was looked at in the browser: a level played through, a link opened and kept, the
   embed in a frame, both languages. That is a smoke test, not coverage.
-
-What is not checked:
-
-- **Determinism between JavaScript engines.** It is designed for (section 4.1, rule 7) and tested
-  on V8, in Node. The reference answer to the first level gives the same figures in Edge as in
-  Node. Nothing has been run on Firefox's or Safari's engine.
 
 ## 10. Deferred
 

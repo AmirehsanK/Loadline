@@ -255,6 +255,31 @@ into `advance` steps.
   `+ - * /` and bit manipulation, which IEEE 754 defines exactly. They are accurate to about one
   unit in the last place rather than correctly rounded; a test pins their exact output bits.
 
+### 5.1 Checked in other engines
+
+`npm run browsers` makes eleven runs in Node and in each browser that is installed, and compares
+the hash of every whole report: the reference system of `test/golden.test.ts` on its bad day, and
+the reference answer to each of the ten levels. Between them they use every kind of part, every
+edge policy, four kinds of fault, autoscaling, and all three of the functions above. Nothing drives
+the browsers. A page makes the runs and posts the hashes to the server that served it
+(`scripts/browsers.mjs`).
+
+| Engine | Where | Reports |
+|---|---|---|
+| V8 | Node 26.4 | the reference |
+| V8 | Chrome 154, Edge 154 | identical on all eleven |
+| SpiderMonkey | Firefox 157 | identical on all eleven |
+| JavaScriptCore | Safari | not checked: it cannot be started from a script this way |
+
+CI repeats it on every push, in the Firefox and Chrome that come with the runner.
+
+Is the fourth rule needed, or only careful? As an experiment, `ln`, `exp` and `pow` were swapped
+for `Math.log`, `Math.exp` and `Math.pow` and the check run again. Firefox still agreed with
+Node. Chrome and Edge disagreed with Node on eight of the eleven runs. Node 26.4 and Chrome 154
+both run V8, in different versions, so the built-in functions differ in practice between two
+releases of one engine, never mind two engines. Without the rule, a link made in one program would
+show other numbers in another.
+
 ## 6. Data layout
 
 A run schedules millions of events a second, so the hot structures avoid allocating objects:

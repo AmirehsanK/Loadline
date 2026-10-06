@@ -123,6 +123,20 @@ The engine also does not use `Math.log`, `Math.exp` or `Math.pow`: the language 
 JavaScript engine approximate them in its own way, and one differing bit in a sampled service time
 is enough to reorder two events. It has its own, built from arithmetic that is defined exactly.
 
+`npm run browsers` puts that to the test. Eleven runs (a reference system with every kind of part
+and fault, and the reference answer to each level) are made in Node and in each browser that is
+installed, and every report has to hash the same.
+
+| Engine | Where | Reports |
+|---|---|---|
+| V8 | Node 26 | the reference |
+| V8 | Chrome 154, Edge 154 | identical on all eleven |
+| SpiderMonkey | Firefox 157 | identical on all eleven |
+| JavaScriptCore | Safari | not checked; it cannot be started from a script this way |
+
+Put the built-in functions back and Chrome disagrees with Node on eight of the eleven, although
+both run V8. CI repeats the check in Firefox and Chrome on every push.
+
 ## Sharing
 
 - **A link.** `…/#/d/v1.…` is the design, its seed and its traffic, compressed into the address
@@ -303,6 +317,7 @@ Vite, React, Tailwind, [React Flow](https://reactflow.dev) for the canvas,
 npm run check                        # typecheck, lint, about 400 tests, build
 npm test -w @loadline/engine         # one package
 npm run bench -w @loadline/engine    # events per second
+npm run browsers                     # the same runs in each installed browser as in Node
 npm run dev -w @loadline/web         # the playground, on http://localhost:5183
 npm run screenshots                  # retakes docs/screenshots from the built app
 ```

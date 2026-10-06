@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Loadline: the engine in this browser</title>
+    <script>
+      // A module that cannot be loaded says nothing for itself, so the page says it.
+      const failed = (what) => {
+        fetch('/report' + location.search, { method: 'POST', body: JSON.stringify({ error: what }) });
+      };
+      addEventListener('error', (event) => failed(event.message || 'a script could not be loaded'), true);
+      addEventListener('unhandledrejection', (event) => failed(String(event.reason)));
+    </script>
+    <script type="module" src="./page.js"></script>
+  </head>
+  <body>
+    <p>The hash of each run's report, as this browser computes it. <code>npm run browsers</code> compares them with Node's.</p>
+    <pre id="runs"></pre>
+  </body>
+</html>

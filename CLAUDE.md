@@ -51,6 +51,7 @@ npm run bench -w @loadline/engine
 npm run loadline -- simulate examples/storefront.yaml   # the command line, from source
 npm run mcp         # the MCP server over stdio; .mcp.json registers it
 npm run screenshots # retakes docs/screenshots; needs the built app served on 5184
+npm run browsers    # the same runs in each installed browser as in Node; they must hash the same
 ```
 
 ## Conventions
@@ -102,7 +103,9 @@ These are the rules that make failures emerge instead of being scripted. Each ha
   same instant break ties by sequence number; `Math.random`, `Date` and the clock APIs are
   lint-banned in `packages/engine/src`; and `ln`, `exp` and `pow` come from `kernel/detmath.ts`,
   because ECMAScript leaves the built-in versions implementation-approximated. The ban is in
-  `eslint.config.js`; do not work around it with an eslint-disable.
+  `eslint.config.js`; do not work around it with an eslint-disable. This is not caution: with the
+  built-ins, Chrome 154 and Node 26 disagree on most runs, though both are V8 (`docs/ENGINE.md`
+  5.1). `npm run browsers` is the check, and CI runs it; run it after touching the kernel.
 - **Each node draws from its own random streams, keyed by its id.** Adding or editing one node
   must not reshuffle the randomness of the others, or two designs cannot be compared fairly.
 - **Live metrics never pass through React Flow's `nodes` state.** Node components subscribe to the
