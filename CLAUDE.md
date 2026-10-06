@@ -50,6 +50,7 @@ npm run check       # all of the above plus build
 npm run bench -w @loadline/engine
 npm run loadline -- simulate examples/storefront.yaml   # the command line, from source
 npm run mcp         # the MCP server over stdio; .mcp.json registers it
+npm run screenshots # retakes docs/screenshots; needs the built app served on 5184
 ```
 
 ## Conventions
@@ -58,6 +59,12 @@ npm run mcp         # the MCP server over stdio; .mcp.json registers it
 - Comments explain *why*, especially where the design departs from the obvious approach.
 - A new engine behaviour needs a test that shows it emerging, and a level that teaches it. Realism
   has no natural end; that pairing is the boundary.
+- The README's screenshots are real runs, taken by `scripts/screenshots.mjs` from the built app
+  with the Edge that is installed (`playwright-core` drives it; nothing is downloaded). Retake them
+  after a change that shows, and look at each one: the script plays the first level in both
+  languages, so a picture that is wrong is usually a bug in the app, as it was the first time.
+- A figure quoted in `README.md` or `docs/ENGINE.md` comes from a test or the benchmark. When the
+  engine changes, measure it again before trusting the sentence.
 - A level's numbers are tuned, not derived. `packages/scenarios/test/attempts.ts` lists what a
   player might try on each level and the stars it should earn. If an engine change moves a row,
   the lesson has changed: retune the level and re-read its brief, hints and debrief against the

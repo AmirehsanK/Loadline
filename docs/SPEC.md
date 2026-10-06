@@ -1,6 +1,6 @@
 # Loadline — specification
 
-`Loadline` is a working name (a ship's load line marks how much it can safely carry).
+A ship's load line is the mark on its hull that shows how much it can safely carry.
 
 ## 1. Purpose
 
@@ -51,7 +51,7 @@ packages/
   scenarios/              level data, scoring (runScenario), review-prompt builder
   share/                  a design as the text of a link, and back; uses the platform's
                           compression streams, which is why it is not part of the engine
-  cli/                    loadline validate | simulate | test | share | levels
+  cli/                    loadline validate | simulate | test | share | review | levels
   mcp/                    stdio MCP server over the same reading, running and scoring as the CLI
 examples/                 designs to try the command line on
 apps/web/
@@ -59,7 +59,7 @@ apps/web/
   src/worker/             the engine in a Web Worker
   src/canvas/  src/inspector/  src/metrics/  src/level/  src/share/  src/embed/
   src/review/  src/i18n/
-  e2e/                    Playwright
+scripts/                  the check for physical-direction classes; the README's screenshots
 .github/workflows/        ci.yml, pages.yml
 ```
 
@@ -249,6 +249,7 @@ Sandbox mode has every component, manual faults and no objectives.
   condition is a metric, a comparison and a number: `errors<=1%`, `cost<300`, `stars>=2`. With a
   level and no condition, the condition is that the level is passed.
 - `loadline share <file> [--base <url>]` — prints a playground link
+- `loadline review <file> [--language en|fa]` — runs the design and prints the review prompt
 - `loadline levels` — lists the levels
 - A file is JSON or YAML: a design, or the same document the web app exports (a design with its
   seed, and the level it answers or traffic of its own). It is checked like a link.
@@ -311,17 +312,43 @@ Sandbox mode has every component, manual faults and no objectives.
 Milestones 6, 7 and 8 are independent of each other and can be reordered. Milestones 0–5 already
 make a complete, deployed piece.
 
+**State on 6 October 2026.** All ten are built, and what each was to be checked by passes, with
+these exceptions:
+
+- 5: the site is not deployed. The Pages workflow exists and is started by hand; Pages has not been
+  switched on for the repository. The links the CLI and the MCP server print point at the address
+  it will have.
+- 6: the Persian copy has not been reviewed.
+- 7: the tests solve a level through the MCP tools and get a share link back, in memory and over
+  standard input and output. No agent has been pointed at the server through `.mcp.json` yet.
+- 8: no review has been run with a real key.
+
+The last three are the owner's to do; the first is the owner's to decide.
+
 ## 9. Verification
+
+What is automated, and runs in CI on every push:
 
 - **Engine:** `npm test` runs the queueing-theory checks, determinism (same seed gives the same
   report hash), conservation properties with fast-check, behaviour tests, golden reports, level
   solvability, and the codec round-trip including malformed and oversized input.
-- **Cross-browser determinism:** Playwright runs one reference scenario in Chromium, Firefox and
-  WebKit and compares each report hash with Node's.
-- **Web:** Playwright covers build-and-run, level pass and fail, share round-trip, embed, and both
-  locales.
+- **Web:** the stores, the worker's runner, level rules, sharing, both catalogs and the review
+  request are unit-tested without a browser.
 - **CLI:** `loadline test` against an example file with a passing and a failing assertion.
-- **MCP:** every tool called from an agent through the repo's `.mcp.json`.
+- **MCP:** every tool is called through the protocol, in memory and from a separate process.
+
+What is checked by hand, in a real browser:
+
+- **The app itself.** There is no browser test suite. `npm run screenshots` plays the first level
+  in both languages in the built app (the starting design failing, then the reference passing), and
+  each milestone was looked at in the browser: a level played through, a link opened and kept, the
+  embed in a frame, both languages. That is a smoke test, not coverage.
+
+What is not checked:
+
+- **Determinism between JavaScript engines.** It is designed for (section 4.1, rule 7) and tested
+  on V8, in Node. The reference answer to the first level gives the same figures in Edge as in
+  Node. Nothing has been run on Firefox's or Safari's engine.
 
 ## 10. Deferred
 

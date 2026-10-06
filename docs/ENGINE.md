@@ -3,6 +3,10 @@
 This file explains each mechanism of `packages/engine` and how it was checked. It grows with the
 engine: a mechanism is described here when it is built.
 
+Sections 1 to 7 are how it works: events, calls, the parts, faults, determinism, memory and
+measurement. Sections 8 to 10 are the evidence: queueing theory, the behaviour that emerges, and
+speed. Every figure quoted here comes from a test or the benchmark.
+
 ## 1. A discrete-event simulation
 
 The engine does not step time forward in ticks. It keeps a queue of **events**, each with a
@@ -355,9 +359,9 @@ a test.
 - **Retries multiply load.** If every attempt times out and the client retries twice, the service
   receives three times the traffic and completes all of it for nobody.
 - **A retry can tip a coping system into collapse.** Four slots and 30 ms of work give room for 133
-  calls a second. At 100 a second (75% load) with a 60 ms timeout and no retries, about 28% of
+  calls a second. At 100 a second (75% load) with a 60 ms timeout and no retries, about 27% of
   requests time out and the queue never passes 25. Allow one retry and the retried calls push the
-  load past 100%: the queue grows past 4,000, every call waits longer than the timeout, and 99% of
+  load past 100%: the queue grows to 4,000, every call waits longer than the timeout, and 99% of
   requests fail while the service runs at full utilization doing wasted work.
 - **Slowness travels upstream.** A front service with spare slots, calling a back service at 80%
   load, holds each slot for the back service's whole time in system.
@@ -411,14 +415,17 @@ a test.
 
 | Scenario | Events | Wall time | Events per second | Speed vs real time |
 |---|---|---|---|---|
-| One service, 20k requests/s | 2,974,441 | 1,052 ms | 2.8 million | 28× |
-| Three services in a chain, 10k requests/s | 3,862,128 | 1,341 ms | 2.9 million | 22× |
-| Overloaded, with a retry storm, 5k requests/s | 2,868,494 | 933 ms | 3.1 million | 32× |
+| One service, 20k requests/s | 2,974,441 | 935 ms | 3.2 million | 32× |
+| Three services in a chain, 10k requests/s | 3,862,128 | 1,158 ms | 3.3 million | 26× |
+| Overloaded, with a retry storm, 5k requests/s | 2,868,494 | 776 ms | 3.7 million | 39× |
 
 The budget in `SPEC.md` is one million events per second. A call through one node costs about five
 events (arrive, service done, return, its timeout, and for a client the arrival itself). So 20k
 requests a second through a five-hop design needs about 500k events a second, a sixth of what one
 thread delivers here.
 
-With only clients and services the engine did about 4 million events a second. Pools, breakers,
-routing and the bookkeeping for the bottleneck finder cost about a quarter of that.
+With only clients and services the engine did about 4 million events a second. The difference is
+what pools, breakers, routing and the bookkeeping for the bottleneck finder cost.
+
+The event counts in the table are exact and do not change from run to run; only the times do. That
+is the determinism of section 5 seen from outside.
