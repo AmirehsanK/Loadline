@@ -142,6 +142,7 @@ function sync(): void {
 let syncTimer: ReturnType<typeof setTimeout> | undefined;
 useDesign.subscribe((state, previous) => {
   clearTimeout(syncTimer);
+  syncTimer = undefined;
   if (state.slot !== previous.slot) {
     // Another design has been opened: show it at once. Full speed is only for runs that end.
     if (!state.level && useSim.getState().speed === FULL_SPEED) setSpeed(1);
@@ -149,9 +150,21 @@ useDesign.subscribe((state, previous) => {
     return;
   }
   // An edit waits until typing has paused.
-  syncTimer = setTimeout(sync, RELOAD_DELAY_MS);
+  syncTimer = setTimeout(settle, RELOAD_DELAY_MS);
 });
 sync();
+
+/**
+ * Applies an edit that is still waiting. Anything done to the run is meant for the design on the
+ * canvas: without this, Run pressed straight after an edit would carry on with the design from
+ * before it, and the edit would then arrive and stop the run.
+ */
+function settle(): void {
+  if (syncTimer === undefined) return;
+  clearTimeout(syncTimer);
+  syncTimer = undefined;
+  sync();
+}
 
 /** Starts the run again from time zero with the same design and seed. */
 export function restart(playing = useSim.getState().status === 'running'): void {
@@ -160,6 +173,7 @@ export function restart(playing = useSim.getState().status === 'running'): void 
 }
 
 export function play(): void {
+  settle();
   const { status } = useSim.getState();
   if (status === 'blocked') return;
   // A run that is over starts again from the beginning.
@@ -183,6 +197,7 @@ export function setMultiplier(value: number): void {
 
 /** The whole report of the run as it stands, or null when there is nothing to report on. */
 export function requestReport(): Promise<FullReport | null> {
+  settle();
   if (useSim.getState().status === 'blocked') return Promise.resolve(null);
   return new Promise((resolve) => {
     const id = ++requests;
@@ -193,5 +208,6 @@ export function requestReport(): Promise<FullReport | null> {
 
 /** Injects a fault into the run in progress. */
 export function inject(command: CommandInput): void {
+  settle();
   send({ type: 'command', command: commandSchema.parse(command) });
 }
