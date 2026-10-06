@@ -27,3 +27,6 @@ jobs:
       # The same command as on a developer's machine: every workspace's types, the lint, the
       # tests (which include the proof that each level can be solved), and the build.
       - run: npm run check
+      # The command line as a build would use it: a condition that holds, and one that must not.
+      - run: npm run loadline -- test examples/storefront.yaml --assert "p99<250ms" --assert "errors<1%"
+      - run: "! npm run loadline -- test examples/storefront.yaml --assert 'cost<200'"

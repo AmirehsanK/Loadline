@@ -51,8 +51,9 @@ packages/
   scenarios/              level data, scoring (runScenario), review-prompt builder
   share/                  a design as the text of a link, and back; uses the platform's
                           compression streams, which is why it is not part of the engine
-  cli/                    loadline validate | simulate | test | share
-  mcp/                    stdio MCP server over engine + scenarios
+  cli/                    loadline validate | simulate | test | share | levels
+  mcp/                    stdio MCP server over the same reading, running and scoring as the CLI
+examples/                 designs to try the command line on
 apps/web/
   index.html, embed.html
   src/worker/             the engine in a Web Worker
@@ -242,18 +243,32 @@ Sandbox mode has every component, manual faults and no objectives.
 
 ### 7.3 CLI
 
-- `loadline validate <file>`
-- `loadline simulate <file> [--scenario] [--duration] [--seed] [--json]`
-- `loadline test <file> --assert "p99<200ms"` — exit code 1 on failure, for CI
-- `loadline share <file>` — prints a playground link
-- Accepts JSON and YAML. Not published to npm.
+- `loadline validate <file>` — exit code 1 if the design cannot run
+- `loadline simulate <file> [--level <id>] [--duration 90s] [--seed n] [--json]`
+- `loadline test <file> --assert "p99<200ms" ...` — exit code 1 if a condition fails, for CI. A
+  condition is a metric, a comparison and a number: `errors<=1%`, `cost<300`, `stars>=2`. With a
+  level and no condition, the condition is that the level is passed.
+- `loadline share <file> [--base <url>]` — prints a playground link
+- `loadline levels` — lists the levels
+- A file is JSON or YAML: a design, or the same document the web app exports (a design with its
+  seed, and the level it answers or traffic of its own). It is checked like a link.
+- Exit code 2 means the command itself made no sense; 1 is always a check that failed.
+- It runs from source under Node (`npm run loadline -- <command>`). Not published to npm.
 
 ### 7.4 MCP server
 
 - Tools: `list_components`, `validate_design`, `simulate`, `list_scenarios`, `score_scenario`,
-  `share_link`.
-- Hard caps per call on simulated duration, request rate and total events, so a call returns in
-  seconds.
+  `share_link`. All read-only.
+- `list_components` gives every kind of part with its defaults, taken from the schema, so a
+  design written from it alone is one the engine accepts. `list_scenarios` with an id gives a
+  level in full: brief, objectives, fixed settings, and the design it starts from.
+- `score_scenario` is the same scoring as the web app and the tests, so an agent that says a
+  design passes is right in the browser too.
+- Hard caps per call on simulated duration (10 minutes), request rate (20,000 a second) and total
+  events, so a call returns in seconds. A design is not validated by the tool's schema but by the
+  tool itself, so that what is wrong comes back in words the agent can act on.
+- It runs over stdio (`npm run mcp`), and `.mcp.json` at the root registers it for an agent
+  working in the repository.
 
 ### 7.5 AI reviewer (no backend)
 

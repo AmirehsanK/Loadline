@@ -18,7 +18,9 @@
     "lint": "eslint . && node scripts/check-logical-classes.mjs",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "loadline": "node packages/cli/src/main.ts",
+    "mcp": "node packages/mcp/src/main.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

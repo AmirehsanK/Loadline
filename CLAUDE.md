@@ -48,6 +48,8 @@ npm run lint        # eslint, type-aware, from the root
 npm test            # vitest, every workspace
 npm run check       # all of the above plus build
 npm run bench -w @loadline/engine
+npm run loadline -- simulate examples/storefront.yaml   # the command line, from source
+npm run mcp         # the MCP server over stdio; .mcp.json registers it
 ```
 
 ## Conventions

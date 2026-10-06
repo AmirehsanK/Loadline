@@ -1,0 +1,34 @@
+# A small shop: a balancer in front of two API instances, a cache in front of the database,
+# and a traffic surge half a minute in. Run it with:
+#
+#   npm run loadline -- simulate examples/storefront.yaml
+#   npm run loadline -- test examples/storefront.yaml --assert "p99<250ms" --assert "errors<1%"
+#   npm run loadline -- share examples/storefront.yaml
+seed: 7
+design:
+  name: Storefront
+  nodes:
+    - { id: users, type: client, name: Shoppers, x: 0, y: 120, params: { rps: 300, readRatio: 0.9, keys: 5000 } }
+    - { id: lb, type: load-balancer, name: Balancer, x: 280, y: 120 }
+    - id: api
+      type: service
+      name: API
+      x: 560
+      y: 120
+      params: { instances: 2, concurrency: 16, serviceTime: { kind: exp, mean: 10 } }
+    - { id: cache, type: cache, name: Cache, x: 840, y: 0, params: { capacity: 5000, ttlMs: 30000 } }
+    - id: db
+      type: database
+      name: Database
+      x: 840
+      y: 240
+      params: { concurrency: 8, readTime: { kind: exp, mean: 12 }, writeTime: { kind: exp, mean: 18 } }
+  edges:
+    - { id: users--lb, from: users, to: lb, params: { timeoutMs: 2000 } }
+    - { id: lb--api, from: lb, to: api, params: { retries: 1 } }
+    - { id: api--cache, from: api, to: cache, params: { timeoutMs: 50 } }
+    - { id: api--db, from: api, to: db, params: { timeoutMs: 800, poolSize: 8 } }
+workload:
+  phases:
+    - { atMs: 30000, multiplier: 2 }
+    - { atMs: 45000, multiplier: 1 }

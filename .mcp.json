@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "loadline": {
+      "command": "node",
+      "args": [
+        "packages/mcp/src/main.ts"
+      ]
+    }
+  }
+}

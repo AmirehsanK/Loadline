@@ -1,0 +1,24 @@
+{
+  "name": "@loadline/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Loadline from the command line: check a design, run it, assert on the result, make a link to it.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "loadline": "./src/main.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@loadline/engine": "*",
+    "@loadline/scenarios": "*",
+    "@loadline/share": "*",
+    "yaml": "2.9.1"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@loadline/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Loadline as tools for an AI agent: describe the parts, check a design, run it, score it against a level.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "loadline-mcp": "./src/main.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@loadline/cli": "*",
+    "@loadline/engine": "*",
+    "@loadline/scenarios": "*",
+    "@loadline/share": "*",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "4.6.5"
+  }
+}
