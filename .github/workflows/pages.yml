@@ -2,11 +2,13 @@ name: Pages
 
 # Builds the web app and publishes it to GitHub Pages, at https://amirehsank.github.io/Loadline/.
 #
-# It runs when started by hand (Actions, Pages, Run workflow; or `gh workflow run pages.yml`), so
-# what is live changes when somebody decides it should. To publish every commit instead, add
-# `push: { branches: [main] }` here. Pages is switched on for the repository with GitHub Actions
-# as its source; without that, this workflow fails at its last step.
+# Every push to main is published, once it has passed the checks below, so what is live is main.
+# It can also be started by hand (Actions, Pages, Run workflow; or `gh workflow run pages.yml`).
+# Pages is switched on for the repository with GitHub Actions as its source; without that, this
+# workflow fails at its last step.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

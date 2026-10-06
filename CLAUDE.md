@@ -127,10 +127,10 @@ These are the rules that make failures emerge instead of being scripted. Each ha
 Commit at each milestone and push `main` to `origin`; the owner created the repository and asked
 for the commits to be pushed there (5 October 2026).
 
-The site is published by the Pages workflow, which is started by hand
-(`gh workflow run pages.yml`). The owner asked for Pages to be enabled and the workflow run on
-6 October 2026. That was for that deployment: a push does not publish, and running the workflow
-again changes what the public sees, so ask first unless told to deploy. After a deployment, open
-the site and play the first level before saying it is up.
+**A push to `main` publishes the site.** The Pages workflow runs on every push, and deploys if
+`npm run check` passes there. The owner asked for this on 6 October 2026. So `main` is what the
+public sees a few minutes later: run `npm run check` before pushing, do not push work that is half
+done, and after a change that shows, open the site and play the first level before saying it is
+up. The checks do not look at the page, so a change that passes them can still be wrong on it.
 
-Changing the repository's settings and publishing a package are outward-facing too: ask first.
+Changing the repository's settings and publishing a package are outward-facing: ask first.

@@ -323,9 +323,9 @@ these exceptions:
 
 All three are the owner's to do.
 
-The site is at <https://amirehsank.github.io/Loadline/>. The Pages workflow publishes it and is
-started by hand, so what is live is the commit it was last run on. It was checked there on the day
-it went up: the first level fails on its starting design and passes on the reference with the
+The site is at <https://amirehsank.github.io/Loadline/>. The Pages workflow publishes every push
+to `main` that passes the checks, so what is live is `main`. It was checked there on the day it
+went up: the first level fails on its starting design and passes on the reference with the
 figures Node gives; the link to that answer, opened in a fresh profile, shows the same figures and
 earns that visitor no stars; the embed loads; a link made by the command line opens; Persian
 mirrors; and no console reports an error or a request the policy refused.
