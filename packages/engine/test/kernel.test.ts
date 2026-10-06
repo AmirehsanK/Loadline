@@ -27,14 +27,20 @@ describe('RandomStream', () => {
     const rng = new RandomStream(1, 'uniform');
     const bins = new Array<number>(20).fill(0);
     let sum = 0;
+    let least = Infinity;
+    let most = -Infinity;
     const n = 400_000;
+    // The range is checked once at the end: an assertion per draw is most of a second's work
+    // four hundred thousand times over, and on a slow machine that is a timeout, not a test.
     for (let i = 0; i < n; i++) {
       const u = rng.next();
-      expect(u).toBeGreaterThanOrEqual(0);
-      expect(u).toBeLessThan(1);
+      if (u < least) least = u;
+      if (u > most) most = u;
       sum += u;
       bins[Math.floor(u * 20)]!++;
     }
+    expect(least).toBeGreaterThanOrEqual(0);
+    expect(most).toBeLessThan(1);
     expect(sum / n).toBeCloseTo(0.5, 2);
     for (const count of bins) expect(Math.abs(count - n / 20) / (n / 20)).toBeLessThan(0.03);
   });

@@ -25,7 +25,11 @@ export default tseslint.config(
     files: ['**/*.ts', '**/*.tsx'],
     extends: [...tseslint.configs.strictTypeChecked],
     languageOptions: {
-      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      parserOptions: {
+        // The three-line test configs of the packages belong to no tsconfig of their own.
+        projectService: { allowDefaultProject: ['packages/*/vitest.config.ts'] },
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: {
       // The kernel indexes typed arrays by number; those accesses are checked by hand.
