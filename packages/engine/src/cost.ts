@@ -1,3 +1,5 @@
+import type { Design } from './model/schema.ts';
+
 /**
  * What each part costs to run, in dollars a month.
  *
@@ -27,3 +29,41 @@ export const databaseServerPrice = (concurrency: number): number =>
   PRICES.databaseServer + PRICES.databaseCore * concurrency;
 
 export const cachePrice = (capacity: number): number => PRICES.cache + (PRICES.cachePerThousand * capacity) / 1000;
+
+/**
+ * What a design costs as it stands, before it has run: the price of each part as it is set up.
+ * A run starts at this figure. It can end at another, because a service that scales is charged
+ * for the instances that were actually running.
+ *
+ * The page shows this until the run has something to say. Without it there is a moment, while the
+ * worker loads, in which a design that costs money appears to cost nothing.
+ */
+export function designMonthlyCost(design: Design): number {
+  let total = 0;
+  for (const node of design.nodes) {
+    switch (node.type) {
+      case 'service':
+      case 'worker':
+        total += node.params.instances * instancePrice(node.params.concurrency);
+        break;
+      case 'database':
+        total += (node.params.replicas + 1) * databaseServerPrice(node.params.concurrency);
+        break;
+      case 'cache':
+        total += cachePrice(node.params.capacity);
+        break;
+      case 'load-balancer':
+        total += PRICES.loadBalancer;
+        break;
+      case 'rate-limiter':
+        total += PRICES.rateLimiter;
+        break;
+      case 'queue':
+        total += PRICES.queue;
+        break;
+      case 'client':
+        break;
+    }
+  }
+  return total;
+}

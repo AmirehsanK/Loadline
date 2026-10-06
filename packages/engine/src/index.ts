@@ -1,6 +1,6 @@
 export { CALL_STATES, OUTCOMES } from './codes.ts';
 export type { CallStateName, OutcomeName } from './codes.ts';
-export { PRICES, cachePrice, databaseServerPrice, instancePrice } from './cost.ts';
+export { PRICES, cachePrice, databaseServerPrice, designMonthlyCost, instancePrice } from './cost.ts';
 export { SimulationLimitError } from './kernel/calls.ts';
 export type { Dist } from './kernel/dist.ts';
 export { findBottleneck, summarize } from './metrics/bottleneck.ts';

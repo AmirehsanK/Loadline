@@ -1,4 +1,4 @@
-import { commandSchema, hasErrors, lintDesign } from '@loadline/engine';
+import { commandSchema, designMonthlyCost, hasErrors, lintDesign } from '@loadline/engine';
 import type { CommandInput, Design } from '@loadline/engine';
 import { simulationKey, structureKey } from '../design/model.ts';
 import { currentDesign, useDesign } from '../design/store.ts';
@@ -84,7 +84,7 @@ function load(design: Design, playing: boolean): void {
   if (hasErrors(issues)) {
     loadedStructure = null;
     send({ type: 'pause' });
-    useSim.setState({ ...EMPTY_RUN, issues, status: 'blocked', nodeIndex: {}, edgeIndex: {} });
+    useSim.setState({ ...EMPTY_RUN, monthlyCost: designMonthlyCost(design), issues, status: 'blocked', nodeIndex: {}, edgeIndex: {} });
     return;
   }
   run++;
@@ -92,6 +92,9 @@ function load(design: Design, playing: boolean): void {
   const { multiplier, speed } = useSim.getState();
   useSim.setState({
     ...EMPTY_RUN,
+    // What the design costs is known before the worker has said anything. Until it has, this is
+    // the figure on show; the run then reports what it has really cost.
+    monthlyCost: designMonthlyCost(design),
     issues,
     status: playing ? 'running' : 'paused',
     nodeIndex: Object.fromEntries(design.nodes.map((node, index) => [node.id, index])),

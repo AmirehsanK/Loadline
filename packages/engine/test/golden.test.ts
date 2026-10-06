@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findBottleneck, hashReport, lintDesign, summarize } from '../src/index.ts';
+import { createSimulation, designMonthlyCost, findBottleneck, hashReport, lintDesign, summarize, totalMonthlyCost } from '../src/index.ts';
 import { run } from './helpers.ts';
 import { referenceRun, storefront } from './reference.ts';
 
@@ -11,6 +11,12 @@ import { referenceRun, storefront } from './reference.ts';
 describe('the reference system', () => {
   it('has nothing for the lint to say', () => {
     expect(lintDesign(storefront)).toEqual([]);
+  });
+
+  it('costs at rest what a run of it starts at', () => {
+    expect(designMonthlyCost(storefront)).toBe(totalMonthlyCost(createSimulation(storefront, { seed: 1 })));
+    // By hand: limiter 10, balancer 20, three instances at 63, cache 14, two servers at 136, queue 15, two workers at 27.
+    expect(designMonthlyCost(storefront)).toBe(574);
   });
 
   it('gets through its bad day the same way every time', () => {

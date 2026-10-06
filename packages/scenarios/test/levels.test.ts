@@ -1,4 +1,4 @@
-import { NODE_TYPES, lintDesign } from '@loadline/engine';
+import { NODE_TYPES, createSimulation, designMonthlyCost, lintDesign, totalMonthlyCost } from '@loadline/engine';
 import { describe, expect, it } from 'vitest';
 import { LEVELS, brokenRules, findLevel, runScenario } from '../src/index.ts';
 import type { Objective } from '../src/index.ts';
@@ -54,6 +54,14 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('%s', (_id, lev
       expect(outcome.issues, what).toEqual([]);
       expect(outcome.broken, what).toEqual([]);
       expect(outcome.stars, what).toBe(stars);
+    }
+  });
+
+  it('costs at rest what a run of it starts at', () => {
+    // The page shows the first figure until the run has something to say, and the second after.
+    for (const design of [level.starter, level.reference]) {
+      const sim = createSimulation(design, { seed: level.seed, workload: level.workload });
+      expect(designMonthlyCost(design)).toBe(totalMonthlyCost(sim));
     }
   });
 
