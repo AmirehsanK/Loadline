@@ -3,6 +3,8 @@
 A system design playground. Draw an architecture, run traffic through it, break it, and see why it
 broke.
 
+**Play it at <https://amirehsank.github.io/Loadline/>.** Nothing to install, and no account.
+
 ![The first level part of the way through a run: one API instance, 300 requests a second arriving, and the queue in front of it full](docs/screenshots/level.png)
 
 Loadline simulates every request, one by one, as it passes through load balancers, services,
@@ -31,6 +33,8 @@ Drag-and-simulate sandboxes are not new. This one tries to do the unglamorous pa
 - **English and Persian**, with the layout mirrored for Persian.
 
 ## Run it
+
+It is hosted at the address above. To run your own copy:
 
 ```bash
 git clone https://github.com/AmirehsanK/Loadline.git
@@ -193,7 +197,7 @@ FAIL  cost<200   got $302
 | `validate <file>` | Checks a design. Exits 1 if it cannot run |
 | `simulate <file>` | Runs it and prints what happened; `--json` for the whole report |
 | `test <file> --assert …` | Runs it and checks conditions. Exits 1 if one fails |
-| `share <file> --base <url>` | Prints a link that opens the design in the playground at that address |
+| `share <file>` | Prints a link that opens the design in the playground; `--base <url>` for a copy of your own |
 | `review <file>` | Runs it and prints a prompt asking a language model to review the run |
 | `levels` | Lists the levels; `--level <id>` on the commands above scores a design against one |
 

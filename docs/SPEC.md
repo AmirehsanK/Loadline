@@ -316,15 +316,19 @@ make a complete, deployed piece.
 **State on 6 October 2026.** All ten are built, and what each was to be checked by passes, with
 these exceptions:
 
-- 5: the site is not deployed. The Pages workflow exists and is started by hand; Pages has not been
-  switched on for the repository. The links the CLI and the MCP server print point at the address
-  it will have.
 - 6: the Persian copy has not been reviewed.
 - 7: the tests solve a level through the MCP tools and get a share link back, in memory and over
   standard input and output. No agent has been pointed at the server through `.mcp.json` yet.
 - 8: no review has been run with a real key.
 
-The last three are the owner's to do; the first is the owner's to decide.
+All three are the owner's to do.
+
+The site is at <https://amirehsank.github.io/Loadline/>. The Pages workflow publishes it and is
+started by hand, so what is live is the commit it was last run on. It was checked there on the day
+it went up: the first level fails on its starting design and passes on the reference with the
+figures Node gives; the link to that answer, opened in a fresh profile, shows the same figures and
+earns that visitor no stars; the embed loads; a link made by the command line opens; Persian
+mirrors; and no console reports an error or a request the policy refused.
 
 ## 9. Verification
 

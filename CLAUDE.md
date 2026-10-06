@@ -7,8 +7,10 @@ it. Where the code and the spec disagree, that is a bug in one of them — resol
 not silently diverge. `docs/ENGINE.md` explains each engine mechanism and how it was validated; it
 is written alongside the engine, one mechanism at a time.
 
-The repository is public at <https://github.com/AmirehsanK/Loadline>. The name also appears in
-package names (`@loadline/*`), so a rename would be a find-and-replace and a repository rename.
+The repository is public at <https://github.com/AmirehsanK/Loadline>, and the site is live at
+<https://amirehsank.github.io/Loadline/>. The name also appears in package names (`@loadline/*`)
+and in the address the command line and the MCP server put in a link (`PLAYGROUND_URL`), so a
+rename would be a find-and-replace, a repository rename and a new address for every link made.
 
 ## Environment facts
 
@@ -123,5 +125,12 @@ These are the rules that make failures emerge instead of being scripted. Each ha
 ## Commit and publish
 
 Commit at each milestone and push `main` to `origin`; the owner created the repository and asked
-for the commits to be pushed there (5 October 2026). Enabling GitHub Pages, changing the
-repository's settings and publishing a package are still outward-facing: ask first.
+for the commits to be pushed there (5 October 2026).
+
+The site is published by the Pages workflow, which is started by hand
+(`gh workflow run pages.yml`). The owner asked for Pages to be enabled and the workflow run on
+6 October 2026. That was for that deployment: a push does not publish, and running the workflow
+again changes what the public sees, so ask first unless told to deploy. After a deployment, open
+the site and play the first level before saying it is up.
+
+Changing the repository's settings and publishing a package are outward-facing too: ask first.
