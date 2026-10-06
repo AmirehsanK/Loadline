@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Canvas } from './canvas/Canvas.tsx';
 import { Palette } from './canvas/Palette.tsx';
 import { useDesign } from './design/store.ts';
+import { Guide } from './guide/Guide.tsx';
 import { Home } from './home/Home.tsx';
 import { useMessages } from './i18n/index.ts';
 import { ForwardIcon, LoadMark } from './icons.tsx';
@@ -19,6 +20,7 @@ export function App() {
   const page = useRoute((state) => state.route.page);
   const shared = useRoute((state) => state.shared);
   if (page === 'home') return <Home />;
+  if (page === 'guide') return <Guide />;
   // A design from a link is not shown until it has been unpacked and checked.
   if (shared?.status === 'opening') return <Notice title={m.shared.opening} />;
   if (shared?.status === 'refused') return <Notice title={m.shared.refusedTitle} text={m.shared.refused[shared.code]} />;

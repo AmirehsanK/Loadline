@@ -6,6 +6,8 @@ export type Route =
   | { page: 'home' }
   | { page: 'sandbox' }
   | { page: 'level'; id: string }
+  /** The guide: its front page, or with an id, the lesson on that level. */
+  | { page: 'guide'; id: string | null }
   /** A design carried in the link itself. `payload` is untrusted until it has been decoded. */
   | { page: 'shared'; payload: string };
 
@@ -15,13 +17,15 @@ export const HOME: Route = { page: 'home' };
 export function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (parts.length === 1 && parts[0] === 'sandbox') return { page: 'sandbox' };
-  if (parts.length === 2 && (parts[0] === 'level' || parts[0] === 'd')) {
+  if (parts.length === 1 && parts[0] === 'guide') return { page: 'guide', id: null };
+  if (parts.length === 2 && (parts[0] === 'level' || parts[0] === 'guide' || parts[0] === 'd')) {
     let value: string;
     try {
       value = decodeURIComponent(parts[1]!);
     } catch {
       return HOME;
     }
+    if (parts[0] === 'guide') return { page: 'guide', id: value };
     return parts[0] === 'level' ? { page: 'level', id: value } : { page: 'shared', payload: value };
   }
   return HOME;
@@ -36,6 +40,8 @@ export function hrefOf(route: Route): string {
       return '#/sandbox';
     case 'level':
       return `#/level/${encodeURIComponent(route.id)}`;
+    case 'guide':
+      return route.id === null ? '#/guide' : `#/guide/${encodeURIComponent(route.id)}`;
     case 'shared':
       return `#/d/${encodeURIComponent(route.payload)}`;
   }

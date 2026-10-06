@@ -22,16 +22,19 @@ describe('routes', () => {
     expect(parseRoute('#/sandbox')).toEqual({ page: 'sandbox' });
     expect(parseRoute('#/level/pool-party')).toEqual({ page: 'level', id: 'pool-party' });
     expect(parseRoute('#level/pool-party/')).toEqual({ page: 'level', id: 'pool-party' });
+    expect(parseRoute('#/guide')).toEqual({ page: 'guide', id: null });
+    expect(parseRoute('#/guide/stampede')).toEqual({ page: 'guide', id: 'stampede' });
   });
 
   it('fall back to the home page for anything else', () => {
-    for (const hash of ['#/nowhere', '#/level', '#/level/a/b', '#/sandbox/extra', '#/level/%E0%A4%A']) {
+    for (const hash of ['#/nowhere', '#/level', '#/level/a/b', '#/sandbox/extra', '#/level/%E0%A4%A', '#/guide/a/b']) {
       expect(parseRoute(hash), hash).toEqual(HOME);
     }
   });
 
   it('survive the trip to a link and back', () => {
-    for (const route of [HOME, { page: 'sandbox' }, { page: 'level', id: 'the-bill' }, { page: 'level', id: 'a b/c' }] as const) {
+    const guides = [{ page: 'guide', id: null }, { page: 'guide', id: 'the-bill' }] as const;
+    for (const route of [HOME, { page: 'sandbox' }, { page: 'level', id: 'the-bill' }, { page: 'level', id: 'a b/c' }, ...guides] as const) {
       expect(sameRoute(parseRoute(hrefOf(route)), route)).toBe(true);
     }
   });

@@ -23,6 +23,9 @@ export function Home() {
           <span className="marking text-[2.1rem]!">{m.app.name}</span>
         </h1>
         <div className="flex items-center gap-4">
+          <a href={hrefOf({ page: 'guide', id: null })} className="font-bold underline decoration-line underline-offset-4 hover:decoration-ink">
+            {m.guide.link}
+          </a>
           <a href={SOURCE} className="text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink">
             {m.home.source}
           </a>
@@ -43,6 +46,17 @@ export function Home() {
               className="flex items-center gap-1.5 rounded-[3px] border border-ink px-3 py-1.5 font-bold hover:bg-ink hover:text-plate"
             >
               {m.home.openSandbox}
+              <ForwardIcon />
+            </a>
+          </div>
+          <div className="flex flex-col items-start gap-2 border-s-4 border-sea bg-plate py-3 ps-4 pe-5">
+            <h2 className="marking">{m.guide.homeTitle}</h2>
+            <p className="text-ink-2">{m.guide.homeHint}</p>
+            <a
+              href={hrefOf({ page: 'guide', id: null })}
+              className="flex items-center gap-1.5 rounded-[3px] border border-ink px-3 py-1.5 font-bold hover:bg-ink hover:text-plate"
+            >
+              {m.guide.open}
               <ForwardIcon />
             </a>
           </div>

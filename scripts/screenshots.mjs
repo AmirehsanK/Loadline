@@ -7,7 +7,7 @@
 // It drives a browser that is already installed (Edge, or Chrome with BROWSER=chrome), so there is
 // nothing to download. The pictures are of real runs: each one plays a level and waits for it.
 
-/* global localStorage -- the function given to addInitScript runs in the page, not here */
+/* global document, localStorage -- the functions given to the page run in the page, not here */
 
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -84,6 +84,13 @@ for (const [locale, words] of [
   await shoot(level, `result${suffix}`);
   await level.context().close();
 }
+
+// A lesson from the guide, once the answer it describes has been run and scored on the page.
+const guide = await visitor('en');
+await guide.goto(`${BASE}/#/guide/first-traffic`);
+await guide.waitForFunction(() => document.querySelectorAll('main ul').length >= 3);
+await shoot(guide, 'guide');
+await guide.context().close();
 
 // The sandbox, with a design that came with traffic and a fault of its own.
 const sandbox = await visitor('en');

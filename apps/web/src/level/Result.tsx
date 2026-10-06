@@ -24,7 +24,7 @@ export function Stars({ earned, size = 16, label, stamped = false }: { earned: n
   );
 }
 
-function ResultRow({ result }: { result: ObjectiveResult }) {
+export function ResultRow({ result }: { result: ObjectiveResult }) {
   const m = useMessages();
   return (
     <li className="grid grid-cols-[1.1rem_minmax(0,1fr)_auto] items-baseline gap-x-2">

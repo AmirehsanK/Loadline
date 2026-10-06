@@ -71,13 +71,17 @@ npm run browsers    # the same runs in each installed browser as in Node; they m
 - A level's numbers are tuned, not derived. `packages/scenarios/test/attempts.ts` lists what a
   player might try on each level and the stars it should earn. If an engine change moves a row,
   the lesson has changed: retune the level and re-read its brief, hints and debrief against the
-  new numbers before touching the table.
+  new numbers before touching the table. Then read its lesson in the guide
+  (`apps/web/src/i18n/guide.en.ts` and `guide.fa.ts`): the steps there are the reference design
+  in words, and each line under `others` is a row of that table.
 - Technical proper nouns stay English in the Persian UI: component names, p99, RPS, ms.
 - Every word the interface shows comes from `apps/web/src/i18n`. A message that takes values is a
   function in the catalog, never a string glued together in a component. `fa.ts` has the type of
   `en.ts`, so a message added to one and not the other does not compile; a level's Persian goes in
-  `levels.fa.ts`. In Persian, a number inside a sentence is in Persian digits and a number read
-  off the system (a rate, a latency, a cost) keeps Latin ones.
+  `levels.fa.ts`, and its lesson in the guide in `guide.en.ts` and `guide.fa.ts`. A step in a
+  lesson names a setting in quotes exactly as the inspector labels it, which a test checks. In
+  Persian, a number inside a sentence is in Persian digits and a number read off the system (a
+  rate, a latency, a cost) keeps Latin ones.
 - Styles use logical directions (`ms-`, `pe-`, `start-`, `text-end`), so the interface can mirror
   for Persian. `npm run lint` fails on a physical one (`ml-`, `text-left`, ...). The canvas and the
   charts are the exception: they set `dir="ltr"` and are always drawn left to right.

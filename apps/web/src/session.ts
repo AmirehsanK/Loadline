@@ -1,5 +1,6 @@
 import { designSchema } from '@loadline/engine';
 import { findLevel } from '@loadline/scenarios';
+import type { Scenario } from '@loadline/scenarios';
 import { ShareError, decodeShare } from '@loadline/share';
 import type { ShareErrorCode } from '@loadline/share';
 import { create } from 'zustand';
@@ -69,6 +70,23 @@ arrive(parseRoute(window.location.hash));
 
 export function go(route: Route): void {
   window.location.hash = hrefOf(route);
+}
+
+/**
+ * Opens a level with its reference design on the canvas, as "show a solution" would leave it. The
+ * guide uses it, for a reader who wants to see the answer run.
+ */
+export function openWithAnswer(level: Scenario): void {
+  // The level's own design is opened when the address changes. The answer goes on after that, as
+  // an edit like any other, so undo brings back what was there.
+  window.addEventListener(
+    'hashchange',
+    () => {
+      useDesign.getState().replace(level.reference);
+    },
+    { once: true },
+  );
+  go({ page: 'level', id: level.id });
 }
 
 /**

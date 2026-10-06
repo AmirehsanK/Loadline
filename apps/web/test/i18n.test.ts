@@ -3,6 +3,8 @@ import { normalize, toAsciiDigits } from 'persian-text-guard';
 import { describe, expect, it } from 'vitest';
 import { en } from '../src/i18n/en.ts';
 import { fa } from '../src/i18n/fa.ts';
+import { guideEn } from '../src/i18n/guide.en.ts';
+import { guideFa } from '../src/i18n/guide.fa.ts';
 import { levelsFa } from '../src/i18n/levels.fa.ts';
 import { DIRECTION, LOCALES, pickLocale } from '../src/i18n/locale.ts';
 
@@ -32,8 +34,10 @@ function texts(catalog: unknown, path = ''): { path: string; text: string }[] {
 const shape = (catalog: unknown) => texts(catalog).map((entry) => entry.path);
 
 const levelTexts = Object.entries(levelsFa).flatMap(([id, text]) => texts(text, `levels.${id}`));
-const persian = [...texts(fa), ...levelTexts];
+const persian = [...texts(fa), ...levelTexts, ...texts(guideFa, 'guide')];
 const hasPersian = (text: string) => /[؀-ۿ]/.test(text);
+/** The numbers a text gives in digits, whichever digits they are written in. */
+const figures = (text: string) => new Set(toAsciiDigits(text).replace(/(\d),(\d)/g, '$1$2').match(/\d+(?:\.\d+)?/g) ?? []);
 
 // The package's `standard` preset, taken apart. As a whole it also folds look-alike letters onto
 // one form, which is right for comparing text and wrong for showing it: it turns «آ» into «ا».
@@ -130,7 +134,6 @@ describe('the levels in Persian', () => {
   it('give no number that the English does not', () => {
     // The English text is tuned against the simulation. A figure written in digits here has to
     // be one that is written in digits there, or one of them is wrong.
-    const figures = (text: string) => new Set(toAsciiDigits(text).replace(/(\d),(\d)/g, '$1$2').match(/\d+(?:\.\d+)?/g) ?? []);
     for (const level of LEVELS) {
       const persianText = levelsFa[level.id]!;
       const pairs: [string, string, string][] = [
@@ -163,5 +166,43 @@ describe('choosing a language', () => {
 
   it('knows which way each language runs', () => {
     expect(LOCALES.map((locale) => DIRECTION[locale])).toEqual(['ltr', 'rtl']);
+  });
+});
+
+describe('the guide', () => {
+  it('has a lesson on every level in both languages, with as many steps and as many other attempts', () => {
+    const ids = LEVELS.map((level) => level.id).sort();
+    expect(Object.keys(guideEn).sort()).toEqual(ids);
+    expect(Object.keys(guideFa).sort()).toEqual(ids);
+    for (const id of ids) {
+      expect(guideEn[id]!.steps.length, id).toBeGreaterThan(1);
+      expect(guideFa[id]!.steps, id).toHaveLength(guideEn[id]!.steps.length);
+      expect(guideFa[id]!.others, id).toHaveLength(guideEn[id]!.others.length);
+      for (const { path, text } of texts(guideFa[id], id)) expect(hasPersian(text), path).toBe(true);
+    }
+  });
+
+  it('names every setting as the inspector does', () => {
+    // A step puts the name of a setting in quotes. If a label is reworded and the step is not,
+    // the reader is sent looking for something that is no longer on the screen.
+    const labels = (catalog: unknown) => new Set(texts(catalog).map((entry) => entry.text));
+    const quoted = (guide: typeof guideEn, pattern: RegExp) =>
+      Object.entries(guide).flatMap(([id, lesson]) => lesson.steps.flatMap((step) => [...step.matchAll(pattern)].map((match) => [id, match[1]!] as const)));
+
+    const english = quoted(guideEn, /"([^"]+)"/g);
+    const persianNames = quoted(guideFa, /«([^»]+)»/g);
+    expect(english.length).toBeGreaterThan(20);
+    expect(persianNames).toHaveLength(english.length);
+    for (const [id, name] of english) expect(labels(en.fields).has(name), `${id}: ${name}`).toBe(true);
+    for (const [id, name] of persianNames) expect(labels(fa.fields).has(name), `${id}: ${name}`).toBe(true);
+  });
+
+  it('gives no number in Persian that the English does not', () => {
+    // As for the levels: the English is written against the simulation and the table of attempts.
+    const english = new Map(texts(guideEn).map((entry) => [entry.path, entry.text]));
+    for (const { path, text } of texts(guideFa)) {
+      const allowed = figures(english.get(path) ?? '');
+      for (const figure of figures(text)) expect(allowed.has(figure), `${path}: ${figure}`).toBe(true);
+    }
   });
 });

@@ -2,6 +2,9 @@ import type { Scenario, ScenarioText } from '@loadline/scenarios';
 import { en } from './en.ts';
 import type { Messages } from './en.ts';
 import { fa } from './fa.ts';
+import { guideEn } from './guide.en.ts';
+import type { LevelGuide } from './guide.en.ts';
+import { guideFa } from './guide.fa.ts';
 import { levelsFa } from './levels.fa.ts';
 import { useLocale } from './locale.ts';
 import type { Locale } from './locale.ts';
@@ -23,4 +26,10 @@ export function useMessages(): Messages {
 export function useLevelText(level: Scenario): ScenarioText {
   const locale = useLocale((state) => state.locale);
   return (locale === 'fa' ? levelsFa[level.id] : undefined) ?? level.text;
+}
+
+/** The guide's lesson on a level, in the language the interface is in. A test sees to it that every level has one. */
+export function useGuide(level: Scenario): LevelGuide {
+  const locale = useLocale((state) => state.locale);
+  return (locale === 'fa' ? guideFa[level.id] : undefined) ?? guideEn[level.id]!;
 }

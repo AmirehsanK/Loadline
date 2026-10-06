@@ -6,6 +6,7 @@ import { useDesign } from '../design/store.ts';
 import { useLevelText, useMessages } from '../i18n/index.ts';
 import { CheckIcon, CrossIcon, StarIcon } from '../icons.tsx';
 import { formatClock } from '../metrics/format.ts';
+import { hrefOf } from '../route.ts';
 import { useSim } from '../sim/store.ts';
 import { describeObjective, describeValue, isMeasured } from './objectives.ts';
 import { allowedParts } from './rules.ts';
@@ -190,6 +191,10 @@ function Hints({ level }: { level: Scenario }) {
           <p className="text-[0.85rem] text-ink-3">{m.level.solutionNote}</p>
         </>
       )}
+      {/* The other way in, for someone who would rather be told: the lesson on this level. */}
+      <a href={hrefOf({ page: 'guide', id: level.id })} className="self-start text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink">
+        {m.guide.stuck}
+      </a>
     </section>
   );
 }

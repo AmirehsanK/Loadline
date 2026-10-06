@@ -30,7 +30,7 @@ Not goals: accounts, a backend, monetization, real cloud pricing.
 | Engine | Discrete-event simulation: each request is an object, and timestamped events are processed in time order from a priority queue | Queueing, tail latency and overload emerge instead of being scripted |
 | Where it runs | A Web Worker in the browser; plain Node for the CLI and MCP server | One engine, three front ends |
 | Web | Vite, React, Tailwind 4, React Flow (`@xyflow/react`), Zustand, uPlot | React Flow is the standard canvas |
-| Routing | Hash routes: `#/`, `#/level/:id`, `#/sandbox`, `#/d/:payload` | GitHub Pages needs no rewrite rules; the payload never reaches a server |
+| Routing | Hash routes: `#/`, `#/level/:id`, `#/guide`, `#/guide/:id`, `#/sandbox`, `#/d/:payload` | GitHub Pages needs no rewrite rules; the payload never reaches a server |
 | Storage | localStorage (versioned keys) plus JSON import and export | No backend |
 | Hosting | GitHub Pages, built by GitHub Actions | Free and static |
 | Units | Milliseconds for every time value | One unit, no conversions |
@@ -57,8 +57,8 @@ examples/                 designs to try the command line on
 apps/web/
   index.html, embed.html
   src/worker/             the engine in a Web Worker
-  src/canvas/  src/inspector/  src/metrics/  src/level/  src/share/  src/embed/
-  src/review/  src/i18n/
+  src/canvas/  src/inspector/  src/metrics/  src/level/  src/guide/  src/share/
+  src/embed/  src/review/  src/i18n/
 scripts/                  the check for physical-direction classes; the README's screenshots;
                           the same runs in each installed browser as in Node
 .github/workflows/        ci.yml, pages.yml
@@ -137,7 +137,8 @@ falls behind, the UI shows the real speed; fidelity is never dropped silently.
 ## 5. Web app
 
 - **Pages:** `#/` is the front page, with the list of levels and how many stars each has earned;
-  `#/level/<id>` plays a level; `#/sandbox` is the playground with every part and no objectives.
+  `#/level/<id>` plays a level; `#/sandbox` is the playground with every part and no objectives;
+  `#/guide` and `#/guide/<id>` are the guide and its lesson on a level.
 - **Layout of the workbench:** a left panel, the canvas, an inspector for the selected node or
   edge, and a metrics dock (KPIs, charts, failure causes, bottleneck callout). In the sandbox the
   left panel is the palette of parts. In a level it is the brief, the objectives with how the run
@@ -176,6 +177,21 @@ workload timeline with scripted faults, objectives, two bonus tiers, hints and a
   it does. A part the player adds can be given settings it must keep. Rules that settings cannot
   express are a function of the design.
 - **Seeds.** A level is played on its own seed, so the same design always scores the same.
+
+- **The guide.** For someone who wants to learn and does not know how to solve a level, the
+  hints are not enough: they nudge, and stop short of explaining. The guide explains. Its front
+  page says how to read the screen and what the words mean. Each lesson takes one level: what is
+  going wrong and why, the idea that fixes it and the name it goes by elsewhere, what to change
+  step by step, why that is the best answer, and what else a player might try and what comes of
+  it. It gives the answer away and says so; the hints stay the gentle way in. A button opens the
+  level with the answer on the canvas, as an edit that undo takes back.
+  - Nothing measured is written into a lesson. What the answer scores is run on the page by
+    `runScenario`, so those figures cannot fall behind the engine.
+  - What is written is tied down where it can be: each line about another attempt is a row of
+    `attempts.ts`; every setting a step names is checked against the inspector's labels in both
+    languages; and the Persian gives no figure the English does not.
+  - A lesson is reachable from its level's panel and from the front page. Unlike the workbench it
+    is a page to read, and fits a phone.
 
 Every level ships with a reference solution. CI proves that on five seeds the starter fails and the
 reference earns three stars, and checks a table of what a player might try against the stars each
@@ -316,7 +332,7 @@ make a complete, deployed piece.
 **State on 6 October 2026.** All ten are built, and what each was to be checked by passes, with
 these exceptions:
 
-- 6: the Persian copy has not been reviewed.
+- 6: the Persian copy has not been reviewed, the guide's included.
 - 7: the tests solve a level through the MCP tools and get a share link back, in memory and over
   standard input and output. No agent has been pointed at the server through `.mcp.json` yet.
 - 8: no review has been run with a real key.
