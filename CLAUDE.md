@@ -54,6 +54,7 @@ npm run loadline -- simulate examples/storefront.yaml   # the command line, from
 npm run mcp         # the MCP server over stdio; .mcp.json registers it
 npm run screenshots # retakes docs/screenshots; needs the built app served on 5184
 npm run browsers    # the same runs in each installed browser as in Node; they must hash the same
+npm run lessons     # follows every lesson's steps in the editor; needs the built app served on 5184
 ```
 
 ## Conventions
@@ -73,7 +74,14 @@ npm run browsers    # the same runs in each installed browser as in Node; they m
   the lesson has changed: retune the level and re-read its brief, hints and debrief against the
   new numbers before touching the table. Then read its lesson in the guide
   (`apps/web/src/i18n/guide.en.ts` and `guide.fa.ts`): the steps there are the reference design
-  in words, and each line under `others` is a row of that table.
+  in words, and each line under `others` is a row of that table. `scripts/lessons.mjs` has the
+  same steps as actions; change them together and run `npm run lessons`. The order of steps
+  matters: the editor refuses a connection that would break a rule of the design, so a client's
+  old connection has to be deleted before its new one is drawn.
+- A new level teaches something the engine already does. Write it with placeholder words, tune it
+  with a table of attempts until every row is stable on five seeds, and only then write the brief,
+  the hints, the debrief, the Persian and the lesson. Words written before the numbers settle are
+  written twice.
 - Technical proper nouns stay English in the Persian UI: component names, p99, RPS, ms.
 - Every word the interface shows comes from `apps/web/src/i18n`. A message that takes values is a
   function in the catalog, never a string glued together in a component. `fa.ts` has the type of

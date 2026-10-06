@@ -21,7 +21,7 @@ export const en = {
     tagline: 'Draw a system. Run traffic through it. Watch where it gives way, and why.',
     intro:
       'Every request here is simulated one by one, so queues, timeouts and overload happen for the reasons they happen in ' +
-      'production. Ten levels each hand you a system with a problem. Fix it, and it stays fixed on any seed.',
+      'production. Each level hands you a system with a problem. Fix it, and it stays fixed on any seed.',
     levels: 'Levels',
     // The number painted beside a level in the list.
     ordinal: (index: number) => String(index).padStart(2, '0'),
@@ -86,7 +86,7 @@ export const en = {
       { term: 'Queue and worker', text: 'A queue stores work and answers at once. A worker takes the work from it at its own pace.' },
       { term: 'Autoscaling', text: 'A service adding and removing its own instances as load changes. A new instance takes time to start.' },
     ],
-    lessonsTitle: 'The ten lessons',
+    lessonsTitle: 'The lessons',
     lesson: (index: number, total: number) => `Lesson ${index} of ${total}`,
     spoiler: 'This page gives the answer away. To find it yourself, play the level first: its hints go one step at a time.',
     problem: 'What is going on',

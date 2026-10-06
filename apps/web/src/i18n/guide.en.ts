@@ -32,7 +32,8 @@ export const guideEn: Record<string, LevelGuide> = {
       'load. It stays small for a long time and then explodes close to 100% busy, which is why a service is run well below what it can do.',
     steps: [
       'Add a Load balancer from the parts on the left.',
-      'Put it between Users and API: connect Users to the balancer and the balancer to API, then select the old connection from Users straight to API and delete it.',
+      'Select the connection from Users to API and delete it. A client can call only one part, so the old connection has to go before a new one can be drawn.',
+      'Connect Users to the balancer, and the balancer to API.',
       'Select API and set "Instances" to 2.',
     ],
     why:
@@ -263,6 +264,213 @@ export const guideEn: Record<string, LevelGuide> = {
       'One API instance, a database of 4 or 6 cores, or a cache of 500 items: each fails. That part is now below its load.',
       'One mailer instance: it fails. Emails are still unsent when the run ends.',
       'A cache of 2,000 items: three stars as well.',
+    ],
+  },
+  'luck-of-the-draw': {
+    problem:
+      'Ten instances each work on 2 requests at a time at 20 ms apiece: 100 a second each, 1,000 together. 850 arrive, so on ' +
+      'average each is 85% busy and there is room. But the balancer picks at random, and random is lumpy. At any moment some ' +
+      'instances have three or four calls and a queue while others stand idle, and a call sent to a busy one waits behind work ' +
+      'that an idle one could have started at once.',
+    idea:
+      'Send each call where it will wait least. A balancer that knows how busy its instances are can do that; one that picks ' +
+      'blindly cannot. Even a little knowledge goes a long way: comparing two instances picked at random, and taking the less ' +
+      'busy, removes most of the waiting. That trick is known as the power of two choices; sending to the least busy of all is ' +
+      'called least connections.',
+    steps: ['Select the Balancer.', 'Set "How it picks an instance" to "The least busy".'],
+    why:
+      'With the least busy instance always chosen, a call queues only when every instance is busy, which at 85% is rare. The ' +
+      'ten small queues behave like one shared queue in front of twenty slots, and the slowest requests take a third as long ' +
+      'as before, on the same servers.',
+    others: [
+      'Each in turn: one star. The calls are shared out evenly, but they are not equally long, so an instance can still be handed a call while it is stuck on a slow one.',
+      'The less busy of two picked at random: two stars. Nearly as good as looking at all of them, for much less looking.',
+    ],
+  },
+  patience: {
+    problem:
+      'Search answers in 60 ms on average, but unevenly: half its answers take under 40 ms, and about one in six takes more ' +
+      'than 100 ms. That is exactly where the site gives up. It calls each of those slow answers a failure and asks again, up ' +
+      'to twice, while Search carries on with the first. Search has room for 233 calls a second and gets 200; the repeats push ' +
+      'it past what it can do. Then everything is late, everything is retried, and it never recovers. Nothing broke. The ' +
+      'timeout did this.',
+    idea:
+      'A timeout is a statement about how long a healthy answer can take. Set it from the slow end of what the service really ' +
+      'does, its p99 or beyond, not from its average. Too short, and you fail requests that were about to succeed, and every ' +
+      'retry adds load to a service that was fine.',
+    steps: ['Select the connection from Site to Search.', 'Set "Give up after" to 600 ms.'],
+    why:
+      'The slowest one in a hundred healthy answers takes about 350 ms, so at 600 ms almost nothing is cut off. The two ' +
+      'retries can stay: when a call really does fail they help, and when hardly any call times out they cost nothing. Search ' +
+      'goes back to the 200 calls a second it can carry.',
+    others: [
+      'Taking out the retries and leaving the timeout at 100 ms: it fails. The storm is gone, and one request in four is still cut off.',
+      'Waiting between retries: it fails. The repeats are spread out, and there are just as many.',
+      'A timeout of 150, 200 or 300 ms: it fails. Each still cuts off enough healthy answers to overload Search.',
+      'A timeout of one second or of three: three stars as well. Past the slow end of a healthy answer, longer changes nothing here. Slow dependency showed what a long timeout costs when the service really is slow.',
+    ],
+  },
+  'full-house': {
+    problem:
+      'The ticket service handles 10 requests at a time at 40 ms each: 250 a second. During the sale 450 arrive. It cannot ' +
+      'serve them all, and it is not allowed to grow. Left alone it fills its waiting room of 256, so everyone it does serve ' +
+      'first waits about a second, and it still turns away everyone who does not fit.',
+    idea:
+      'When you cannot serve everyone, choose who waits. Turn the excess away at the door, at once, and the people you let in ' +
+      'are served as they arrive. That is load shedding, and a rate limiter is the usual tool: it lets a set number of calls ' +
+      'through each second and refuses the rest immediately.',
+    steps: [
+      'Add a Rate limiter from the parts on the left.',
+      'Select the connection from Fans to Tickets and delete it.',
+      'Connect Fans to the limiter, and the limiter to Tickets.',
+      'Select the limiter and set "Calls let through per second" to 230.',
+      'Set "Calls let through at once after a quiet spell" to 20.',
+    ],
+    why:
+      'At 230 a second the service is busy but not full, so a request that gets in is answered almost as fast as the work ' +
+      'itself takes. That is a little under what the room holds on purpose: at exactly 250 it is full all the time, and the ' +
+      'queue comes back. The burst is the other half. A limiter saves up permission while it is quiet, and a hundred calls ' +
+      'let in together at the start of the sale would be a queue that takes seconds to clear.',
+    others: [
+      'Letting 250 through, exactly what the room holds: it fails. With no slack the queue grows again.',
+      'Letting 300 through: it fails, just as it does with no door at all.',
+      'Letting 220 through: two stars. 210: one. The answers are no faster, and more people are turned away than need be.',
+      'Letting 190 or fewer through: it fails. More than 45% are turned away.',
+      '230 with the burst left at 100: it fails. The rush at the start of the sale fills the waiting room.',
+    ],
+  },
+  'never-twice': {
+    problem:
+      'Every second 360 reads and 40 writes arrive, and one database server runs about 330 queries a second: 4 cores, 12 ms a ' +
+      'query. It falls behind and most requests fail. The fix from Read-heavy does not work here. A cache answers a read that ' +
+      'was made before, and with a million documents asked for evenly, almost no read was made before.',
+    idea:
+      'When reads do not repeat, add servers that can answer them. A read replica is a copy of the database that serves ' +
+      'reads; writes still go to the one primary and are copied across. It suits a load that is mostly reading, and it is ' +
+      'called scaling reads out. Count the replicas for the reads alone, because once there is one, the primary no longer ' +
+      'serves any.',
+    steps: [
+      'Select the Database and set "Read replicas" to 2.',
+      'Select the connection from API to Database and set "Connections per instance" to 10.',
+    ],
+    why:
+      'With two replicas each gets 180 reads a second, a little over half of what it can run, and the primary is left with ' +
+      'the 40 writes. The pool is the lesson of Pool party again: three servers have twelve cores between them, so the API may ' +
+      'hold more connections than before, but with no limit at all a burst can still crowd one replica and tip it over.',
+    others: [
+      'A cache: it fails. Nothing is read twice, so it has nothing to give back.',
+      'One replica: it fails. All 360 reads go to it, and that is as much too many for it as 400 queries were for the primary.',
+      'Two replicas and no pool: it fails. A burst puts too many queries on one replica at once, and it does not recover.',
+      'Two replicas and a pool of 5: it fails; the API waits for connections while cores stand idle. A pool of 6: one star. A pool of 32: it fails, like none.',
+      'Three replicas: it fails, on cost.',
+    ],
+  },
+  clockwork: {
+    problem:
+      'A hundred prices are each asked for twenty times a second, and the cache keeps each for exactly twenty seconds. When ' +
+      'the site starts, all hundred are fetched in the same moment. So they all expire in the same moment and are all fetched ' +
+      'again together: a hundred queries at once on a database of 4 cores that needs 40 ms for each. Until they are done, ' +
+      'nobody gets a price. Twenty seconds later it happens again, and again, because being fetched together is what keeps ' +
+      'them together.',
+    idea:
+      'Things that are stored at the same time with the same lifetime expire at the same time. Give each item a slightly ' +
+      'different lifetime and they drift apart, so the store sees a steady trickle instead of a wave. This is called adding ' +
+      'jitter to the expiry, and it applies to anything on a timer: caches, scheduled jobs, clients that all reconnect after ' +
+      'an outage.',
+    steps: ['Select the Cache.', 'Set "Randomise lifetimes" to 0.2.'],
+    why:
+      'A price now lives somewhere between sixteen and twenty seconds, so the hundred no longer run out together. The first ' +
+      'time round they spread over four seconds, the next time over more, and within a minute the database is fetching about ' +
+      'five prices a second, which it does without anyone waiting. No price is ever older than the twenty seconds allowed.',
+    others: [
+      'Randomised by 0.01 or 0.02: it fails. The prices drift apart too slowly to help within the run.',
+      'By 0.05: two stars. By 0.1, by 0.5, or completely: three, like 0.2.',
+      'Fetching a missing price only once is already on, and does not help: these are a hundred different prices, not one price asked for a hundred times.',
+    ],
+  },
+  'nine-times': {
+    problem:
+      'Users call Web, and Web calls the API. Web gives the API 200 ms and tries twice more if a call fails. The user tries ' +
+      'twice more as well, and every one of those tries is three calls by Web. So when the API has a bad five seconds, each ' +
+      'request can turn into nine calls. The API can handle 375 a second and normally gets 100. Nine times that is 900, so it ' +
+      'never clears its queue, every call is late, and every late call is retried.',
+    idea:
+      'Retries multiply down a chain of calls; they do not add. Two layers that each try three times make nine tries, and ' +
+      'three layers would make twenty-seven. So retry in one layer only, the one closest to what fails, and let the others ' +
+      'pass the failure on. This is sometimes called a retry budget: decide how much extra load the whole chain may create, ' +
+      'not each layer by itself.',
+    steps: ['Select the connection from Users to Web.', 'Set "Retries" to 0. Leave the two retries on the connection from Web to API.'],
+    why:
+      'Now the worst the API can be handed is three times its usual load, 300 calls a second, and it has room for 375. After ' +
+      'the bad five seconds it works through what has piled up and is back to normal a few seconds later. The retries that ' +
+      'remain are worth keeping: even a healthy API is now and then slower than 200 ms, and a second try answers those requests.',
+    others: [
+      'Two retries at the edge and none inside: three stars as well. What matters is that only one layer retries.',
+      'One retry at each layer: it fails. It looks more careful than two at one layer, and is four times the load instead of three, more than the API can carry.',
+      'No retries anywhere: it fails. The storm cannot start, but the requests that a healthy API answers late simply fail.',
+      'Two at each layer with a wait between them: it fails. The calls are spread out, and there are still nine.',
+      'Two at each layer and a circuit breaker on the connection to the API: three stars. The breaker stops the calls themselves instead of the retries.',
+    ],
+  },
+  'wrong-suspect': {
+    problem:
+      'Web is turning away a quarter of all requests, and its gauge is at the top. But look at what it is doing: every one of ' +
+      'its slots holds a request that is waiting for the API, and every slot of the API holds one that is waiting for the ' +
+      'database. The database runs a query in 16 ms on 4 cores, so 250 a second, and 300 arrive. The shortage is at the back. ' +
+      'It shows at the front because a call holds its place all the way up the chain while it waits.',
+    idea:
+      'The part that hurts is not always the part that is short. Before making anything bigger, follow the waiting: what is ' +
+      'this part waiting for, and what is that one waiting for? The last part in the line, the one that is working and not ' +
+      'waiting, is the bottleneck. The panel under the canvas that says where the time goes does this walk for you.',
+    steps: [
+      'Run it and read the panel that says where the time goes. It names the Database.',
+      'Select the Database and set "Queries at full speed at once" to 6.',
+      'Select the connection from API to Database and set "Connections per instance" to 7.',
+    ],
+    why:
+      'Six cores run 375 queries a second, so 300 keeps the database 80% busy and nothing waits for long. The pool has to ' +
+      'follow: it was 5 for a database of four cores, and left there it would let only five queries run at once and leave a ' +
+      'core idle. Seven is the six cores plus one, as in Pool party. Web and the API needed nothing. They empty as soon as the ' +
+      'database keeps up.',
+    others: [
+      'More slots on Web, or a second Web instance: it fails, and costs more. More requests get in, to wait for the same database.',
+      'A second API instance: it fails, and worse than before. Two instances open twice the connections, and the database slows down under them.',
+      'A larger pool, or none: it fails, for the same reason.',
+      'Five cores: it fails; that is barely more than the load. Six cores with the pool left at 5: it fails too.',
+      'Eight cores and a pool of 9: one star. It works, and costs more than it needs to.',
+      'A read replica: it fails. One replica takes all the reads and is as short as the primary was, and it costs more than two extra cores.',
+    ],
+  },
+  failover: {
+    problem:
+      'There is one database server, and at twenty seconds it fails. Fifteen seconds pass before the database can be used ' +
+      'again, and in that time every request fails: browsing, which only reads, and buying, which writes. That is 300 ' +
+      'requests a second for fifteen seconds.',
+    idea:
+      'Two different things have stopped, and they need two different answers. Reads need a second copy to read from: a ' +
+      'replica, which also takes over as the new primary. Writes cannot be saved that way, because while the new primary is ' +
+      'being chosen there is nowhere to write. They need somewhere to wait: a queue, with a worker that writes each purchase ' +
+      'down once the database is back. A user cannot wait fifteen seconds. A message can.',
+    steps: [
+      'Select the Database and set "Read replicas" to 1.',
+      'Add a Queue and a Worker from the parts on the left.',
+      'Connect Shop to the Queue, the Queue to the Worker, and the Worker to the Database.',
+      'Select the connection from Shop to the Queue. Set "Used by" to "Writes only" and "The caller" to "Hands it over and moves on".',
+      'Select the connection from Shop to the Database and set "Used by" to "Reads only".',
+      'Select the connection from the Worker to the Database. Set "Retries" to 5 and "Wait before the first retry" to 1,000 ms.',
+    ],
+    why:
+      'The replica answers every read while the primary is gone, and then becomes the primary, so browsing never notices. ' +
+      'Purchases go into the queue and the customer is answered at once. The worker tries to write each one, fails, and waits: ' +
+      'one second, then two, then four, eight and sixteen, which is longer than the fifteen seconds the database is away. ' +
+      'When it is back, the purchases that piled up are written within a few seconds. Nothing is lost and nobody was kept waiting.',
+    others: [
+      'A replica and nothing else: it fails. Browsing survives, and every purchase made in those fifteen seconds is refused.',
+      'A replica, and the shop itself retrying its writes with long waits: it fails badly. Each waiting purchase holds a slot of the shop, the slots run out, and browsing fails too.',
+      'The queue and a patient worker, but no replica: it fails. Purchases are safe and nobody can browse.',
+      'A queue with a worker that does not retry, or that retries five times at once: it fails. The worker uses up every chance a purchase has in a few milliseconds and sets it aside, and hundreds are lost.',
+      'Two worker instances: one star. One is enough, and the second is paid for.',
+      'Two replicas: it fails, on cost.',
     ],
   },
 };

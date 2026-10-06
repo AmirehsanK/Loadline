@@ -17,10 +17,10 @@ function getPath(source: unknown, path: string): unknown {
 }
 
 describe('the levels', () => {
-  it('are ten, each with its own id and seed, and can be found by id', () => {
-    expect(LEVELS).toHaveLength(10);
-    expect(new Set(LEVELS.map((level) => level.id)).size).toBe(10);
-    expect(new Set(LEVELS.map((level) => level.seed)).size).toBe(10);
+  it('are eighteen, each with its own id and seed, and can be found by id', () => {
+    expect(LEVELS).toHaveLength(18);
+    expect(new Set(LEVELS.map((level) => level.id)).size).toBe(LEVELS.length);
+    expect(new Set(LEVELS.map((level) => level.seed)).size).toBe(LEVELS.length);
     for (const level of LEVELS) expect(findLevel(level.id)).toBe(level);
     expect(findLevel('no-such-level')).toBeUndefined();
   });

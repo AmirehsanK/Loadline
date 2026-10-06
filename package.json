@@ -22,7 +22,8 @@
     "loadline": "node packages/cli/src/main.ts",
     "mcp": "node packages/mcp/src/main.ts",
     "screenshots": "node scripts/screenshots.mjs",
-    "browsers": "node scripts/browsers.mjs"
+    "browsers": "node scripts/browsers.mjs",
+    "lessons": "node scripts/lessons.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

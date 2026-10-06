@@ -164,7 +164,10 @@ describe('loadline share and levels', () => {
   it('lists the levels in order', async () => {
     const { out } = await run(['levels']);
     expect(out.split('\n')).toHaveLength(LEVELS.length);
-    expect(out.split('\n')[0]).toBe(' 1  first-traffic    First traffic: Traffic is about to pass what one instance can do.');
+    // The ids are padded to the longest of them, so the titles line up however many levels there are.
+    const lines = out.split('\n');
+    expect(lines[0]).toMatch(/^ 1 {2}first-traffic +First traffic: Traffic is about to pass what one instance can do\.$/);
+    expect(new Set(lines.map((line) => line.indexOf(LEVELS[lines.indexOf(line)]!.text.title))).size).toBe(1);
   });
 });
 

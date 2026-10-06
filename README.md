@@ -26,7 +26,7 @@ Drag-and-simulate sandboxes are not new. This one tries to do the unglamorous pa
   share link carries all three, so whoever opens it sees the numbers you saw.
 - **One engine, three ways in.** The same code runs in a Web Worker behind the canvas, at the
   command line, and behind an MCP server for agents. One function scores a level in all three.
-- **Ten levels, each teaching one thing.** Each ships with a reference answer. CI proves on five
+- **Eighteen levels, each teaching one thing.** Each ships with a reference answer. CI proves on five
   seeds that the design a level starts from fails and that the reference earns three stars.
 - **No backend.** It is a static site. Designs live in your browser and in links, and nothing is
   uploaded.
@@ -50,7 +50,7 @@ TypeScript with no build step between them. It is developed on Node 26.
 
 | | |
 |---|---|
-| ![The front page: ten levels, and the stars earned so far](docs/screenshots/home.png) | ![A level passed with three stars, and what happened](docs/screenshots/result.png) |
+| ![The front page: the levels, and the stars earned so far](docs/screenshots/home.png) | ![A level passed with three stars, and what happened](docs/screenshots/result.png) |
 
 A level hands you a system with a problem, the traffic it has to survive, and what counts as
 surviving: a p99, an error rate, a monthly cost. You change the design, press Run, and watch. The
@@ -64,7 +64,8 @@ different trick. There are three hints if you want them and, after the third, a 
 screen and what the words mean, and has a lesson on every level: what is going wrong, the idea
 that fixes it and the name it goes by elsewhere, what to change step by step, why that is the best
 answer, and what else people try and what comes of it. The answer is run and scored on the page,
-and one button puts it on the canvas so you can watch it work.
+and one button puts it on the canvas so you can watch it work. `npm run lessons` follows the steps
+of every lesson in the editor, in a real browser, and checks that each earns three stars.
 
 ![A lesson from the guide: the first level explained, with the steps of the best answer](docs/screenshots/guide.png)
 
@@ -80,6 +81,14 @@ and one button puts it on the canvas so you can watch it work.
 | 8 | Black Friday | Autoscaling is late; headroom buys time, under a budget |
 | 9 | Node down | One more instance than the load needs, health checks, and a retry |
 | 10 | The bill | Sizing every part to its load line while holding the objectives |
+| 11 | Luck of the draw | How a balancer picks an instance: looking at two beats picking one blind |
+| 12 | Patience | A timeout shorter than a healthy answer; set it from the slow end, not the average |
+| 13 | Full house | Rate limiting: turn the excess away at the door, a little under what you can serve |
+| 14 | Never twice | Read replicas, for reads that never repeat and a cache cannot help |
+| 15 | Clockwork | Items stored together expire together; randomise their lifetimes |
+| 16 | Nine times | Retries multiply down a chain of calls; retry in one layer |
+| 17 | Wrong suspect | Finding the bottleneck: the part that hurts is not always the part that is short |
+| 18 | Failover | A replica for reads, a queue for writes, and a worker that waits between tries |
 
 The **sandbox** has every part and no objectives. Scale the traffic with a slider, kill an
 instance, slow a part down, empty a cache, fail a database over, cut a connection, and see what
@@ -135,18 +144,18 @@ The engine also does not use `Math.log`, `Math.exp` or `Math.pow`: the language 
 JavaScript engine approximate them in its own way, and one differing bit in a sampled service time
 is enough to reorder two events. It has its own, built from arithmetic that is defined exactly.
 
-`npm run browsers` puts that to the test. Eleven runs (a reference system with every kind of part
+`npm run browsers` puts that to the test. Nineteen runs (a reference system with every kind of part
 and fault, and the reference answer to each level) are made in Node and in each browser that is
 installed, and every report has to hash the same.
 
 | Engine | Where | Reports |
 |---|---|---|
 | V8 | Node 26 | the reference |
-| V8 | Chrome 154, Edge 154 | identical on all eleven |
-| SpiderMonkey | Firefox 157 | identical on all eleven |
+| V8 | Chrome 154, Edge 154 | identical on all nineteen |
+| SpiderMonkey | Firefox 157 | identical on all nineteen |
 | JavaScriptCore | Safari | not checked; it cannot be started from a script this way |
 
-Put the built-in functions back and Chrome disagrees with Node on eight of the eleven, although
+Put the built-in functions back and Chrome disagrees with Node on sixteen of the nineteen, although
 both run V8. CI repeats the check in Firefox and Chrome on every push.
 
 ## Sharing
@@ -267,7 +276,7 @@ enforces. The Persian text is a first draft and has not been reviewed yet.
 ```mermaid
 flowchart TB
   engine["<b>engine</b><br/>discrete-event simulation<br/>pure TypeScript"]
-  scenarios["<b>scenarios</b><br/>the ten levels, scoring,<br/>the review prompt"]
+  scenarios["<b>scenarios</b><br/>the levels, scoring,<br/>the review prompt"]
   share["<b>share</b><br/>a design as the text<br/>of a link, and back"]
   web["<b>apps/web</b><br/>the playground"]
   cli["<b>cli</b><br/>the command line"]
@@ -326,10 +335,11 @@ Vite, React, Tailwind, [React Flow](https://reactflow.dev) for the canvas,
 ## Working on it
 
 ```bash
-npm run check                        # typecheck, lint, about 400 tests, build
+npm run check                        # typecheck, lint, nearly 500 tests, build
 npm test -w @loadline/engine         # one package
 npm run bench -w @loadline/engine    # events per second
 npm run browsers                     # the same runs in each installed browser as in Node
+npm run lessons                      # follows every lesson's steps in the editor; needs the built app served
 npm run dev -w @loadline/web         # the playground, on http://localhost:5183
 npm run screenshots                  # retakes docs/screenshots from the built app
 ```

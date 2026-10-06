@@ -1,7 +1,14 @@
 import type { Design } from '@loadline/engine';
 import { shop as blackFriday } from '../src/levels/black-friday.ts';
+import { priced } from '../src/levels/clockwork.ts';
+import { standby } from '../src/levels/failover.ts';
 import { fleet } from '../src/levels/first-traffic.ts';
+import { door } from '../src/levels/full-house.ts';
+import { balanced } from '../src/levels/luck-of-the-draw.ts';
+import { copies } from '../src/levels/never-twice.ts';
+import { layered } from '../src/levels/nine-times.ts';
 import { system as nodeDown } from '../src/levels/node-down.ts';
+import { hasty, searching } from '../src/levels/patience.ts';
 import { pooled } from '../src/levels/pool-party.ts';
 import { cached } from '../src/levels/read-heavy.ts';
 import { impatient, system as retryStorm } from '../src/levels/retry-storm.ts';
@@ -9,6 +16,7 @@ import { shop as slowDependency } from '../src/levels/slow-dependency.ts';
 import { catalog } from '../src/levels/stampede.ts';
 import { system as theBill } from '../src/levels/the-bill.ts';
 import { queued } from '../src/levels/write-burst.ts';
+import { tiers } from '../src/levels/wrong-suspect.ts';
 
 /** Something a player might try on a level, and the stars it should earn; none means it fails. */
 export type Attempt = [what: string, design: Design, stars: 0 | 1 | 2 | 3];
@@ -114,4 +122,97 @@ export const ATTEMPTS: Record<string, Attempt[]> = {
     ['a cache of 500 items', theBill({ ...bill, cache: 500 }), 0],
     ['a cache of 2,000 items', theBill({ ...bill, cache: 2000 }), 3],
   ],
+  'luck-of-the-draw': [
+    ['taking turns', balanced('round-robin'), 1],
+    ['the less busy of two picked at random', balanced('two-choices'), 2],
+    ['the least busy of all', balanced('least-connections'), 3],
+  ],
+  patience: [
+    ['no retries, the timeout left at 100 ms', searching({ ...hasty, retries: 0 }), 0],
+    ['waiting between retries, the timeout left at 100 ms', searching({ ...hasty, backoffMs: 200, jitter: 1 }), 0],
+    ['a timeout of 150 ms', searching({ ...hasty, timeoutMs: 150 }), 0],
+    ['a timeout of 200 ms', searching({ ...hasty, timeoutMs: 200 }), 0],
+    ['a timeout of 300 ms', searching({ ...hasty, timeoutMs: 300 }), 0],
+    ['a timeout of 600 ms', searching({ ...hasty, timeoutMs: 600 }), 3],
+    ['a timeout of one second', searching({ ...hasty, timeoutMs: 1000 }), 3],
+    ['a timeout of three seconds', searching({ ...hasty, timeoutMs: 3000 }), 3],
+    ['a timeout of 600 ms and no retries', searching({ timeoutMs: 600, retries: 0 }), 3],
+  ],
+
+  'full-house': [
+    ['a door that lets 300 a second through', door(300), 0],
+    ['250, exactly what the room holds', door(250), 0],
+    ['230', door(230), 3],
+    ['220', door(220), 2],
+    ['210', door(210), 1],
+    ['190', door(190), 0],
+    ['150', door(150), 0],
+    // A hundred rush in when the surge starts, and the room spends seconds clearing them.
+    ['230 and a burst of 100', door(230, 100), 0],
+    ['230 and a burst of 5', door(230, 5), 3],
+  ],
+
+
+  'never-twice': [
+    ['a cache of 10,000 items', copies({ replicas: 0, cache: 10_000 }), 0],
+    ['a pool of 5 and nothing else', copies({ replicas: 0, pool: 5 }), 0],
+    ['one replica', copies({ replicas: 1 }), 0],
+    ['one replica and a pool of 9', copies({ replicas: 1, pool: 9 }), 0],
+    ['two replicas and no pool', copies({ replicas: 2 }), 0],
+    ['two replicas and a pool of 5', copies({ replicas: 2, pool: 5 }), 0],
+    ['two replicas and a pool of 6', copies({ replicas: 2, pool: 6 }), 1],
+    ['two replicas and a pool of 10', copies({ replicas: 2, pool: 10 }), 3],
+    ['two replicas and a pool of 16', copies({ replicas: 2, pool: 16 }), 3],
+    ['two replicas and a pool of 32', copies({ replicas: 2, pool: 32 }), 0],
+    ['three replicas and a pool of 10', copies({ replicas: 3, pool: 10 }), 0],
+  ],
+
+
+  clockwork: [
+    ['lifetimes randomised by a hundredth', priced({ jitter: 0.01 }), 0],
+    ['by a fiftieth', priced({ jitter: 0.02 }), 0],
+    ['by a twentieth', priced({ jitter: 0.05 }), 2],
+    ['by a tenth', priced({ jitter: 0.1 }), 3],
+    ['by a fifth', priced({ jitter: 0.2 }), 3],
+    ['by half', priced({ jitter: 0.5 }), 3],
+    ['altogether', priced({ jitter: 1 }), 3],
+  ],
+
+
+  'nine-times': [
+    ['no retries anywhere', layered(0, 0), 0],
+    ['two at the edge and none inside', layered(2, 0), 3],
+    ['none at the edge and two inside', layered(0, 2), 3],
+    ['none at the edge and one inside', layered(0, 1), 3],
+    ['one at each layer', layered(1, 1), 0],
+    ['two at the edge and one inside', layered(2, 1), 0],
+    ['two at each, waiting between them', layered(2, 2, { backoffMs: 200, jitter: 1 }, { backoffMs: 100, jitter: 1 }), 0],
+    ['two at each, and a breaker inside', layered(2, 2, {}, { breaker: { enabled: true, window: 20, openMs: 2000 } }), 3],
+  ],
+  'wrong-suspect': [
+    ['twice the slots on Web', tiers({ webSlots: 80 }), 0],
+    ['two Web instances behind a balancer', tiers({ web: 2 }), 0],
+    ['two API instances behind a balancer', tiers({ api: 2 }), 0],
+    ['a pool of 10', tiers({ pool: 10 }), 0],
+    ['no pool', tiers({ pool: 0 }), 0],
+    ['five cores and a pool of 6', tiers({ cores: 5, pool: 6 }), 0],
+    ['six cores, the pool left at 5', tiers({ cores: 6 }), 0],
+    ['six cores and a pool of 7', tiers({ cores: 6, pool: 7 }), 3],
+    ['eight cores and a pool of 9', tiers({ cores: 8, pool: 9 }), 1],
+    ['a read replica', tiers({ replicas: 1 }), 0],
+  ],
+  failover: [
+    ['a replica and nothing else', standby({ replicas: 1 }), 0],
+    // Each purchase holds a slot of the shop while it waits, and its customer has long since given up.
+    ['a replica, and the shop retrying its own writes for half a minute', standby({ replicas: 1, direct: { retries: 5, backoffMs: 1000 } }), 0],
+    ['a queue and a patient worker, and no replica', standby({ queued: { retries: 5, backoffMs: 1000 } }), 0],
+    ['a replica and a queue, the worker not retrying', standby({ replicas: 1, queued: {} }), 0],
+    ['the worker retrying five times at once', standby({ replicas: 1, queued: { retries: 5, backoffMs: 0 } }), 0],
+    ['the worker retrying four times, a second apart at first', standby({ replicas: 1, queued: { retries: 4, backoffMs: 1000 } }), 3],
+    ['five times, a second apart at first', standby({ replicas: 1, queued: { retries: 5, backoffMs: 1000 } }), 3],
+    ['ten times, half a second apart at first', standby({ replicas: 1, queued: { retries: 10, backoffMs: 500 } }), 3],
+    ['five times a second apart, and two worker instances', standby({ replicas: 1, workers: 2, queued: { retries: 5, backoffMs: 1000 } }), 1],
+    ['two replicas', standby({ replicas: 2, queued: { retries: 5, backoffMs: 1000 } }), 0],
+  ],
+
 };

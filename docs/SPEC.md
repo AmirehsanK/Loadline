@@ -210,6 +210,21 @@ tests: an engine change that moves a row has changed what a level teaches.
 | 8 | Black Friday | Autoscaling is late; headroom buys time, under a budget |
 | 9 | Node down | One more instance than the load needs, health checks, and a retry |
 | 10 | The bill | Sizing every part to its load line, at the peak, while holding the objectives |
+| 11 | Luck of the draw | How a balancer picks an instance: looking at two beats picking one blind |
+| 12 | Patience | A timeout shorter than a healthy answer; set it from the slow end, not the average |
+| 13 | Full house | Rate limiting: turn the excess away at the door, a little under what you can serve |
+| 14 | Never twice | Read replicas, for reads that never repeat and a cache cannot help |
+| 15 | Clockwork | Items stored together expire together; randomise their lifetimes |
+| 16 | Nine times | Retries multiply down a chain of calls; retry in one layer |
+| 17 | Wrong suspect | Finding the bottleneck: the part that hurts is not always the part that is short |
+| 18 | Failover | A replica for reads, a queue for writes, and a worker that waits between tries |
+
+The first ten came with the plan. The other eight were added afterwards, one for each thing the
+engine could already do and no level asked for: the ways a balancer picks an instance, a timeout
+that is too short, the rate limiter (the one part no level used), read replicas, lifetimes in a
+cache, retries at more than one layer, the panel that finds the bottleneck, and a database failover
+with redelivery. None needed a change to the engine, which is the rule of section 11 kept: a new
+behaviour needs a level, and a level should not need a new behaviour made up for it.
 
 Sandbox mode has every component, manual faults and no objectives.
 
@@ -357,19 +372,24 @@ What is automated, and runs in CI on every push:
   request are unit-tested without a browser.
 - **CLI:** `loadline test` against an example file with a passing and a failing assertion.
 - **MCP:** every tool is called through the protocol, in memory and from a separate process.
-- **Between JavaScript engines:** `npm run browsers` makes eleven runs (the engine's reference
+- **Between JavaScript engines:** `npm run browsers` makes nineteen runs (the engine's reference
   system, and the reference answer to each level) in Node and in each installed browser, and the
   hash of every report must be the same. CI runs it in Firefox and Chrome. On the development
   machine Edge is checked as well. Safari's engine is not: it cannot be started from a script.
   This replaces the Playwright run in three engines that was planned, which would have needed
   browsers downloaded; this one uses the browsers that are there.
 
-What is checked by hand, in a real browser:
+What is run on demand, in a real browser:
 
-- **The app itself.** There is no browser test suite. `npm run screenshots` plays the first level
-  in both languages in the built app (the starting design failing, then the reference passing), and
-  each milestone was looked at in the browser: a level played through, a link opened and kept, the
-  embed in a frame, both languages. That is a smoke test, not coverage.
+- **Every lesson, followed by hand.** `npm run lessons` opens each level in the built app and
+  carries out the steps of its lesson as a person would: adds parts, draws and deletes connections,
+  selects things and types into settings by the names the inspector shows. Each level then has to
+  be passed with three stars. It is the nearest thing here to an end-to-end test of the editor, and
+  it is how a lesson that told the reader to draw a connection the editor refuses was found.
+- **The rest of the app.** `npm run screenshots` plays the first level in both languages (the
+  starting design failing, then the reference passing), and each milestone was looked at in the
+  browser: a link opened and kept, the embed in a frame, both languages. That part is a smoke
+  test, not coverage.
 
 ## 10. Deferred
 
