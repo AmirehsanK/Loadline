@@ -271,7 +271,9 @@ the browsers. A page makes the runs and posts the hashes to the server that serv
 | SpiderMonkey | Firefox 157 | identical on all eleven |
 | JavaScriptCore | Safari | not checked: it cannot be started from a script this way |
 
-CI repeats it on every push, in the Firefox and Chrome that come with the runner.
+CI repeats it on every push, in the Firefox and Chrome that come with the runner. The hashes there
+are the ones above again, on another operating system and other versions: Linux with Node 26.10
+and Firefox 156, against Windows with Node 26.4 and Firefox 157 on the development machine.
 
 Is the fourth rule needed, or only careful? As an experiment, `ln`, `exp` and `pow` were swapped
 for `Math.log`, `Math.exp` and `Math.pow` and the check run again. Firefox still agreed with

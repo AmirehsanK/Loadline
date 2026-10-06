@@ -2,7 +2,7 @@
 // does: the reference system on its bad day, and the reference answer to every level.
 //
 //   npm run browsers                       whichever of Firefox, Chrome and Edge are installed
-//   npm run browsers -- Firefox Chrome     these, and it is a failure if one is missing
+//   npm run browsers -- Firefox Chrome     only these, and it is a failure if one is missing
 //
 // This is the check on the claim that a run is the same on any JavaScript engine. Node, Chrome and
 // Edge all run V8, so they mostly show that nothing differs between Node and a page. Firefox runs
@@ -172,7 +172,8 @@ async function ask(browser, executable) {
   }
 }
 
-// A browser named on the command line has to be checked; without names, what is missing is skipped.
+// With names on the command line, those browsers are checked and each has to be there. Without,
+// every browser that is installed is checked and one that is missing is skipped.
 const required = process.argv.slice(2).map((name) => name.toLowerCase());
 const unknown = required.filter((name) => !BROWSERS.some((browser) => browser.name.toLowerCase() === name));
 if (unknown.length > 0) {
@@ -188,7 +189,7 @@ for (const name of names) console.log(`  ${expected[name]}  ${name}`);
 
 let checked = 0;
 let failed = false;
-for (const browser of BROWSERS) {
+for (const browser of BROWSERS.filter((each) => required.length === 0 || required.includes(each.name.toLowerCase()))) {
   const executable = browser.paths.find((path) => existsSync(path));
   if (!executable) {
     const needed = required.includes(browser.name.toLowerCase());
