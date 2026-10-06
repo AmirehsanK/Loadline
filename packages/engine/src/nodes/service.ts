@@ -4,6 +4,7 @@ import {
   CACHE_SET,
   EV_SERVICE_DONE,
   EV_TIMER,
+  FILE,
   FREE,
   IN_SERVICE,
   NODE_DOWN,
@@ -89,8 +90,8 @@ export class ServiceRuntime extends NodeRuntime {
   protected concurrency = 1;
   protected readonly instances: Instance[] = [];
   private queueLimit = 0;
-  private serviceTime: Sampler;
-  private readonly serviceRng: RandomStream;
+  protected serviceTime: Sampler;
+  protected readonly serviceRng: RandomStream;
   private scaling: Scaling = NO_SCALING;
   /** Instances that have been started and are not up yet. */
   private booting = 0;
@@ -116,9 +117,7 @@ export class ServiceRuntime extends NodeRuntime {
   }
 
   override get instanceCount(): number {
-    let up = 0;
-    for (const instance of this.instances) if (instance.up) up++;
-    return this.down ? 0 : up;
+    return this.upCount();
   }
 
   /** How many instances there have ever been; valid indices are below this. */
@@ -288,6 +287,11 @@ export class ServiceRuntime extends NodeRuntime {
     for (const instance of this.instances) this.drain(instance);
   }
 
+  /** What this many instances cost to keep, in dollars a month. A subclass may charge another way. */
+  protected priceOf(instances: number): number {
+    return instances * instancePrice(this.concurrency);
+  }
+
   /** Hook for subclasses: an instance has a free slot and nothing waiting for it. */
   protected idle(_instance: Instance): void {}
 
@@ -320,6 +324,13 @@ export class ServiceRuntime extends NodeRuntime {
     this.ended(call, result);
     sim.finish(call, result, origin, stuck);
     this.drain(instance);
+  }
+
+  /** Instances that are up, whether or not they are being retired. */
+  private upCount(): number {
+    let up = 0;
+    for (const instance of this.instances) if (instance.up) up++;
+    return this.down ? 0 : up;
   }
 
   /** Instances that are up and taking new calls. */
@@ -365,6 +376,11 @@ export class ServiceRuntime extends NodeRuntime {
         continue;
       }
       const toCache = sim.nodes[edge.to]!.type === 'cache';
+      if (toCache && cls === FILE) {
+        // A cache of data holds no files; what keeps files near the people asking is a CDN.
+        calls.step[call] = step + 1;
+        continue;
+      }
       if (toCache && cls !== READ) {
         // A write makes the cached copy stale, so it is removed. The write does not wait for that.
         sim.detach(edgeIndex, cls, calls.key[call]!, CACHE_DELETE, calls.orphan[call]!);
@@ -537,8 +553,8 @@ export class ServiceRuntime extends NodeRuntime {
     this.touch();
     let paidFor = 0;
     for (const instance of this.instances) if (instance.up || instance.killed) paidFor++;
-    this.capacity = this.instanceCount * this.concurrency;
-    this.setPrice(paidFor * instancePrice(this.concurrency));
+    this.capacity = this.upCount() * this.concurrency;
+    this.setPrice(this.priceOf(paidFor));
   }
 
   private armScaling(): void {

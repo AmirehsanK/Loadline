@@ -18,7 +18,7 @@ describe('the design schema', () => {
       version: 1,
       name: '',
       nodes: [
-        { id: 'users', name: '', x: 0, y: 0, type: 'client', params: { rps: 100, readRatio: 0.9, keys: 10_000, skew: 1 } },
+        { id: 'users', name: '', x: 0, y: 0, type: 'client', params: { rps: 100, fileRatio: 0, readRatio: 0.9, keys: 10_000, skew: 1 } },
         {
           id: 'api',
           name: '',

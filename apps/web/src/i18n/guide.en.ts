@@ -485,4 +485,57 @@ export const guideEn: Record<string, LevelGuide> = {
       'Two replicas: it fails, on cost.',
     ],
   },
+  'heavy-lifting': {
+    problem:
+      'Of 600 requests a second, 450 are for a picture. The CDN keeps a picture for 2 seconds and there are 20,000 of them, so ' +
+      'most requests find it has already let theirs go. It asks the site, which does 12 ms of work and then waits about 40 ms ' +
+      'for Images, holding a slot the whole time. Two instances have 16 slots between them, and the pictures keep nearly all of ' +
+      'them waiting. The waiting room fills, and about a tenth of all requests fail.',
+    idea:
+      'Fetch files from where files are kept. A picture is the same for everyone, so the CDN can get it from storage itself, ' +
+      'and the site never hears about it. Object storage has no slots to fill: a thousand files at once take as long each as ' +
+      'one does. Elsewhere this is called giving static content an origin of its own.',
+    steps: [
+      'Connect CDN to Images.',
+      'Select the connection from CDN to Images and set "Used by" to "Files only". The CDN sends a file by the connection that is for files, and everything else by the other.',
+      'Select CDN and set "Keep each file for" to 300,000 ms, which is five minutes.',
+      'Select Site and set "Instances" to 1.',
+    ],
+    why:
+      'Files now go from the CDN to storage and nowhere else, so what the site carries is the 150 requests a second that are ' +
+      'about data, which is under 2 slots. That alone passes. One instance is plenty for it, and that is the second star. The ' +
+      'release still empties the CDN and for a moment every picture has to be fetched, but storage does not mind. The third ' +
+      'star is for keeping pictures longer: the slowest requests left are the ones for a file the CDN had to fetch, and the ' +
+      'fewer of those there are, the lower the p99.',
+    others: [
+      'Keeping files five minutes and still fetching them through the site: it fails. It works until the release, and then every picture lands on the site at once.',
+      'That with a third instance, or four instances and nothing else: it fails, on cost.',
+      'Fetching from storage and changing nothing else: one star. With one instance as well: two.',
+      'Fetching from storage and keeping files five minutes, with both instances: one star. The second star is for the instance.',
+      'Keeping each file for 0, which is until it is pushed out: three stars, like five minutes.',
+    ],
+  },
+  'cold-start': {
+    problem:
+      'In a rush 200 calls a second arrive where there were 10. Each takes 50 ms, so about ten are in progress at a time, and ' +
+      'the function has one or two environments left from the quiet. Every call beyond those starts an environment and waits ' +
+      '800 ms for it, and so do the calls that arrive during those 800 ms. An environment is let go 8 seconds after its last ' +
+      'call, so by the next rush they are gone again. More than one request in a hundred waits for a start, which makes the ' +
+      'slowest 1% all cold starts.',
+    idea:
+      'Keep some ready. An environment kept ready is never let go, so a call that gets one starts at once. It is called ' +
+      'provisioned concurrency, and it is the same trade as an instance left running: you pay for it whether or not it is ' +
+      'used. Size it for the busy moments of a rush, not for the average.',
+    steps: ['Select Checkout.', 'Set "Environments kept ready" to 18.'],
+    why:
+      'Ten calls are in progress on average during a rush, but they do not arrive evenly and do not all take 50 ms, so at ' +
+      'moments there are half as many again and more. 18 covers all but a few of those moments, and the calls that still wait ' +
+      'for a start are fewer than 1 in 100. Each environment kept ready costs $6 a month, and every one beyond what a rush ' +
+      'reaches is $6 for nothing. That is what the stars count.',
+    others: [
+      'Ten kept ready, which is the average, or twelve: it fails. More than one call in a hundred still waits for a start, so the slowest 1% look just as they did.',
+      'Twenty-four: two stars. Thirty: one. They are as fast as eighteen, and cost more.',
+      'Forty: it fails, on cost.',
+    ],
+  },
 };

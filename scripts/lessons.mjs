@@ -241,6 +241,19 @@ const LESSONS = {
     await set('Wait before the first retry', 2000);
     await set('Each further wait is longer by', 1);
   },
+  'heavy-lifting': async () => {
+    await connect('CDN', 'Images');
+    await selectConnection('cdn', 'bucket');
+    await choose('Used by', 'Files only');
+    await select('CDN');
+    await set('Keep each file for', 300000);
+    await select('Site');
+    await set('Instances', 1);
+  },
+  'cold-start': async () => {
+    await select('Checkout');
+    await set('Environments kept ready', 18);
+  },
 };
 
 let failed = false;

@@ -74,8 +74,9 @@ export function lintDesign(design: Design): Issue[] {
       error('edge-into-client', `Edge "${edge.id}" points at the client "${edge.to}"; clients only send.`, where);
       continue;
     }
-    if (from.type === 'cache' || from.type === 'database') {
-      error('leaf-calls', `"${edge.from}" is a ${from.type}; it answers calls and makes none.`, where);
+    if (from.type === 'cache' || from.type === 'database' || from.type === 'object-store') {
+      const kind = from.type === 'object-store' ? 'n object store' : ` ${from.type}`;
+      error('leaf-calls', `"${edge.from}" is a${kind}; it answers calls and makes none.`, where);
       continue;
     }
     if (from.type === 'queue' && to.type !== 'worker') {
@@ -119,8 +120,16 @@ export function lintDesign(design: Design): Issue[] {
           warning('balancer-target', `The load balancer "${node.id}" only spreads load over a service's instances.`, where);
         }
         break;
-      case 'service': {
-        const many = node.params.instances > 1 || node.params.autoscale.enabled;
+      case 'cdn':
+        if (out.length === 0) {
+          warning('pass-through-unconnected', `"${node.id}" has nothing behind it, so every call to it fails.`, where);
+        } else if (!out.some((edge) => edge.params.appliesTo === 'all' || edge.params.appliesTo === 'file')) {
+          warning('cdn-no-files', `No connection from the CDN "${node.id}" carries files, so it has nothing to keep.`, where);
+        }
+        break;
+      case 'service':
+      case 'function': {
+        const many = node.type === 'service' && (node.params.instances > 1 || node.params.autoscale.enabled);
         const direct = callers.find((edge) => nodes.get(edge.from)?.type !== 'load-balancer');
         if (many && direct) {
           warning(

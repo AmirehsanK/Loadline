@@ -1,4 +1,4 @@
-import { READ } from './codes.ts';
+import { FILE, READ } from './codes.ts';
 import type { FloatRing, IntRing } from './kernel/ring.ts';
 import type { RandomStream } from './kernel/rng.ts';
 import type { EdgeParams } from './model/schema.ts';
@@ -25,9 +25,10 @@ export interface EdgeRuntime {
   readonly fromClient: boolean;
   readonly rng: RandomStream;
   params: EdgeParams;
-  /** Whether reads, and whether writes, use the edge. */
+  /** Whether reads, whether writes, and whether requests for files use the edge. */
   reads: boolean;
   writes: boolean;
+  files: boolean;
   async: boolean;
 
   // Injected faults.
@@ -68,5 +69,5 @@ export interface EdgeRuntime {
 
 /** Whether a call of class `cls` uses the edge. */
 export function edgeCarries(edge: EdgeRuntime, cls: number): boolean {
-  return cls === READ ? edge.reads : edge.writes;
+  return cls === READ ? edge.reads : cls === FILE ? edge.files : edge.writes;
 }

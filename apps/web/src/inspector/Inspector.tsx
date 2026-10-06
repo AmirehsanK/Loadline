@@ -1,4 +1,4 @@
-import { cachePrice, databaseServerPrice, instancePrice } from '@loadline/engine';
+import { PRICES, cachePrice, databaseServerPrice, instancePrice } from '@loadline/engine';
 import type { CommandInput, Dist, Issue } from '@loadline/engine';
 import type { ReactNode } from 'react';
 import { EDGE_FIELDS, NODE_FIELDS, getPath, setPath } from '../design/fields.ts';
@@ -252,6 +252,19 @@ function Summary({ node }: { node: FlowNode }) {
     case 'cache':
       lines.push(m.inspector.cost(formatCount(cachePrice(node.data.params.capacity))));
       break;
+    case 'cdn':
+      lines.push(m.inspector.cost(formatCount(PRICES.cdn)));
+      break;
+    case 'object-store':
+      lines.push(m.inspector.cost(formatCount(PRICES.objectStore)));
+      break;
+    case 'function': {
+      const { maxConcurrency, serviceTime, provisioned } = node.data.params;
+      lines.push(m.inspector.room(formatCount((maxConcurrency * 1000) / serviceTime.mean)));
+      lines.push(m.inspector.usage);
+      if (provisioned > 0) lines.push(m.inspector.ready(formatCount(provisioned * PRICES.functionProvisioned)));
+      break;
+    }
     default:
       break;
   }
@@ -286,8 +299,13 @@ function faultsFor(node: FlowNode, m: Messages): Fault[] {
     case 'service':
     case 'worker':
       return [killOne, kill, slow, errors];
+    case 'function':
+    case 'object-store':
+      return [kill, slow, errors];
     case 'cache':
       return [{ label: labels.flush, command: { type: 'flush', nodeId } }, kill, slow];
+    case 'cdn':
+      return [{ label: labels.flush, command: { type: 'flush', nodeId } }, kill, errors];
     case 'database':
       return [{ label: labels.failover, command: { type: 'failover', nodeId } }, kill, slow];
     default:

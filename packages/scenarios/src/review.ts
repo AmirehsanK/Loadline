@@ -63,6 +63,8 @@ function system(language: ReviewInput['language']): string {
     '- A service instance runs `concurrency` calls at once and holds `queue` more; beyond that it rejects. Without a load balancer in front, every call lands on the first instance.',
     '- A database runs `concurrency` queries at full speed. More than that share its cores and all of them slow down. `poolSize` on the connection into it limits how many a caller sends at once.',
     '- A cache holds real items. A hit skips the store behind it. A queue answers the publisher at once and a worker takes messages at its own pace.',
+    '- A request is a read, a write, or a request for a file. A CDN answers for the files it holds and fetches the rest; it passes reads and writes on untouched. An object store takes the same time for any number of files at once.',
+    '- A function runs each call in an environment of its own, up to `maxConcurrency`, and refuses the rest. A call that finds no environment ready waits `coldStartMs` for one. It is charged for the time its calls take, waiting included.',
     '- Latency percentiles are of the requests that succeeded. Costs are made-up dollars a month.',
     '',
     'Write a review they can act on:',
@@ -86,8 +88,9 @@ function describeNode(node: DesignNode): string {
   const name = node.name === '' ? node.id : `${node.id} ("${node.name}")`;
   switch (node.type) {
     case 'client': {
-      const { rps, readRatio, keys, skew } = node.params;
-      return `${name}: client sending ${count(rps)} requests a second, ${share(readRatio)} of them reads, over ${count(keys)} items (skew ${String(skew)})`;
+      const { rps, fileRatio, readRatio, keys, skew } = node.params;
+      const files = fileRatio > 0 ? `${share(fileRatio)} of them for files and of the rest ` : '';
+      return `${name}: client sending ${count(rps)} requests a second, ${files}${share(readRatio)} ${fileRatio > 0 ? '' : 'of them '}reads, over ${count(keys)} items (skew ${String(skew)})`;
     }
     case 'service':
     case 'worker': {
@@ -116,6 +119,16 @@ function describeNode(node: DesignNode): string {
     }
     case 'queue':
       return `${name}: queue holding up to ${count(node.params.maxDepth)} messages`;
+    case 'cdn': {
+      const { capacity, ttlMs } = node.params;
+      return `${name}: CDN holding up to ${count(capacity)} files, ${ttlMs === 0 ? 'kept until pushed out' : `kept for ${duration(ttlMs)}`}`;
+    }
+    case 'object-store':
+      return `${name}: object store, a file handed over in ${work(node.params.readTime)}, taken in in ${work(node.params.writeTime)}`;
+    case 'function': {
+      const { maxConcurrency, serviceTime, coldStartMs, keepWarmMs, provisioned } = node.params;
+      return `${name}: function, up to ${count(maxConcurrency)} calls at once, work ${work(serviceTime)}, ${duration(coldStartMs)} to start an environment, kept for ${duration(keepWarmMs)} after a call, ${String(provisioned)} kept ready`;
+    }
   }
 }
 
@@ -127,7 +140,7 @@ function describeEdge(edge: DesignEdge): string {
     ...(retries > 0 ? [`${String(retries)} retries${backoffMs > 0 ? ` after ${duration(backoffMs)}${jitter > 0 ? ' with jitter' : ''}` : ' at once'}`] : []),
     ...(poolSize > 0 ? [`pool of ${String(poolSize)} connections per caller instance`] : []),
     ...(breaker.enabled ? [`circuit breaker (opens at ${share(breaker.failureRate)} failing, for ${duration(breaker.openMs)})`] : []),
-    ...(appliesTo === 'all' ? [] : [`${appliesTo}s only`]),
+    ...(appliesTo === 'all' ? [] : [appliesTo === 'data' ? 'everything but files' : `${appliesTo}s only`]),
     ...(mode === 'async' ? ['not waited for'] : []),
   ];
   return `${edge.from} -> ${edge.to}: ${policy.join(', ')}`;

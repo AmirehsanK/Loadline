@@ -1,4 +1,4 @@
-import { EV_TIMER, OK, READ, WAITING, WRITE } from '../codes.ts';
+import { EV_TIMER, FILE, OK, READ, WAITING, WRITE } from '../codes.ts';
 import { exponential } from '../kernel/dist.ts';
 import { RandomStream } from '../kernel/rng.ts';
 import { ZipfTable } from '../kernel/zipf.ts';
@@ -15,14 +15,16 @@ const TIMER_ARRIVAL = 0;
  * that never waits for a reply. A request is a call at the client; each attempt it makes is a
  * downstream call over the client's one edge, under that edge's timeout and retry policy.
  *
- * Every request is a read or a write and is about one item, its key. Keys follow a Zipf
- * distribution, so a few items get most of the traffic.
+ * Every request is a read, a write or a request for a file, and is about one item, its key. Keys
+ * follow a Zipf distribution, so a few items get most of the traffic.
  */
 export class ClientRuntime extends NodeRuntime {
   private params: ClientNode['params'];
   private keys: ZipfTable;
   private readonly arrivalRng: RandomStream;
   private readonly classRng: RandomStream;
+  // A stream of its own, so that a design with no files draws exactly what it drew before files existed.
+  private readonly fileRng: RandomStream;
   private readonly keyRng: RandomStream;
   // Bumped whenever the rate changes, so the arrival already scheduled at the old rate is ignored.
   private generation = 0;
@@ -33,6 +35,7 @@ export class ClientRuntime extends NodeRuntime {
     this.keys = new ZipfTable(node.params.keys, node.params.skew);
     this.arrivalRng = new RandomStream(sim.seed, `${node.id}/arrivals`);
     this.classRng = new RandomStream(sim.seed, `${node.id}/class`);
+    this.fileRng = new RandomStream(sim.seed, `${node.id}/files`);
     this.keyRng = new RandomStream(sim.seed, `${node.id}/keys`);
   }
 
@@ -112,7 +115,8 @@ export class ClientRuntime extends NodeRuntime {
     calls.node[call] = this.index;
     calls.state[call] = WAITING;
     calls.tArrive[call] = sim.now;
-    calls.cls[call] = this.classRng.next() < this.params.readRatio ? READ : WRITE;
+    const file = this.params.fileRatio > 0 && this.fileRng.next() < this.params.fileRatio;
+    calls.cls[call] = file ? FILE : this.classRng.next() < this.params.readRatio ? READ : WRITE;
     calls.key[call] = this.keys.pick(this.keyRng.next());
     this.countArrival();
     this.touch();

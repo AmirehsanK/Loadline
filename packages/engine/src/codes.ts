@@ -55,9 +55,13 @@ export const POOL_WAIT = 7;
 /** A downstream call was refused without being made; the refusal is about to be delivered. */
 export const REFUSED = 8;
 
-/** The two kinds of request. Edges can be limited to one of them. */
+/**
+ * The kinds of request. Edges can be limited to some of them. A read and a write are about data;
+ * a file is a read of something that is the same for everyone who asks: an image, a script.
+ */
 export const READ = 0;
 export const WRITE = 1;
+export const FILE = 2;
 
 /** What a call to a cache asks it to do, carried in the call's tag. */
 export const CACHE_GET = 0;

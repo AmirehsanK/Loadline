@@ -62,7 +62,7 @@ describe('list_components', () => {
   it('describes every kind of part with the defaults the engine uses', async () => {
     const answer = await call('list_components');
     const described = JSON.parse(answer.texts[0]!) as { parts: { type: string; what: string; defaults: Record<string, unknown> }[]; edges: { defaults: Record<string, unknown> } };
-    expect(described.parts.map((part) => part.type)).toEqual(['client', 'load-balancer', 'rate-limiter', 'service', 'cache', 'database', 'queue', 'worker']);
+    expect(described.parts.map((part) => part.type)).toEqual(['client', 'cdn', 'load-balancer', 'rate-limiter', 'service', 'function', 'cache', 'database', 'object-store', 'queue', 'worker']);
     expect(described.parts.find((part) => part.type === 'client')!.defaults).toMatchObject({ rps: 100, readRatio: 0.9 });
     expect(described.edges.defaults).toMatchObject({ timeoutMs: 3000, retries: 0, mode: 'sync' });
     // A design written from this description alone is one the engine accepts.

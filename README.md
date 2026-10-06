@@ -7,8 +7,8 @@ broke.
 
 ![The first level part of the way through a run: one API instance, 300 requests a second arriving, and the queue in front of it full](docs/screenshots/level.png)
 
-Loadline simulates every request, one by one, as it passes through load balancers, services,
-caches, databases and queues. No failure is scripted. Waiting that explodes near full load, retry
+Loadline simulates every request, one by one, as it passes through CDNs, load balancers, services,
+functions, caches, databases, object storage and queues. No failure is scripted. Waiting that explodes near full load, retry
 storms, cache stampedes and starved connection pools come out of queues, timeouts and retries, for
 the reasons they happen in production.
 
@@ -26,7 +26,7 @@ Drag-and-simulate sandboxes are not new. This one tries to do the unglamorous pa
   share link carries all three, so whoever opens it sees the numbers you saw.
 - **One engine, three ways in.** The same code runs in a Web Worker behind the canvas, at the
   command line, and behind an MCP server for agents. One function scores a level in all three.
-- **Eighteen levels, each teaching one thing.** Each ships with a reference answer. CI proves on five
+- **Twenty levels, each teaching one thing.** Each ships with a reference answer. CI proves on five
   seeds that the design a level starts from fails and that the reference earns three stars.
 - **No backend.** It is a static site. Designs live in your browser and in links, and nothing is
   uploaded.
@@ -89,6 +89,8 @@ of every lesson in the editor, in a real browser, and checks that each earns thr
 | 16 | Nine times | Retries multiply down a chain of calls; retry in one layer |
 | 17 | Wrong suspect | Finding the bottleneck: the part that hurts is not always the part that is short |
 | 18 | Failover | A replica for reads, a queue for writes, and a worker that waits between tries |
+| 19 | Heavy lifting | Files come from storage by way of a CDN, not through the servers |
+| 20 | Cold start | A function starts an environment for every call that finds none; keep enough ready |
 
 The **sandbox** has every part and no objectives. Scale the traffic with a slider, kill an
 instance, slow a part down, empty a cache, fail a database over, cut a connection, and see what
@@ -130,6 +132,9 @@ And some of what falls out of those rules, none of it programmed as a behaviour:
   work nobody is waiting for.
 - **A cache emptied at peak.** The store's load goes from about 10 calls a second to over 900 in
   the next second, and p99 from 2 ms to several seconds.
+- **A surge on a function starts far more than it needs.** Twenty times the traffic needs twenty
+  calls in progress. Every call that arrives while the first environments are starting finds none
+  ready and starts its own: well over a hundred.
 - **The right pool size is the database's, not the caller's.** Four cores, 340 queries a second.
   With a pool of four there are no errors. With a pool of two, 40% of requests are turned away
   while the database sits half idle. With no pool at all the database is flat out and does half
@@ -144,19 +149,19 @@ The engine also does not use `Math.log`, `Math.exp` or `Math.pow`: the language 
 JavaScript engine approximate them in its own way, and one differing bit in a sampled service time
 is enough to reorder two events. It has its own, built from arithmetic that is defined exactly.
 
-`npm run browsers` puts that to the test. Nineteen runs (a reference system with every kind of part
-and fault, and the reference answer to each level) are made in Node and in each browser that is
+`npm run browsers` puts that to the test. Twenty-one runs (a reference system on a scripted bad
+day, and the reference answer to each level) are made in Node and in each browser that is
 installed, and every report has to hash the same.
 
 | Engine | Where | Reports |
 |---|---|---|
 | V8 | Node 26 | the reference |
-| V8 | Chrome 154, Edge 154 | identical on all nineteen |
-| SpiderMonkey | Firefox 157 | identical on all nineteen |
+| V8 | Chrome 154, Edge 154 | identical on all twenty-one |
+| SpiderMonkey | Firefox 157 | identical on all twenty-one |
 | JavaScriptCore | Safari | not checked; it cannot be started from a script this way |
 
-Put the built-in functions back and Chrome disagrees with Node on sixteen of the nineteen, although
-both run V8. CI repeats the check in Firefox and Chrome on every push.
+With the built-in functions put back, Chrome disagreed with Node on sixteen of the nineteen runs
+there were when that was tried, although both run V8. CI repeats the check in Firefox and Chrome on every push.
 
 ## Sharing
 

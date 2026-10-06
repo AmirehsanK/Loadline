@@ -288,11 +288,14 @@ export const fa: Messages = {
     hint: 'قطعه را روی بوم بکشید، یا برای افزودنش روی آن بزنید.',
     types: {
       client: { name: 'Client', hint: 'با آهنگی ثابت درخواست می‌فرستد' },
+      cdn: { name: 'CDN', hint: 'نسخه‌ای از فایل‌ها را نزدیک کاربران نگه می‌دارد' },
       'load-balancer': { name: 'Load balancer', hint: 'فراخوانی‌ها را میان نمونه‌های یک Service پخش می‌کند' },
       'rate-limiter': { name: 'Rate limiter', hint: 'فراخوانی‌های بیش از یک آهنگ معین را رد می‌کند' },
       service: { name: 'Service', hint: 'کار انجام می‌دهد و قطعه‌هایی را که به آن‌ها وصل است فرامی‌خواند' },
+      function: { name: 'Function', hint: 'هنگام فراخوانی اجرا می‌شود؛ در فاصلهٔ فراخوانی‌ها چیزی روشن نمی‌ماند' },
       cache: { name: 'Cache', hint: 'به خواندن‌های تکراری پاسخ می‌دهد تا بار از روی مخزن داده برداشته شود' },
       database: { name: 'Database', hint: 'داده را نگه می‌دارد؛ هر پرس‌وجو روی هسته‌های آن اجرا می‌شود' },
+      'object-store': { name: 'Object storage', hint: 'فایل‌ها را نگه می‌دارد؛ هیچ‌وقت پر نمی‌شود و هیچ‌وقت هم تند نیست' },
       queue: { name: 'Queue', hint: 'کار را نگه می‌دارد تا یک Worker آزاد شود' },
       worker: { name: 'Worker', hint: 'با آهنگ خودش از Queue کار برمی‌دارد' },
     },
@@ -308,6 +311,7 @@ export const fa: Messages = {
     backlog: (count: string) => `${count} در انتظار`,
     oldest: (duration: string) => `انتظار ${duration}`,
     hits: (percent: string) => `${percent} از Cache`,
+    served: (percent: string) => `${percent} از همین‌جا`,
     failing: (rate: string) => `${rate}/s ناموفق`,
     instances: (count: number) => `×${count}`,
     down: 'از کار افتاده',
@@ -326,6 +330,8 @@ export const fa: Messages = {
     connection: (from: string, to: string) => `${from} به ${to}`,
     room: (rate: string) => `جا برای حدود ${rate} درخواست در ثانیه، پیش از زمانی که صرف انتظار برای قطعه‌های دیگر می‌شود.`,
     cost: (dollars: string) => `با این تنظیم‌ها ماهی $${dollars} هزینه دارد.`,
+    usage: 'هزینه‌اش به‌اندازهٔ زمانی است که فراخوانی‌هایش طول می‌کشند، با احتساب انتظار برای قطعه‌های دیگر. بیکار که باشد هزینه‌ای ندارد.',
+    ready: (dollars: string) => `آماده نگه‌داشتن محیط‌ها ماهی $${dollars} هزینه دارد، چه استفاده شوند چه نشوند.`,
     problems: 'مشکل‌ها',
     notes: 'خوب است بدانید',
     faults: {
@@ -350,7 +356,8 @@ export const fa: Messages = {
     node: {
       client: {
         rps: { label: 'درخواست در ثانیه', hint: 'پیش از اعمال کنترل ترافیکِ بالای صفحه.' },
-        readRatio: { label: 'سهم درخواست‌های فقط‌خواندنی', hint: '۰ یعنی همه نوشتن، ۱ یعنی همه خواندن.' },
+        fileRatio: { label: 'سهم درخواست‌های فایل', hint: 'تصویر یا اسکریپت: برای هر کسی که بخواهد یکسان است. بقیهٔ درخواست‌ها داده می‌خوانند یا می‌نویسند.' },
+        readRatio: { label: 'سهم درخواست‌های فقط‌خواندنی', hint: 'از میان درخواست‌های داده. ۰ یعنی همه نوشتن، ۱ یعنی همه خواندن.' },
         keys: { label: 'تعداد موردهای مختلفی که خواسته می‌شوند' },
         skew: { label: 'ناهمواری تقاضا', hint: '۰ درخواست‌ها را یکنواخت پخش می‌کند. ۱ معمول است: چند مورد بیشترِ درخواست‌ها را می‌گیرند.' },
       },
@@ -407,9 +414,24 @@ export const fa: Messages = {
         rate: { label: 'فراخوانی مجاز در ثانیه' },
         burst: { label: 'فراخوانی مجاز یک‌جا، پس از مدتی آرامش' },
       },
+      cdn: {
+        capacity: { label: 'تعداد فایل‌هایی که نگه می‌دارد', hint: 'برای جا بازکردن، فایلی که دیرتر از همه خواسته شده کنار می‌رود.' },
+        ttlMs: { label: 'مدت نگهداری هر فایل', hint: '۰ یعنی تا وقتی برای جا کنار برود می‌ماند.' },
+      },
+      'object-store': {
+        readTime: work('زمان تحویل‌دادن یک فایل'),
+        writeTime: work('زمان گرفتن یک فایل'),
+      },
+      function: {
+        maxConcurrency: { label: 'فراخوانی‌های هم‌زمان مجاز', hint: 'هر کدام در محیط خودش اجرا می‌شود. بیش از این رد می‌شود.' },
+        serviceTime: work('کار هر فراخوانی'),
+        coldStartMs: { label: 'زمان راه‌افتادن یک محیط', hint: 'فراخوانی‌ای که محیط آماده‌ای پیدا نکند، نخست این‌قدر صبر می‌کند.' },
+        keepWarmMs: { label: 'مدت نگهداری محیط بیکار' },
+        provisioned: { label: 'محیط‌های همیشه‌آماده', hint: 'همیشه آماده‌اند و چه استفاده شوند چه نشوند، هزینه دارند.' },
+      },
     },
     edge: {
-      appliesTo: { label: 'برای', options: { all: 'همهٔ درخواست‌ها', read: 'فقط خواندن', write: 'فقط نوشتن' } },
+      appliesTo: { label: 'برای', options: { all: 'همهٔ درخواست‌ها', data: 'همه به‌جز فایل', read: 'فقط خواندن', write: 'فقط نوشتن', file: 'فقط فایل' } },
       mode: { label: 'فراخواننده', options: { sync: 'منتظر پاسخ می‌ماند', async: 'تحویل می‌دهد و می‌رود' } },
       timeoutMs: { label: 'مهلت انتظار', hint: '۰ یعنی تا ابد منتظر می‌ماند.' },
       retries: { label: 'تلاش دوباره' },
@@ -434,6 +456,7 @@ export const fa: Messages = {
       `${name} بیش از یک نمونه دارد، ولی فراخوانی‌ها مستقیم به آن می‌رسند و همه به نمونهٔ اول می‌روند. یک Load balancer جلوی آن بگذارید.`,
     'cache-fronts-nothing': (name: string) => `${name} از Cache می‌پرسد ولی مخزنی ندارد که پس از آن بخواند.`,
     'queue-unread': (name: string) => `هیچ قطعه‌ای از ${name} پیام برنمی‌دارد و فقط پر می‌شود.`,
+    'cdn-no-files': (name: string) => `هیچ اتصالی از ${name} فایل نمی‌برد، پس چیزی برای نگه‌داشتن ندارد.`,
   },
   metrics: {
     title: 'آنچه کاربران می‌بینند',

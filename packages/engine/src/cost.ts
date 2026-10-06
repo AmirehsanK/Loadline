@@ -21,6 +21,16 @@ export const PRICES = {
   loadBalancer: 20,
   rateLimiter: 10,
   queue: 15,
+  cdn: 25,
+  objectStore: 5,
+  /**
+   * A function has no fixed cost. It is charged for the time its environments spend on calls,
+   * waiting on a dependency included: this much for one environment busy all month. That is several
+   * times what a slot of an instance costs, which is the trade: nothing when idle, dear when busy.
+   */
+  functionBusy: 24,
+  /** An environment kept ready, used or not. */
+  functionProvisioned: 6,
 } as const;
 
 export const instancePrice = (concurrency: number): number => PRICES.instance + PRICES.slot * concurrency;
@@ -60,6 +70,15 @@ export function designMonthlyCost(design: Design): number {
         break;
       case 'queue':
         total += PRICES.queue;
+        break;
+      case 'cdn':
+        total += PRICES.cdn;
+        break;
+      case 'object-store':
+        total += PRICES.objectStore;
+        break;
+      case 'function':
+        total += node.params.provisioned * PRICES.functionProvisioned;
         break;
       case 'client':
         break;

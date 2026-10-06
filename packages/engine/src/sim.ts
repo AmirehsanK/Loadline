@@ -38,9 +38,12 @@ import { CLOSED, HALF_OPEN, OPEN } from './edge.ts';
 import type { EdgeRuntime, Pool } from './edge.ts';
 import type { NodeRuntime, NodeWindow } from './nodes/base.ts';
 import { CacheRuntime } from './nodes/cache.ts';
+import { CdnRuntime } from './nodes/cdn.ts';
 import { ClientRuntime } from './nodes/client.ts';
 import { DatabaseRuntime } from './nodes/database.ts';
+import { FunctionRuntime } from './nodes/function.ts';
 import { LoadBalancerRuntime } from './nodes/loadBalancer.ts';
+import { ObjectStoreRuntime } from './nodes/objectStore.ts';
 import { QueueRuntime } from './nodes/queue.ts';
 import { RateLimiterRuntime } from './nodes/rateLimiter.ts';
 import { ServiceRuntime } from './nodes/service.ts';
@@ -210,6 +213,7 @@ export class Simulation {
         params: edge.params,
         reads: true,
         writes: true,
+        files: true,
         async: false,
         severed: false,
         extraLatencyMs: 0,
@@ -575,14 +579,22 @@ export class Simulation {
         return new QueueRuntime(this, index, node);
       case 'rate-limiter':
         return new RateLimiterRuntime(this, index, node);
+      case 'cdn':
+        return new CdnRuntime(this, index, node);
+      case 'object-store':
+        return new ObjectStoreRuntime(this, index, node);
+      case 'function':
+        return new FunctionRuntime(this, index, node);
     }
   }
 
   /** Applies an edge's parameters, at the start and whenever they are changed. */
   private configure(edge: EdgeRuntime, params: EdgeParams): void {
     edge.params = params;
-    edge.reads = params.appliesTo !== 'write';
-    edge.writes = params.appliesTo !== 'read';
+    const kinds = params.appliesTo;
+    edge.reads = kinds === 'all' || kinds === 'data' || kinds === 'read';
+    edge.writes = kinds === 'all' || kinds === 'data' || kinds === 'write';
+    edge.files = kinds === 'all' || kinds === 'file';
     edge.async = params.mode === 'async';
     if (edge.recent.length !== params.breaker.window) {
       edge.recent = new Uint8Array(params.breaker.window);

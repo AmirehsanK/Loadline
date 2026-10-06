@@ -93,11 +93,16 @@ generation and check it.
 
 ### 2.4 Requests have a kind and a key
 
-Every request is a **read** or a **write**, and is about one item, its **key**. Calls made on its
-behalf inherit both.
+Every request is a **read**, a **write** or a request for a **file**, and is about one item, its
+**key**. Calls made on its behalf inherit both. A read and a write are about data, which is
+different for each person asking. A file is an image or a script: the same for everyone, which is
+what lets a copy of it be handed over by something that knows nothing else.
 
-- An edge can carry all requests, only reads, or only writes. That is how a design says "writes
-  also go to the payments service".
+- An edge can carry all requests, only reads, only writes, only files, or everything but files.
+  That is how a design says "writes also go to the payments service", or "files come from storage".
+- A client's `fileRatio` is the share of its requests that are for a file, and `readRatio` the
+  share of the rest that only read. Whether a request is for a file is drawn from a stream of its
+  own, so a design with no files in it draws exactly what it drew before files existed.
 - Keys are drawn from a Zipf distribution: key `i` is chosen in proportion to `1 / i^skew`. A few
   items get most of the traffic, as in real systems, which is what makes caches work.
 
@@ -184,6 +189,9 @@ An edge from a service to a cache is **read-through**:
 With **single flight** on, calls that miss the same item while it is being fetched wait for that
 one fetch instead of each making their own.
 
+A request for a file passes a cache by. A cache of data holds no files; the part that keeps files
+is a CDN.
+
 ### 3.4 Database
 
 A primary takes every write. Replicas, if there are any, share the reads in turn.
@@ -224,6 +232,38 @@ A token bucket: tokens drip in at `rate` per second up to `burst`, and each call
 that finds no token is refused at once. What is behind the limiter only ever sees load it can
 carry.
 
+### 3.7 CDN and object store
+
+A **CDN** stands in front of everything and keeps copies of files, as real keys, each for `ttlMs`
+and up to `capacity` of them. A request for a file it holds is answered there and goes no further.
+One it does not hold is fetched over an outgoing edge and kept. Reads and writes pass through
+untouched. It has no slots: what limits it is what it calls.
+
+Which edge a call leaves by is the one that names its kind most exactly, so an edge for files wins
+over one for everything whichever was drawn first. That is what lets a design send files one way
+and data another.
+
+An **object store** has no slots and no queue either. Any number of calls at once each take their
+own time and none waits for another, which is the whole of what it offers: 20,000 files a second
+take as long each as ten a second do. It is not fast, and a service that fetches a file from one
+holds its own slot for the fetch (2.2).
+
+Put together, those two rules say where files should come from. A service doing 10 ms of work per
+request at 400 a second is a quarter full. Make six requests in ten a file that takes another 40 ms
+to fetch, and the same traffic fills more than four fifths of it. Put a CDN in front that fetches
+from the store itself, and the service is back under 15%.
+
+### 3.8 Function
+
+A function is a service with no instances to count. Each call gets an environment to itself. One
+that has just finished a call is reused; if none is around, one is started and the call waits
+`coldStartMs` first. An environment is let go `keepWarmMs` after its last call, and the most
+recently used is the first reused, so the rest are left to go. Beyond `maxConcurrency` calls at
+once it refuses: there is no queue. `provisioned` environments are never let go.
+
+It costs nothing to have. It is charged for the time its environments spend on calls, starting and
+waiting on dependencies included, plus a fixed amount for each one provisioned.
+
 ## 4. Faults, and changing a run
 
 `Simulation.command` injects a fault: a traffic spike, a node or some of its instances down, a node
@@ -257,9 +297,9 @@ into `advance` steps.
 
 ### 5.1 Checked in other engines
 
-`npm run browsers` makes nineteen runs in Node and in each browser that is installed, and compares
+`npm run browsers` makes twenty-one runs in Node and in each browser that is installed, and compares
 the hash of every whole report: the reference system of `test/golden.test.ts` on its bad day, and
-the reference answer to each of the eighteen levels. Between them they use every kind of part, every
+the reference answer to each of the twenty levels. Between them they use every kind of part, every
 edge policy, four kinds of fault, autoscaling, and all three of the functions above. Nothing drives
 the browsers. A page makes the runs and posts the hashes to the server that served it
 (`scripts/browsers.mjs`).
@@ -277,7 +317,7 @@ and Firefox 156, against Windows with Node 26.4 and Firefox 157 on the developme
 
 Is the fourth rule needed, or only careful? As an experiment, `ln`, `exp` and `pow` were swapped
 for `Math.log`, `Math.exp` and `Math.pow` and the check run again. Firefox still agreed with
-Node. Chrome and Edge disagreed with Node on sixteen of the nineteen runs. Node 26.4 and Chrome 154
+Node. Chrome and Edge disagreed with Node on sixteen of the nineteen runs there were then. Node 26.4 and Chrome 154
 both run V8, in different versions, so the built-in functions differ in practice between two
 releases of one engine, never mind two engines. Without the rule, a link made in one program would
 show other numbers in another.
@@ -431,6 +471,19 @@ a test.
 - **A breaker can also spread a failure.** In the reference system one breaker guards both reads
   and writes to the database. During a failover only writes fail, but they open the breaker, which
   then refuses the reads the replica could have served.
+- **A CDN that is emptied sends everything back.** Holding every file, it passes on a trickle. A
+  purge puts more than four times that on whatever it fetches from in the next second. An object
+  store does not notice. Fetch the same files through a service of 16 slots and the next seconds fail
+  requests, where the minute before it failed none.
+- **A surge starts far more environments than it needs.** A function at 20 calls a second, 50 ms
+  each, meets a surge to 400. Warm, that is 20 calls in progress. But every call that arrives in
+  the half second the first ones take to start finds nothing ready and starts its own: well over a
+  hundred of them. With 60 kept ready none starts at all.
+- **Waiting is charged for.** A function that does 50 ms of work and then waits 150 ms for a
+  database costs four times what it costs when the database answers at once.
+- **A function has no pool.** Every environment opens its own connection. A surge a service would
+  have queued behind its slots arrives at the database all at once, and the database refuses what
+  it has no connection left for.
 - **Autoscaling arrives late.** With instances that take 30 s to start, a sixfold surge is 35
   seconds of errors before the first new instance is ready. With 2 s it is a quarter of that.
 - **And leaves late, on purpose.** When the surge ends the instances stay for a cooldown and then

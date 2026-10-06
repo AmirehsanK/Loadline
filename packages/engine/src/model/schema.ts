@@ -29,7 +29,9 @@ const nodeBase = {
 export const clientParamsSchema = z.object({
   /** New requests per second, before the workload's multiplier. */
   rps: z.number().min(0).max(200_000).default(100),
-  /** Share of requests that only read. The rest write. */
+  /** Share of requests that are for a file: an image, a script, the same for everyone who asks. */
+  fileRatio: fraction.default(0),
+  /** Of the requests that are not for a file, the share that only read. The rest write. */
   readRatio: fraction.default(0.9),
   /** How many different items requests ask about. */
   keys: count(1, 1_000_000).default(10_000),
@@ -115,6 +117,33 @@ export const rateLimiterParamsSchema = z.object({
   burst: z.number().min(1).max(1_000_000).default(100),
 });
 
+export const cdnParamsSchema = z.object({
+  /** Files it can hold near the people asking. The least recently used is dropped to make room. */
+  capacity: count(1, 10_000_000).default(10_000),
+  /** How long it keeps a file before asking for it again; 0 keeps it until it is dropped for room. */
+  ttlMs: duration(86_400_000).default(300_000),
+});
+
+export const objectStoreParamsSchema = z.object({
+  /** Time to hand a file over. However many are asked for at once, each takes this long. */
+  readTime: distSchema.prefault({ kind: 'lognormal', mean: 40, cv: 0.5 }),
+  /** Time to take a file in. */
+  writeTime: distSchema.prefault({ kind: 'lognormal', mean: 80, cv: 0.5 }),
+});
+
+export const functionParamsSchema = z.object({
+  /** Calls it will work on at once, each in an environment of its own; beyond this they are refused. */
+  maxConcurrency: count(1, 5000).default(100),
+  /** The function's own work per call, not counting time spent waiting on dependencies. */
+  serviceTime: distSchema.prefault({ mean: 20 }),
+  /** Extra time a call takes when no environment is ready for it and one has to be started. */
+  coldStartMs: duration(60_000).default(400),
+  /** How long an environment that has finished a call stays ready for another. */
+  keepWarmMs: duration(3_600_000).default(300_000),
+  /** Environments kept ready at all times, and paid for whether or not they are used. */
+  provisioned: count(0, 5000).default(0),
+});
+
 const node = <T extends string, P extends z.ZodType>(type: T, params: P) =>
   z.object({ ...nodeBase, type: z.literal(type), params });
 
@@ -126,6 +155,9 @@ export const cacheNodeSchema = node('cache', cacheParamsSchema.prefault({}));
 export const databaseNodeSchema = node('database', databaseParamsSchema.prefault({}));
 export const queueNodeSchema = node('queue', queueParamsSchema.prefault({}));
 export const rateLimiterNodeSchema = node('rate-limiter', rateLimiterParamsSchema.prefault({}));
+export const cdnNodeSchema = node('cdn', cdnParamsSchema.prefault({}));
+export const objectStoreNodeSchema = node('object-store', objectStoreParamsSchema.prefault({}));
+export const functionNodeSchema = node('function', functionParamsSchema.prefault({}));
 
 export const nodeSchema = z.discriminatedUnion('type', [
   clientNodeSchema,
@@ -136,6 +168,9 @@ export const nodeSchema = z.discriminatedUnion('type', [
   databaseNodeSchema,
   queueNodeSchema,
   rateLimiterNodeSchema,
+  cdnNodeSchema,
+  objectStoreNodeSchema,
+  functionNodeSchema,
 ]);
 
 export const breakerSchema = z.object({
@@ -162,8 +197,8 @@ export const edgeParamsSchema = z.object({
   backoffFactor: z.number().min(1).max(10).default(2),
   /** Fraction of each wait that is randomised: 0 is none, 1 picks anywhere from zero to the full wait. */
   jitter: fraction.default(0),
-  /** Which requests use this edge. */
-  appliesTo: z.enum(['all', 'read', 'write']).default('all'),
+  /** Which requests use this edge. `data` is reads and writes, which is everything but files. */
+  appliesTo: z.enum(['all', 'read', 'write', 'file', 'data']).default('all'),
   /** `async` hands the call over and carries on without waiting for the result. */
   mode: z.enum(['sync', 'async']).default('sync'),
   /** Calls each instance of the caller may have open over this edge at once; 0 is no limit. */
@@ -236,6 +271,9 @@ export type CacheNode = z.output<typeof cacheNodeSchema>;
 export type DatabaseNode = z.output<typeof databaseNodeSchema>;
 export type QueueNode = z.output<typeof queueNodeSchema>;
 export type RateLimiterNode = z.output<typeof rateLimiterNodeSchema>;
+export type CdnNode = z.output<typeof cdnNodeSchema>;
+export type ObjectStoreNode = z.output<typeof objectStoreNodeSchema>;
+export type FunctionNode = z.output<typeof functionNodeSchema>;
 export type DesignEdge = z.output<typeof edgeSchema>;
 export type EdgeParams = z.output<typeof edgeParamsSchema>;
 export type NodeType = DesignNode['type'];
@@ -247,11 +285,14 @@ export type WorkloadInput = z.input<typeof workloadSchema>;
 // A record rather than an array, so that leaving a node type out fails to compile.
 const listed: Record<NodeType, true> = {
   client: true,
+  cdn: true,
   'load-balancer': true,
   'rate-limiter': true,
   service: true,
+  function: true,
   cache: true,
   database: true,
+  'object-store': true,
   queue: true,
   worker: true,
 };

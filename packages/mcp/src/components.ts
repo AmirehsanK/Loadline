@@ -8,7 +8,12 @@ import type { NodeType } from '@loadline/engine';
 const WHAT: Record<NodeType, string> = {
   client:
     'Sends requests at a steady rate (rps), whatever happens to them: it does not slow down when the system does. ' +
-    'readRatio is the share that only read; keys and skew say how many different items are asked for and how unevenly. Has exactly one outgoing edge.',
+    'fileRatio is the share that ask for a file (an image, a script); of the rest, readRatio is the share that only read. ' +
+    'keys and skew say how many different items are asked for and how unevenly. Has exactly one outgoing edge.',
+  cdn:
+    'Stands in front of everything and keeps copies of files. A request for a file it holds is answered there; one it does not hold is fetched over ' +
+    'the outgoing edge that carries files (appliesTo file, else all) and kept for ttlMs, up to `capacity` files. Reads and writes of data pass through ' +
+    'untouched, over the edge that carries them (read, write, data or all). Emptied, it sends every file request on until it has them again.',
   'load-balancer':
     'Spreads calls over the instances of the one service behind it. It only learns that an instance has died at its next health check ' +
     '(healthCheckMs); a retry on its outgoing edge goes to a different instance. A service with more than one instance needs one in front, ' +
@@ -18,6 +23,10 @@ const WHAT: Record<NodeType, string> = {
     'Does work. Each instance handles `concurrency` calls at once (each taking serviceTime) and holds `queue` more waiting; beyond that it rejects. ' +
     'After its own work a call goes through the outgoing edges in order, and a synchronous call holds its slot while it waits. ' +
     'With autoscale it adds and removes instances by itself, late: it sizes for load it has already seen, and a new instance takes bootMs.',
+  function:
+    'Runs each call in an environment of its own, up to maxConcurrency at once, and refuses the rest (rate-limited); there is no queue. ' +
+    'A call that finds no environment ready waits coldStartMs for one to start; an environment that has finished a call stays ready for keepWarmMs. ' +
+    '`provisioned` environments are always ready. Otherwise it behaves as a service: it goes through its outgoing edges and holds its environment while it waits.',
   cache:
     'Answers repeat reads. An edge from a service to a cache must come before the edge to the store it fronts: a hit skips that next edge, ' +
     'a miss reads the store and fills the cache. Holds `capacity` items (least recently used goes first) for ttlMs each. ' +
@@ -25,20 +34,24 @@ const WHAT: Record<NodeType, string> = {
   database:
     'A primary that takes writes, and optional replicas that share reads. `concurrency` is its cores: that many queries run at full speed, ' +
     'and beyond that they share the cores and all slow down, so limit callers with poolSize on the edge into it. A leaf: it makes no calls.',
+  'object-store':
+    'Keeps files. It has no slots and no queue: any number of calls at once each take readTime (writeTime for a write). A leaf: it makes no calls. ' +
+    'A service that fetches a file from it holds its own slot for that long, which is why files are better fetched by a CDN.',
   queue: 'Stores messages and answers the publisher at once. Only workers read from it. Use an async edge into it for work that can be done later.',
   worker: 'Takes messages from a queue at its own pace and processes them like a service. Its only incoming edge is from a queue.',
 };
 
 const EDGES =
   'An edge is a call from one part to another, and carries the caller\'s policy: timeoutMs (0 waits forever), retries with backoffMs, backoffFactor and jitter, ' +
-  'poolSize (connections per caller instance; 0 is no limit), a circuit breaker, latencyMs each way, appliesTo (all, read or write) and mode ' +
+  'poolSize (connections per caller instance; 0 is no limit), a circuit breaker, latencyMs each way, appliesTo (all, read, write, file, or data which is reads and writes but not files) and mode ' +
   '(sync waits for the answer; async hands the call over and moves on). A timeout does not cancel the work downstream.';
 
 const DOCUMENT =
   'A design is { name?, nodes: [{ id, type, name?, x?, y?, params? }], edges: [{ id, from, to, params? }] }. Ids are 1-64 letters, digits, "_" or "-". ' +
   'Every setting left out takes the default shown here. All times are in milliseconds. ' +
   'A duration of work is { kind: "const" | "exp" | "lognormal", mean, cv? }. ' +
-  'Costs are made-up dollars a month: an instance is 15 + 3 per slot, a database server 40 + 12 per core, a cache 10 + 2 per 1000 items, a load balancer 20, a rate limiter 10, a queue 15.';
+  'Costs are made-up dollars a month: an instance is 15 + 3 per slot, a database server 40 + 12 per core, a cache 10 + 2 per 1000 items, a load balancer 20, a rate limiter 10, a queue 15, a CDN 25, an object store 5. ' +
+  'A function has no fixed cost: 24 for each environment busy all month (so in proportion to the time its calls take), plus 6 for each provisioned one.';
 
 export interface Components {
   document: string;

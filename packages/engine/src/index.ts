@@ -17,6 +17,7 @@ export {
 } from './model/schema.ts';
 export type {
   CacheNode,
+  CdnNode,
   ClientNode,
   Command,
   CommandInput,
@@ -26,8 +27,10 @@ export type {
   DesignInput,
   DesignNode,
   EdgeParams,
+  FunctionNode,
   LoadBalancerNode,
   NodeType,
+  ObjectStoreNode,
   QueueNode,
   RateLimiterNode,
   ServiceNode,

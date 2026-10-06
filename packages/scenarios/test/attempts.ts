@@ -1,9 +1,11 @@
 import type { Design } from '@loadline/engine';
 import { shop as blackFriday } from '../src/levels/black-friday.ts';
 import { priced } from '../src/levels/clockwork.ts';
+import { checkout } from '../src/levels/cold-start.ts';
 import { standby } from '../src/levels/failover.ts';
 import { fleet } from '../src/levels/first-traffic.ts';
 import { door } from '../src/levels/full-house.ts';
+import { site } from '../src/levels/heavy-lifting.ts';
 import { balanced } from '../src/levels/luck-of-the-draw.ts';
 import { copies } from '../src/levels/never-twice.ts';
 import { layered } from '../src/levels/nine-times.ts';
@@ -231,4 +233,23 @@ export const ATTEMPTS: Record<string, Attempt[]> = {
 
 
 
+  'heavy-lifting': [
+    // Fine while the CDN is full. The release empties it, and every picture lands on the site at once.
+    ['files kept five minutes, still fetched through the site', site({ ttlMs: 300_000 }), 0],
+    ['that, and a third instance', site({ ttlMs: 300_000, instances: 3 }), 0],
+    ['four instances and nothing else', site({ instances: 4 }), 0],
+    ['fetched from storage, still kept two seconds', site({ direct: true }), 1],
+    ['that, with one instance', site({ direct: true, instances: 1 }), 2],
+    ['fetched from storage and kept five minutes, with both instances', site({ direct: true, ttlMs: 300_000 }), 1],
+    ['fetched from storage, kept five minutes, one instance', site({ direct: true, ttlMs: 300_000, instances: 1 }), 3],
+    ['fetched from storage, kept until pushed out, one instance', site({ direct: true, ttlMs: 0, instances: 1 }), 3],
+  ],
+  'cold-start': [
+    ['ten kept ready, the average in a rush', checkout(10), 0],
+    ['twelve', checkout(12), 0],
+    ['eighteen', checkout(18), 3],
+    ['twenty-four', checkout(24), 2],
+    ['thirty', checkout(30), 1],
+    ['forty', checkout(40), 0],
+  ],
 };

@@ -6,9 +6,12 @@ import type { FlowNodeOf } from '../design/model.ts';
 import { useMessages } from '../i18n/index.ts';
 import {
   CacheIcon,
+  CdnIcon,
   ClientIcon,
   DatabaseIcon,
+  FunctionIcon,
   LoadBalancerIcon,
+  ObjectStoreIcon,
   QueueIcon,
   RateLimiterIcon,
   ServiceIcon,
@@ -39,11 +42,14 @@ function useLive(id: string): { window: NodeWindow | undefined; gauge: Gauge | u
 
 export const PART_ICONS: Record<NodeType, ReactNode> = {
   client: <ClientIcon />,
+  cdn: <CdnIcon />,
   'load-balancer': <LoadBalancerIcon />,
   'rate-limiter': <RateLimiterIcon />,
   service: <ServiceIcon />,
+  function: <FunctionIcon />,
   cache: <CacheIcon />,
   database: <DatabaseIcon />,
+  'object-store': <ObjectStoreIcon />,
   queue: <QueueIcon />,
   worker: <WorkerIcon />,
 };
@@ -154,7 +160,7 @@ function Trouble({ text }: { text: string | false }) {
   return <div className={`h-[1.1rem] truncate text-signal ${small}`}>{text || ''}</div>;
 }
 
-export function ServiceNodeView({ id, type, data, selected }: NodeProps<FlowNodeOf<'service' | 'worker'>>) {
+export function ServiceNodeView({ id, type, data, selected }: NodeProps<FlowNodeOf<'service' | 'worker' | 'function'>>) {
   const m = useMessages();
   const { window, gauge } = useLive(id);
   const waiting = gauge?.queued ?? 0;
@@ -190,6 +196,30 @@ export function CacheNodeView({ id, type, data, selected }: NodeProps<FlowNodeOf
   );
 }
 
+/** A CDN: what share of the files asked for it had already. Everything else passes through it. */
+export function CdnNodeView({ id, type, data, selected }: NodeProps<FlowNodeOf<'cdn'>>) {
+  const m = useMessages();
+  const { window } = useLive(id);
+  const lookups = window ? window.hits + window.misses : 0;
+  return (
+    <Plate id={id} type={type} name={data.name} selected={selected}>
+      <Throughput window={window} />
+      <div className={`h-[1.1rem] text-ink-2 ${small}`}>{lookups > 0 ? m.node.served(formatPercent(window!.hits / lookups)) : ''}</div>
+    </Plate>
+  );
+}
+
+/** An object store has no slots to fill, so it has no gauge: only what it is asked for. */
+export function ObjectStoreNodeView({ id, type, data, selected }: NodeProps<FlowNodeOf<'object-store'>>) {
+  const { window } = useLive(id);
+  return (
+    <Plate id={id} type={type} name={data.name} selected={selected} calls={false}>
+      <Throughput window={window} />
+      <Trouble text={false} />
+    </Plate>
+  );
+}
+
 export function QueueNodeView({ id, type, data, selected }: NodeProps<FlowNodeOf<'queue'>>) {
   const m = useMessages();
   const { window, gauge } = useLive(id);
@@ -212,11 +242,14 @@ export function QueueNodeView({ id, type, data, selected }: NodeProps<FlowNodeOf
 /** The component that draws each kind of part. */
 export const NODE_VIEWS = {
   client: ClientNodeView,
+  cdn: CdnNodeView,
   'load-balancer': GateNodeView,
   'rate-limiter': GateNodeView,
   service: ServiceNodeView,
+  function: ServiceNodeView,
   worker: ServiceNodeView,
   database: DatabaseNodeView,
+  'object-store': ObjectStoreNodeView,
   cache: CacheNodeView,
   queue: QueueNodeView,
 } satisfies Record<NodeType, (props: NodeProps<never>) => ReactNode>;

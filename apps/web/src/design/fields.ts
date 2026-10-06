@@ -21,6 +21,7 @@ const MS = { unit: 'ms' } as const;
 export const NODE_FIELDS: Record<NodeType, FieldSpec[]> = {
   client: [
     { kind: 'number', path: 'rps', min: 0, max: 200_000, step: 10 },
+    { kind: 'number', path: 'fileRatio', min: 0, max: 1, step: 0.05 },
     { kind: 'number', path: 'readRatio', min: 0, max: 1, step: 0.05 },
     { kind: 'number', path: 'keys', min: 1, max: 1_000_000, step: 1000, integer: true },
     { kind: 'number', path: 'skew', min: 0, max: 2, step: 0.1 },
@@ -70,10 +71,25 @@ export const NODE_FIELDS: Record<NodeType, FieldSpec[]> = {
     { kind: 'number', path: 'rate', min: 0.1, max: 1_000_000, step: 10 },
     { kind: 'number', path: 'burst', min: 1, max: 1_000_000, step: 10 },
   ],
+  cdn: [
+    { kind: 'number', path: 'capacity', min: 1, max: 10_000_000, step: 1000, integer: true },
+    { kind: 'number', path: 'ttlMs', min: 0, max: 86_400_000, step: 1000, ...MS },
+  ],
+  'object-store': [
+    { kind: 'work', path: 'readTime' },
+    { kind: 'work', path: 'writeTime' },
+  ],
+  function: [
+    { kind: 'number', path: 'maxConcurrency', min: 1, max: 5000, integer: true },
+    { kind: 'work', path: 'serviceTime' },
+    { kind: 'number', path: 'coldStartMs', min: 0, max: 60_000, step: 50, ...MS },
+    { kind: 'number', path: 'keepWarmMs', min: 0, max: 3_600_000, step: 1000, ...MS },
+    { kind: 'number', path: 'provisioned', min: 0, max: 5000, integer: true },
+  ],
 };
 
 export const EDGE_FIELDS: FieldSpec[] = [
-  { kind: 'choice', path: 'appliesTo', options: ['all', 'read', 'write'] },
+  { kind: 'choice', path: 'appliesTo', options: ['all', 'data', 'read', 'write', 'file'] },
   { kind: 'choice', path: 'mode', options: ['sync', 'async'] },
   { kind: 'number', path: 'timeoutMs', min: 0, max: 600_000, step: 100, ...MS },
   { kind: 'number', path: 'retries', min: 0, max: 10, integer: true },

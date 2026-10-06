@@ -126,6 +126,35 @@ export function DatabaseIcon() {
   );
 }
 
+/** A globe: copies of files, kept around the world. */
+export function CdnIcon() {
+  return (
+    <Icon size={16}>
+      <circle cx="8" cy="8" r="5.8" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M2.2 8h11.6M8 2.2c-2.4 2-2.4 9.6 0 11.6M8 2.2c2.4 2 2.4 9.6 0 11.6" stroke="currentColor" strokeWidth="1.3" />
+    </Icon>
+  );
+}
+
+/** A bucket. */
+export function ObjectStoreIcon() {
+  return (
+    <Icon size={16}>
+      <ellipse cx="8" cy="4" rx="5.3" ry="1.8" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M2.7 4 4.3 13c.2.8 1.8 1.3 3.7 1.3s3.5-.5 3.7-1.3L13.3 4" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </Icon>
+  );
+}
+
+/** A lambda, the letter a function is written with. */
+export function FunctionIcon() {
+  return (
+    <Icon size={16}>
+      <path d="M4 2.5h1.6c.8 0 1.3.4 1.6 1.2l3.2 9c.2.5.6.8 1.1.8h.5M7.4 6.5 4 13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </Icon>
+  );
+}
+
 export function QueueIcon() {
   return (
     <Icon size={16}>

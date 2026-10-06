@@ -285,11 +285,14 @@ export const en = {
     hint: 'Drag a part onto the canvas, or press it to add one.',
     types: {
       client: { name: 'Client', hint: 'Sends requests at a steady rate' },
+      cdn: { name: 'CDN', hint: 'Keeps copies of files near the people asking for them' },
       'load-balancer': { name: 'Load balancer', hint: 'Spreads calls over the instances of a service' },
       'rate-limiter': { name: 'Rate limiter', hint: 'Refuses calls beyond a set rate' },
       service: { name: 'Service', hint: 'Does work, and calls the parts it points to' },
+      function: { name: 'Function', hint: 'Runs when it is called; nothing is kept running in between' },
       cache: { name: 'Cache', hint: 'Answers repeat reads so the store does not have to' },
       database: { name: 'Database', hint: 'Stores data; every query runs on its cores' },
+      'object-store': { name: 'Object storage', hint: 'Keeps files; never full, and never quick' },
       queue: { name: 'Queue', hint: 'Holds work until a worker is free' },
       worker: { name: 'Worker', hint: 'Takes work from a queue at its own pace' },
     },
@@ -305,6 +308,7 @@ export const en = {
     backlog: (count: string) => `${count} waiting`,
     oldest: (duration: string) => `wait ${duration}`,
     hits: (percent: string) => `${percent} hits`,
+    served: (percent: string) => `${percent} held here`,
     failing: (rate: string) => `${rate}/s failing`,
     instances: (count: number) => `×${count}`,
     down: 'down',
@@ -323,6 +327,8 @@ export const en = {
     connection: (from: string, to: string) => `${from} to ${to}`,
     room: (rate: string) => `Room for about ${rate} requests a second, before any time spent waiting on other parts.`,
     cost: (dollars: string) => `Costs $${dollars} a month as it stands.`,
+    usage: 'Charged for the time its calls take, waiting on other parts included. Idle, it costs nothing.',
+    ready: (dollars: string) => `Keeping environments ready costs $${dollars} a month, used or not.`,
     problems: 'Problems',
     notes: 'Worth knowing',
     faults: {
@@ -347,7 +353,8 @@ export const en = {
     node: {
       client: {
         rps: { label: 'Requests per second', hint: 'Before the traffic control above is applied.' },
-        readRatio: { label: 'Share that only read', hint: '0 is all writes, 1 is all reads.' },
+        fileRatio: { label: 'Share that ask for a file', hint: 'An image, a script: the same for everyone who asks. The rest read or write data.' },
+        readRatio: { label: 'Share that only read', hint: 'Of the requests for data. 0 is all writes, 1 is all reads.' },
         keys: { label: 'Different items asked about' },
         skew: { label: 'How uneven the demand is', hint: '0 spreads requests evenly. 1 is typical: a few items get most of them.' },
       },
@@ -404,9 +411,24 @@ export const en = {
         rate: { label: 'Calls let through per second' },
         burst: { label: 'Calls let through at once after a quiet spell' },
       },
+      cdn: {
+        capacity: { label: 'Files it can hold', hint: 'The least recently asked for is dropped to make room.' },
+        ttlMs: { label: 'Keep each file for', hint: '0 keeps it until it is dropped for room.' },
+      },
+      'object-store': {
+        readTime: work('Time to hand a file over'),
+        writeTime: work('Time to take a file in'),
+      },
+      function: {
+        maxConcurrency: { label: 'Calls it may run at once', hint: 'Each runs in an environment of its own. Beyond this they are refused.' },
+        serviceTime: work('Work per call'),
+        coldStartMs: { label: 'Time to start an environment', hint: 'A call that finds none ready waits this long first.' },
+        keepWarmMs: { label: 'Keep an idle environment for' },
+        provisioned: { label: 'Environments kept ready', hint: 'Always ready, and paid for whether or not they are used.' },
+      },
     },
     edge: {
-      appliesTo: { label: 'Used by', options: { all: 'Every request', read: 'Reads only', write: 'Writes only' } },
+      appliesTo: { label: 'Used by', options: { all: 'Every request', data: 'Everything but files', read: 'Reads only', write: 'Writes only', file: 'Files only' } },
       mode: { label: 'The caller', options: { sync: 'Waits for the answer', async: 'Hands it over and moves on' } },
       timeoutMs: { label: 'Give up after', hint: '0 waits forever.' },
       retries: { label: 'Retries' },
@@ -431,6 +453,7 @@ export const en = {
     'needs-balancer': (name: string) => `${name} has more than one instance, but calls reach it directly, so they all land on the first. Put a load balancer in front.`,
     'cache-fronts-nothing': (name: string) => `${name} checks a cache but has no store to read after it.`,
     'queue-unread': (name: string) => `Nothing takes messages from ${name}, so it only fills up.`,
+    'cdn-no-files': (name: string) => `No connection from ${name} carries files, so it has nothing to keep.`,
   },
   metrics: {
     title: 'What clients see',

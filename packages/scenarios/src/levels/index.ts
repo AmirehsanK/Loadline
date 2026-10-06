@@ -1,9 +1,11 @@
 import type { Scenario } from '../types.ts';
 import { blackFriday } from './black-friday.ts';
 import { clockwork } from './clockwork.ts';
+import { coldStart } from './cold-start.ts';
 import { failover } from './failover.ts';
 import { firstTraffic } from './first-traffic.ts';
 import { fullHouse } from './full-house.ts';
+import { heavyLifting } from './heavy-lifting.ts';
 import { luckOfTheDraw } from './luck-of-the-draw.ts';
 import { neverTwice } from './never-twice.ts';
 import { nineTimes } from './nine-times.ts';
@@ -38,6 +40,8 @@ export const LEVELS: readonly Scenario[] = [
   nineTimes,
   wrongSuspect,
   failover,
+  heavyLifting,
+  coldStart,
 ];
 
 export function findLevel(id: string): Scenario | undefined {

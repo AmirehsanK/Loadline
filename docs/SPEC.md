@@ -100,11 +100,11 @@ user retrying and a service retrying its database.
   database queue".
 - Work done for an orphan is counted per node as wasted work.
 
-### 4.3 Components (v1)
+### 4.3 Components
 
 | Type | Main parameters | What emerges |
 |---|---|---|
-| Client | rate, share of reads, number of items and how unevenly they are asked for | overload, retry storms |
+| Client | rate, share of files, share of reads, number of items and how unevenly they are asked for | overload, retry storms |
 | Load balancer | algorithm (round-robin, random, least-connections, two-choices), health-check interval | uneven load, failover delay |
 | Service | instances, concurrency, queue, service-time distribution, autoscaling (target, min/max, boot time, cooldown) | thread starvation, scaling lag |
 | Cache | capacity, TTL and jitter, single-flight toggle | hit ratio, cold start, stampede |
@@ -112,8 +112,15 @@ user retrying and a service retrying its database.
 | Queue | max depth, overflow policy | backlog, drain time |
 | Worker | instances, concurrency, processing time, failure rate, tries before giving up | consumer lag |
 | Rate limiter | token-bucket rate and burst | load shedding |
+| CDN | files held, how long each is kept | offload, and its loss when emptied |
+| Object store | time to hand a file over and to take one in | a slot held for a fetch |
+| Function | calls at once, work, time to start an environment, how long one is kept, how many are kept ready | cold starts, a surge that starts too many, a bill for waiting |
 
-- **Edges** carry network latency, a filter (all, read, write), a mode (sync, async), and the
+The first eight were v1. The last three were added on 6 October 2026 at the owner's request, after a
+comparison with another playground showed what this one could not draw: where files come from,
+and code that runs without a server. Each came with its tests and a level, as section 11 asks.
+
+- **Edges** carry network latency, a filter (all, data, read, write, file), a mode (sync, async), and the
   caller's policy: timeout, retries, backoff, jitter, circuit breaker, and pool size for database
   edges.
 - **A multi-instance service needs a load balancer in front.** Without one, only the first
@@ -122,7 +129,8 @@ user retrying and a service retrying its database.
   emptied, database failover, connection cut, connection delayed. They can be triggered by hand or
   scheduled in a workload, and a scheduled fault is part of the run.
 - **Cost** is a made-up monthly price per part (`src/cost.ts`): a fixed amount per instance or
-  server plus an amount per slot, core or thousand cached items, accrued over the run.
+  server plus an amount per slot, core or thousand cached items, accrued over the run. A function
+  is the exception: it is charged for the time its calls take and nothing for being there.
 - **Live edits:** setting changes and faults apply mid-run; adding or removing nodes or edges
   restarts the run.
 - **Where the time goes:** `findBottleneck` follows the waiting from a client to the part the time
@@ -225,13 +233,19 @@ tests: an engine change that moves a row has changed what a level teaches.
 | 16 | Nine times | Retries multiply down a chain of calls; retry in one layer |
 | 17 | Wrong suspect | Finding the bottleneck: the part that hurts is not always the part that is short |
 | 18 | Failover | A replica for reads, a queue for writes, and a worker that waits between tries |
+| 19 | Heavy lifting | Files come from storage by way of a CDN, not through the servers |
+| 20 | Cold start | A function starts an environment for every call that finds none; keep enough ready |
 
-The first ten came with the plan. The other eight were added afterwards, one for each thing the
+The first ten came with the plan. The next eight were added afterwards, one for each thing the
 engine could already do and no level asked for: the ways a balancer picks an instance, a timeout
 that is too short, the rate limiter (the one part no level used), read replicas, lifetimes in a
 cache, retries at more than one layer, the panel that finds the bottleneck, and a database failover
 with redelivery. None needed a change to the engine, which is the rule of section 11 kept: a new
 behaviour needs a level, and a level should not need a new behaviour made up for it.
+
+The last two are the other half of that rule. The CDN, the object store and the function were new
+behaviour, so each had to bring a level: Heavy lifting for the first two together, Cold start for
+the third.
 
 Sandbox mode has every component, manual faults and no objectives.
 
@@ -348,6 +362,8 @@ Sandbox mode has every component, manual faults and no objectives.
 | 8 | AI reviewer | End-to-end test against a mocked provider; one live review run by the owner with their own key |
 | 9 | README with screenshots, `docs/ENGINE.md` finished, architecture diagram | A stranger can understand and run the project from the README |
 
+| 10 | Content delivery and serverless: requests for files, CDN, object store, function | A test per behaviour; a level for each, with its lesson; the same hashes in every browser |
+
 Milestones 6, 7 and 8 are independent of each other and can be reordered. Milestones 0–5 already
 make a complete, deployed piece.
 
@@ -379,7 +395,7 @@ What is automated, and runs in CI on every push:
   request are unit-tested without a browser.
 - **CLI:** `loadline test` against an example file with a passing and a failing assertion.
 - **MCP:** every tool is called through the protocol, in memory and from a separate process.
-- **Between JavaScript engines:** `npm run browsers` makes nineteen runs (the engine's reference
+- **Between JavaScript engines:** `npm run browsers` makes twenty-one runs (the engine's reference
   system, and the reference answer to each level) in Node and in each installed browser, and the
   hash of every report must be the same. CI runs it in Firefox and Chrome. On the development
   machine Edge is checked as well. Safari's engine is not: it cannot be started from a script.
@@ -406,8 +422,11 @@ pricing, mobile editing, multiplayer.
 
 ## 11. Risks
 
-- **Realism has no natural end.** The eight rules and eight component types are the v1 boundary; a
-  new behaviour needs a level that teaches it.
+- **Realism has no natural end.** The eight rules and eight component types were the v1 boundary,
+  and three types have been added since. The rule that held the line is unchanged: a new behaviour
+  needs a test that shows it emerging and a level that teaches it. Parts that would behave as an
+  existing one does under another name (a document database, a second kind of balancer) are not
+  added.
 - **Engine slower than budget.** Level sizes follow the measured benchmark; the fallback is smaller
   request rates, not sampling.
 - **UI polish eats the schedule.** The skeleton lands in milestone 2 and the visual pass is
