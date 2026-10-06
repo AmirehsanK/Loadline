@@ -1,6 +1,7 @@
 import type { Scenario } from '@loadline/scenarios';
 import { useId } from 'react';
 import { useDesign } from '../design/store.ts';
+import { LocaleSwitch } from '../i18n/LocaleSwitch.tsx';
 import { useLevelText, useMessages } from '../i18n/index.ts';
 import { BackIcon, BoltIcon, LoadMark, PauseIcon, PlayIcon, RedoIcon, RestartIcon, UndoIcon } from '../icons.tsx';
 import { Timeline, scriptOfLevel, scriptOfWorkload } from '../level/Timeline.tsx';
@@ -74,6 +75,7 @@ export function TopBar() {
           <Clock />
         </>
       )}
+      <LocaleSwitch />
 
       <RunNotice />
       <SharedNotice />

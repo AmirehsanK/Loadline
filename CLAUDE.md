@@ -62,7 +62,10 @@ npm run bench -w @loadline/engine
   new numbers before touching the table.
 - Technical proper nouns stay English in the Persian UI: component names, p99, RPS, ms.
 - Every word the interface shows comes from `apps/web/src/i18n`. A message that takes values is a
-  function in the catalog, never a string glued together in a component.
+  function in the catalog, never a string glued together in a component. `fa.ts` has the type of
+  `en.ts`, so a message added to one and not the other does not compile; a level's Persian goes in
+  `levels.fa.ts`. In Persian, a number inside a sentence is in Persian digits and a number read
+  off the system (a rate, a latency, a cost) keeps Latin ones.
 - Styles use logical directions (`ms-`, `pe-`, `start-`, `text-end`), so the interface can mirror
   for Persian. `npm run lint` fails on a physical one (`ml-`, `text-left`, ...). The canvas and the
   charts are the exception: they set `dir="ltr"` and are always drawn left to right.

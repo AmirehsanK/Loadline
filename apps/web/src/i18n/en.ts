@@ -23,6 +23,8 @@ export const en = {
       'Every request here is simulated one by one, so queues, timeouts and overload happen for the reasons they happen in ' +
       'production. Ten levels each hand you a system with a problem. Fix it, and it stays fixed on any seed.',
     levels: 'Levels',
+    // The number painted beside a level in the list.
+    ordinal: (index: number) => String(index).padStart(2, '0'),
     passed: (count: number, total: number) => `${count} of ${total} passed`,
     stars: (count: number) => (count === 0 ? 'Not passed yet' : count === 1 ? '1 star of 3' : `${count} stars of 3`),
     play: 'Play',
@@ -88,7 +90,7 @@ export const en = {
     number: (index: number, total: number) => `Level ${index} of ${total}`,
     objectives: 'To pass',
     scoredFrom: (time: string) => `Scored from ${time} on. What happens before that is warm-up.`,
-    star: (count: number) => (count === 2 ? 'For a second star' : 'For a third star'),
+    star: (count: number): string => (count === 2 ? 'For a second star' : 'For a third star'),
     // What an objective asks, given its limit.
     objective: {
       p99: (limit: string) => `99% of requests answered within ${limit}`,
@@ -382,6 +384,10 @@ export const en = {
   units: {
     ms: 'ms',
     times: '×',
+  },
+  locale: {
+    // The name of the other language, in that language: what the button that switches to it says.
+    switchTo: 'فارسی',
   },
 };
 

@@ -226,9 +226,19 @@ Sandbox mode has every component, manual faults and no objectives.
 - The canvas and charts stay left-to-right in both locales; panels, menus and text flip.
 - Technical proper nouns stay English in the Persian UI (component names, p99, RPS, ms). Metric
   readouts use Latin digits; prose uses Persian digits.
-- Fonts follow League Meta: Estedad (SIL OFL) for Persian, a Latin face for figures.
-- Every `fa` string must equal `normalize(s, 'standard')` from `persian-text-guard`, checked in CI.
-- Claude drafts the Persian copy; Amirehsan reviews it.
+- Fonts follow League Meta: Estedad (SIL OFL) for Persian, a Latin face for figures. Estedad comes
+  after the Latin face in every stack, so the browser takes Persian letters from it one character
+  at a time and an English name inside a Persian sentence keeps its own face. Headings lose their
+  letter-spacing in Persian, which would break the joins, and the page is set a little larger.
+- The language is the one chosen before, or Persian for a browser that asks for Persian first.
+  The switch is the name of the other language, in that language.
+- The words of each level are in `apps/web/src/i18n/levels.fa.ts`, by level id. A test checks that
+  no figure appears in the Persian that is not in the English, which is tuned against the engine.
+- Every `fa` string is checked in CI with `persian-text-guard`: it must be unchanged by the tidying
+  steps of the `standard` preset, and must hold no look-alike letter (Arabic yeh or kaf, and the
+  like). The preset is not used whole, because it also folds «آ» and «أ» into «ا», which is right
+  for comparing text and wrong for showing it.
+- Claude drafts the Persian copy; Amirehsan reviews it. **The copy has not been reviewed yet.**
 
 ### 7.3 CLI
 

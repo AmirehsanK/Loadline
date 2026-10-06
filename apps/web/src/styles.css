@@ -24,9 +24,14 @@
   --color-signal: #b87400;
   --color-signal-wash: #fbefd5;
 
-  --font-sans: 'B612', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'B612 Mono', ui-monospace, 'Cascadia Mono', monospace;
-  --font-display: 'Big Shoulders Stencil Variable', 'B612', sans-serif;
+  /*
+   * Estedad follows each Latin face. The Latin faces have no Persian letters, so the browser
+   * takes those from Estedad one character at a time, and a part's English name inside a Persian
+   * sentence is still set in the face it has everywhere else.
+   */
+  --font-sans: 'B612', 'Estedad Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'B612 Mono', 'Estedad Variable', ui-monospace, 'Cascadia Mono', monospace;
+  --font-display: 'Big Shoulders Stencil Variable', 'Estedad Variable', 'B612', sans-serif;
 }
 
 @layer base {
@@ -66,6 +71,16 @@
     text-transform: uppercase;
   }
 
+  /* The line the front page opens with. */
+  .headline {
+    font-family: var(--font-display);
+    font-size: 3.4rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
   .field-label {
     color: var(--color-ink-2);
     font-size: 0.92rem;
@@ -99,6 +114,37 @@
   .field-input:disabled:hover {
     border-color: var(--color-line);
   }
+}
+
+/* --- Persian ------------------------------------------------------------------------------- */
+
+/*
+ * Persian is a joined script. Its letters need more room above and below than Latin ones, they
+ * stop resolving below about 12px, and spacing them out breaks the joins. So the page is set a
+ * little larger and looser, and the stencilled headings, which are spaced capitals in English,
+ * become heavy Estedad with no spacing at all.
+ */
+html[lang='fa'] {
+  font-size: 14.5px;
+}
+html[lang='fa'] body {
+  line-height: 1.75;
+}
+html[lang='fa'] .marking,
+html[lang='fa'] .headline {
+  /* The family is left alone: a Latin word in a heading, the name above all, stays stencilled. */
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+html[lang='fa'] .headline {
+  font-size: 2.5rem;
+  line-height: 1.45;
+}
+/* What is read off the system is the same in both languages, and is laid out the same. */
+html[lang='fa'] .react-flow,
+html[lang='fa'] .uplot {
+  line-height: 1.45;
 }
 
 /* --- The canvas ---------------------------------------------------------------------------- */

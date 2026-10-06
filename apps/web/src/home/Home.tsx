@@ -1,6 +1,7 @@
 import { LEVELS } from '@loadline/scenarios';
 import type { Scenario } from '@loadline/scenarios';
 import { useLevelText, useMessages } from '../i18n/index.ts';
+import { LocaleSwitch } from '../i18n/LocaleSwitch.tsx';
 import { ForwardIcon, LoadMark } from '../icons.tsx';
 import { useProgress } from '../level/progress.ts';
 import { Stars } from '../level/Result.tsx';
@@ -21,14 +22,17 @@ export function Home() {
           <LoadMark size={28} />
           <span className="marking text-[2.1rem]!">{m.app.name}</span>
         </h1>
-        <a href={SOURCE} className="text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink">
-          {m.home.source}
-        </a>
+        <div className="flex items-center gap-4">
+          <a href={SOURCE} className="text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink">
+            {m.home.source}
+          </a>
+          <LocaleSwitch />
+        </div>
       </header>
 
       <main className="mx-auto grid w-full max-w-[84rem] flex-1 grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-start gap-12 px-6 py-10">
         <section className="flex flex-col gap-6">
-          <p className="font-display text-[3.4rem] leading-[0.95] font-bold tracking-wide uppercase">{m.home.tagline}</p>
+          <p className="headline">{m.home.tagline}</p>
           <p className="max-w-[36rem] text-[1.15rem] text-ink-2">{m.home.intro}</p>
           <Hull passed={passed} total={LEVELS.length} />
           <div className="flex flex-col items-start gap-2 border-s-4 border-ink bg-plate py-3 ps-4 pe-5">
@@ -75,7 +79,7 @@ function LevelRow({ level, index, stars }: { level: Scenario; index: number; sta
         }`}
       >
         <span className={`font-display text-[2.6rem] leading-none font-bold ${done ? 'text-sea' : 'text-ink'}`} aria-hidden="true">
-          {String(index).padStart(2, '0')}
+          {m.home.ordinal(index)}
         </span>
         <span>
           <span className="block text-[1.2rem] font-bold">{text.title}</span>
