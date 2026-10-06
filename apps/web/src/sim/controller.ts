@@ -3,14 +3,13 @@ import type { CommandInput, Design } from '@loadline/engine';
 import { simulationKey, structureKey } from '../design/model.ts';
 import { currentDesign, useDesign } from '../design/store.ts';
 import { useProgress } from '../level/progress.ts';
-import { FULL_SPEED } from './protocol.ts';
+import { DEFAULT_SEED, FULL_SPEED } from './protocol.ts';
 import type { FromWorker, ToWorker } from './protocol.ts';
 import { EMPTY_RUN, HISTORY, useSim } from './store.ts';
 
 // Owns the worker. The design store says what to simulate, the sim store holds what came back, and
 // this module is the only thing that talks to the worker in between.
 
-const SEED = 2026;
 const RELOAD_DELAY_MS = 250;
 
 const worker = new Worker(new URL('../worker/sim.worker.ts', import.meta.url), { type: 'module' });
@@ -25,6 +24,13 @@ let run = 0;
 let loadedKey: string | null = null;
 let loadedStructure: string | null = null;
 let loadedLevel: string | null = null;
+// Whether the run is of a design that is only being looked at; such a run earns no stars.
+let loadedTransient = false;
+
+/** Everything a run depends on, as a string: the design, and the traffic and seed it came with. */
+function runKey(state: { seed: number | null; workload: unknown }, design: Design): string {
+  return `${simulationKey(design)}|${String(state.seed)}|${JSON.stringify(state.workload)}`;
+}
 
 worker.onmessage = (event: MessageEvent<FromWorker>) => {
   const message = event.data;
@@ -53,17 +59,19 @@ worker.onmessage = (event: MessageEvent<FromWorker>) => {
     samples: frame.samples.length > 0 ? [...state.samples, ...frame.samples].slice(-HISTORY) : state.samples,
   }));
   // The moment a run of a level ends is the moment its result counts.
-  if (finished && before !== 'finished' && loadedLevel !== null && frame.level?.outcome.passed) {
+  if (finished && before !== 'finished' && loadedLevel !== null && !loadedTransient && frame.level?.outcome.passed) {
     useProgress.getState().record(loadedLevel, frame.level.outcome.stars);
   }
 };
 
 /** Starts a run of `design` from time zero. */
 function load(design: Design, playing: boolean): void {
-  const { level } = useDesign.getState();
+  const state = useDesign.getState();
+  const { level } = state;
   const issues = lintDesign(design);
-  loadedKey = simulationKey(design);
+  loadedKey = runKey(state, design);
   loadedLevel = level?.id ?? null;
+  loadedTransient = state.transient;
   if (hasErrors(issues)) {
     loadedStructure = null;
     send({ type: 'pause' });
@@ -84,9 +92,10 @@ function load(design: Design, playing: boolean): void {
   send({
     type: 'load',
     design,
-    seed: level?.seed ?? SEED,
+    seed: level?.seed ?? state.seed ?? DEFAULT_SEED,
     multiplier: level ? 1 : multiplier,
     levelId: level?.id ?? null,
+    workload: level ? null : state.workload,
   });
   send({ type: 'speed', value: speed });
   if (playing) send({ type: 'play' });
@@ -97,13 +106,14 @@ function sync(): void {
   const state = useDesign.getState();
   const design = currentDesign(state);
   if (!design) return;
-  const key = simulationKey(design);
+  const key = runKey(state, design);
   const levelId = state.level?.id ?? null;
   if (key === loadedKey && levelId === loadedLevel) return;
 
   // A level is scored on one design from start to finish, so any change starts the run over,
-  // stopped. So does moving between a level and the sandbox.
-  if (levelId !== null || levelId !== loadedLevel) {
+  // stopped. So does moving between a level and the sandbox, and so does scripted traffic, which
+  // only means something from its beginning.
+  if (levelId !== null || levelId !== loadedLevel || state.workload !== null) {
     load(design, false);
     return;
   }

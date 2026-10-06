@@ -13,7 +13,8 @@ import { NODE_VIEWS } from './nodes.tsx';
 
 const edgeTypes = { flow: FlowEdgeView };
 
-export function Canvas() {
+/** The design, drawn. With `readOnly` it can be panned and zoomed and nothing else. */
+export function Canvas({ readOnly = false }: { readOnly?: boolean }) {
   const m = useMessages();
   const nodes = useDesign((state) => state.nodes);
   const edges = useDesign((state) => state.edges);
@@ -27,7 +28,7 @@ export function Canvas() {
 
   const onDrop = (event: DragEvent) => {
     const type = event.dataTransfer.getData(PART_MIME) as NodeType | '';
-    if (type === '') return;
+    if (type === '' || readOnly) return;
     event.preventDefault();
     addNode(type, m.parts.types[type].name, screenToFlowPosition({ x: event.clientX, y: event.clientY }));
   };
@@ -38,7 +39,7 @@ export function Canvas() {
       dir="ltr"
       className={`h-full ${running ? 'is-running' : ''}`}
       onDragOver={(event) => {
-        if (event.dataTransfer.types.includes(PART_MIME)) event.preventDefault();
+        if (!readOnly && event.dataTransfer.types.includes(PART_MIME)) event.preventDefault();
       }}
       onDrop={onDrop}
     >
@@ -62,7 +63,10 @@ export function Canvas() {
         fitViewOptions={{ padding: 0.35, maxZoom: 1 }}
         minZoom={0.3}
         maxZoom={1.5}
-        deleteKeyCode={['Backspace', 'Delete']}
+        deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
+        elementsSelectable={!readOnly}
         aria-label={m.canvas.label}
       >
         <Background variant={BackgroundVariant.Lines} gap={32} color="var(--color-grid)" />

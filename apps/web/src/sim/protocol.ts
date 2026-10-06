@@ -1,4 +1,4 @@
-import type { BlameReport, Bottleneck, Command, Design, Gauge, WindowSample } from '@loadline/engine';
+import type { BlameReport, Bottleneck, Command, Design, Gauge, WindowSample, Workload } from '@loadline/engine';
 import type { Outcome } from '@loadline/scenarios';
 
 /** Running totals since the start of the run. */
@@ -13,13 +13,17 @@ export interface Totals {
 /** The speed that means "as fast as the simulation will go". */
 export const FULL_SPEED = Infinity;
 
+/** The seed of a run whose design did not come with one. */
+export const DEFAULT_SEED = 2026;
+
 /** What the page sends to the worker. */
 export type ToWorker =
   /**
    * Start a run of a design from time zero, paused. With `levelId` it is a run of that level: the
-   * level's traffic and faults, its warm-up left out of the score, and an end.
+   * level's traffic and faults, its warm-up left out of the score, and an end. Otherwise
+   * `workload` is the traffic and faults the design came with, if it came with any.
    */
-  | { type: 'load'; design: Design; seed: number; multiplier: number; levelId: string | null }
+  | { type: 'load'; design: Design; seed: number; multiplier: number; levelId: string | null; workload: Workload | null }
   /** New settings for the design that is running; its nodes and edges are the same. */
   | { type: 'reconfigure'; design: Design }
   | { type: 'play' }

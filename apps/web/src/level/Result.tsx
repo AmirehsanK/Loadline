@@ -136,11 +136,15 @@ export function Result({ level }: { level: Scenario }) {
           </div>
 
           <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-3">
-            <form method="dialog">
-              <button type="submit" className="rounded-[3px] border border-line px-3 py-1.5 hover:border-ink">
-                {passed ? m.level.result.stay : m.level.result.retry}
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={() => {
+                dialog.current?.close();
+              }}
+              className="rounded-[3px] border border-line px-3 py-1.5 hover:border-ink"
+            >
+              {passed ? m.level.result.stay : m.level.result.retry}
+            </button>
             {passed && (
               <a
                 href={hrefOf(next ? { page: 'level', id: next.id } : { page: 'sandbox' })}

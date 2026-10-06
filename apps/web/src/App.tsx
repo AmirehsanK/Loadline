@@ -4,16 +4,50 @@ import { Canvas } from './canvas/Canvas.tsx';
 import { Palette } from './canvas/Palette.tsx';
 import { useDesign } from './design/store.ts';
 import { Home } from './home/Home.tsx';
+import { useMessages } from './i18n/index.ts';
+import { ForwardIcon, LoadMark } from './icons.tsx';
 import { Inspector } from './inspector/Inspector.tsx';
 import { Brief } from './level/Brief.tsx';
 import { Result } from './level/Result.tsx';
 import { Dock } from './metrics/Dock.tsx';
+import { HOME, hrefOf } from './route.ts';
 import { useRoute } from './session.ts';
 import { TopBar } from './topbar/TopBar.tsx';
 
 export function App() {
+  const m = useMessages();
   const page = useRoute((state) => state.route.page);
-  return page === 'home' ? <Home /> : <Workbench />;
+  const shared = useRoute((state) => state.shared);
+  if (page === 'home') return <Home />;
+  // A design from a link is not shown until it has been unpacked and checked.
+  if (shared?.status === 'opening') return <Notice title={m.shared.opening} />;
+  if (shared?.status === 'refused') return <Notice title={m.shared.refusedTitle} text={m.shared.refused[shared.code]} />;
+  return <Workbench />;
+}
+
+/** A page with one thing to say, and the way back to the levels. */
+function Notice({ title, text }: { title: string; text?: string }) {
+  const m = useMessages();
+  return (
+    <main className="grid min-h-dvh place-items-center p-6">
+      <div className="flex max-w-[34rem] flex-col items-start gap-3 border border-ink bg-plate p-6 shadow-[6px_6px_0_var(--color-ink)]">
+        <p className="flex items-center gap-2 text-ink">
+          <LoadMark />
+          <span className="marking text-[1.4rem]!">{m.app.name}</span>
+        </p>
+        <h1 className="text-[1.3rem] font-bold" role="status">
+          {title}
+        </h1>
+        {text !== undefined && <p className="text-ink-2">{text}</p>}
+        {text !== undefined && (
+          <a href={hrefOf(HOME)} className="flex items-center gap-1.5 rounded-[3px] bg-ink px-3 py-1.5 font-bold text-plate hover:bg-ink-2">
+            {m.shared.home}
+            <ForwardIcon />
+          </a>
+        )}
+      </div>
+    </main>
+  );
 }
 
 /** Undo and redo from the keyboard, except where a text field has its own. */
@@ -41,6 +75,7 @@ function useHistoryKeys(): void {
 function Workbench() {
   const level = useDesign((state) => state.level);
   const slot = useDesign((state) => state.slot);
+  const payload = useRoute((state) => (state.route.page === 'shared' ? state.route.payload : ''));
   useHistoryKeys();
 
   return (
@@ -51,7 +86,7 @@ function Workbench() {
           {level ? <Brief level={level} /> : <Palette />}
           <main id="canvas" className="min-w-0">
             {/* A different design is a different canvas, fitted to the view afresh. */}
-            <Canvas key={slot} />
+            <Canvas key={slot + payload} />
           </main>
           <Inspector />
         </div>

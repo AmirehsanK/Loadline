@@ -1,4 +1,4 @@
-import type { Command } from '@loadline/engine';
+import type { Command, Design, Workload } from '@loadline/engine';
 import type { Scenario } from '@loadline/scenarios';
 import { useDesign } from '../design/store.ts';
 import type { Messages } from '../i18n/en.ts';
@@ -10,6 +10,30 @@ const WIDTH = 1000;
 const HEIGHT = 30;
 /** Room above the traffic for the marks of what happens to the system. */
 const HEADROOM = 8;
+
+/** A run with a shape of its own: a level's, or the traffic a design came with. */
+export interface Script {
+  /** How much of the run the line shows. A level ends there. */
+  durationMs: number;
+  /** How much of the start is not scored. */
+  warmupMs: number;
+  workload: Workload;
+  /** The design the script was written for: its names stand in for parts no longer on the canvas. */
+  starter?: Design;
+}
+
+export function scriptOfLevel(level: Scenario): Script {
+  return { durationMs: level.durationMs, warmupMs: level.warmupMs, workload: level.workload, starter: level.starter };
+}
+
+/** The script of traffic that has no end of its own: the line runs a little past its last event. */
+export function scriptOfWorkload(workload: Workload): Script {
+  const ends = [
+    ...workload.phases.map((phase) => phase.atMs),
+    ...workload.chaos.map(({ atMs, command }) => atMs + ('durationMs' in command ? (command.durationMs ?? 0) : 0)),
+  ];
+  return { durationMs: Math.max(60_000, Math.max(0, ...ends) + 20_000), warmupMs: 0, workload };
+}
 
 interface Happening {
   atMs: number;
@@ -50,11 +74,11 @@ function describe(command: Command, m: Messages, nodeName: (id: string) => strin
 }
 
 /**
- * The run of a level laid out along a line: how its traffic rises and falls, what is done to the
- * system and when, which part is warm-up, and how far the run has got. It shows the story of the
- * level before a single request has been sent.
+ * A run laid out along a line: how its traffic rises and falls, what is done to the system and
+ * when, which part is warm-up, and how far the run has got. It shows the story of a level before
+ * a single request has been sent.
  */
-export function Timeline({ level }: { level: Scenario }) {
+export function Timeline({ script }: { script: Script }) {
   const m = useMessages();
   const now = useSim((state) => state.now);
   const nodes = useDesign((state) => state.nodes);
@@ -62,14 +86,14 @@ export function Timeline({ level }: { level: Scenario }) {
 
   // Faults name parts by id; the names are the ones on the canvas, which the player may have changed.
   const nodeName = (id: string) =>
-    nodes.find((node) => node.id === id)?.data.name || level.starter.nodes.find((node) => node.id === id)?.name || id;
+    nodes.find((node) => node.id === id)?.data.name || script.starter?.nodes.find((node) => node.id === id)?.name || id;
   const edgeEnds = (id: string): [string, string] => {
     const edge = edges.find((candidate) => candidate.id === id);
-    const original = level.starter.edges.find((candidate) => candidate.id === id);
+    const original = script.starter?.edges.find((candidate) => candidate.id === id);
     return [nodeName(edge?.source ?? original?.from ?? id), nodeName(edge?.target ?? original?.to ?? id)];
   };
 
-  const { durationMs, warmupMs, workload } = level;
+  const { durationMs, warmupMs, workload } = script;
   const x = (ms: number) => (Math.min(ms, durationMs) / durationMs) * WIDTH;
   const happenings: Happening[] = workload.chaos.map(({ atMs, command }) => ({
     atMs,

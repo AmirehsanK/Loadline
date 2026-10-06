@@ -1,5 +1,5 @@
 import { createSimulation, describeBlame, findBottleneck, summarize, totalMonthlyCost } from '@loadline/engine';
-import type { Command, Design, Simulation } from '@loadline/engine';
+import type { Command, Design, Simulation, Workload } from '@loadline/engine';
 import { evaluate, startScenario } from '@loadline/scenarios';
 import type { Scenario } from '@loadline/scenarios';
 import type { Frame } from './protocol.ts';
@@ -39,8 +39,11 @@ export class Runner {
   private framedAt = 0;
   private framedNow = 0;
 
-  /** Replaces the current run with a fresh one, paused at time zero. */
-  load(run: number, design: Design, seed: number, multiplier: number, level: Scenario | null = null): void {
+  /**
+   * Replaces the current run with a fresh one, paused at time zero. A level brings its own traffic
+   * and faults; without one, `workload` is what the design came with.
+   */
+  load(run: number, design: Design, seed: number, multiplier: number, level: Scenario | null = null, workload: Workload | null = null): void {
     this.run = run;
     this.sim = null;
     this.design = design;
@@ -53,8 +56,9 @@ export class Runner {
       this.sim = startScenario(level, design, seed);
       return;
     }
-    const sim = createSimulation(design, { seed });
-    if (multiplier !== 1) sim.setMultiplier(multiplier);
+    const sim = createSimulation(design, { seed, ...(workload ? { workload } : {}) });
+    // Scripted traffic sets its own level; the control is for designs that have none.
+    if (!workload && multiplier !== 1) sim.setMultiplier(multiplier);
     this.sim = sim;
   }
 

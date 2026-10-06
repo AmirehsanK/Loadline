@@ -1,7 +1,8 @@
-import { checkDesign, designSchema, hasErrors } from '@loadline/engine';
-import type { Design, DesignEdge, NodeType } from '@loadline/engine';
+import { designSchema, hasErrors, lintDesign } from '@loadline/engine';
+import type { Design, DesignEdge, NodeType, Workload } from '@loadline/engine';
 import { brokenRules } from '@loadline/scenarios';
 import type { Scenario } from '@loadline/scenarios';
+import { shareSchema } from '@loadline/share';
 import { applyEdgeChanges, applyNodeChanges } from '@xyflow/react';
 import type { Connection, EdgeChange, NodeChange } from '@xyflow/react';
 import { create } from 'zustand';
@@ -14,6 +15,26 @@ import type { FlowEdge, FlowNode } from './model.ts';
 export const SANDBOX_SLOT = 'loadline:design:v1';
 /** Where the design a visitor is working on for a level is kept. */
 export const levelSlot = (id: string) => `loadline:level:${id}:v1`;
+
+/** A design and what goes with it when it is saved, shared or exported. */
+export interface Document {
+  design: Design;
+  /** The seed it runs with; the app's own when absent. A level always uses its own. */
+  seed?: number;
+  /** Traffic and faults that come with it. A level always uses its own. */
+  workload?: Workload;
+}
+
+/** How a design is opened, apart from which one. */
+export interface Opening {
+  seed?: number | undefined;
+  workload?: Workload | undefined;
+  /**
+   * A design that is being looked at and belongs to nobody yet: one from a link, or in an embed.
+   * Nothing is read from storage for it and nothing is saved.
+   */
+  transient?: boolean;
+}
 
 const HISTORY_LIMIT = 100;
 /** Changes of one kind to one part that come this close together are a single step to undo. */
@@ -30,6 +51,11 @@ interface DesignState extends Snapshot {
   slot: string;
   /** The level whose rules the design is edited under; null in the sandbox. */
   level: Scenario | null;
+  /** The seed and the traffic the design came with, if it came with any. */
+  seed: number | null;
+  workload: Workload | null;
+  /** Whether the design is only being looked at, and so is not saved. */
+  transient: boolean;
   /** What undo and redo go back and forward to. */
   past: Snapshot[];
   future: Snapshot[];
@@ -47,28 +73,68 @@ interface DesignState extends Snapshot {
   /** Swaps the whole design for another, as one step that can be undone. */
   replace: (design: Design) => void;
   /**
+   * Takes on a document from outside: a file, or a design made elsewhere. In a level only the
+   * design is taken, and only if it keeps the level's rules. Returns whether it was taken.
+   */
+  adopt: (document: Document) => boolean;
+  /**
    * Starts editing what is saved under `slot`, or `fallback` if nothing valid is. The history
    * starts empty: undo never crosses from one design into another.
    */
-  open: (slot: string, fallback: Design, level: Scenario | null) => void;
+  open: (slot: string, fallback: Design, level: Scenario | null, opening?: Opening) => void;
+  /** Saves the design that is open under another key as well, at once. */
+  saveAs: (slot: string) => void;
+  /** Lets go of the traffic the design came with, so the traffic control applies again. */
+  dropWorkload: () => void;
   undo: () => void;
   redo: () => void;
 }
 
-/** The design saved under a key by an earlier visit, if it is still one that may be edited. */
-function stored(slot: string, level: Scenario | null): Design | null {
+/**
+ * A document read from text that may hold anything: saved by an earlier version, edited by hand,
+ * or picked from disk. Returns null unless it is a design that can be opened. A bare design, which
+ * is what earlier versions saved, is a document with nothing else in it.
+ */
+export function readDocument(text: string): Document | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  const result = shareSchema.safeParse('nodes' in parsed ? { design: parsed } : parsed);
+  if (!result.success || hasErrors(lintDesign(result.data.design))) return null;
+  const { design, seed, workload } = result.data;
+  return { design, ...(seed === undefined ? {} : { seed }), ...(workload === undefined ? {} : { workload }) };
+}
+
+/** What was saved under a key by an earlier visit, if it is still something that may be edited. */
+function stored(slot: string, level: Scenario | null): Document | null {
   try {
     const saved = localStorage.getItem(slot);
-    if (saved === null) return null;
-    // Saved data is checked like any other input: it may be from an older version, or edited.
-    const { design, issues } = checkDesign(JSON.parse(saved));
-    if (!design || hasErrors(issues)) return null;
+    const document = saved === null ? null : readDocument(saved);
     // A level may have changed since: a design that breaks its rules now starts over.
-    if (level && brokenRules(level, design).length > 0) return null;
-    return design;
+    if (!document || (level && brokenRules(level, document.design).length > 0)) return null;
+    return document;
   } catch {
-    // Storage can be unavailable or hold something unreadable.
+    // Storage can be unavailable.
     return null;
+  }
+}
+
+/** The design that is open, with what it came with. */
+function documentOf(state: Snapshot & Pick<DesignState, 'seed' | 'workload'>): Document | null {
+  const design = currentDesign(state);
+  if (!design) return null;
+  return { design, ...(state.seed === null ? {} : { seed: state.seed }), ...(state.workload === null ? {} : { workload: state.workload }) };
+}
+
+function write(slot: string, document: Document): void {
+  try {
+    localStorage.setItem(slot, JSON.stringify(document));
+  } catch {
+    // A full or disabled store only costs the user their saved design, not the session.
   }
 }
 
@@ -111,10 +177,14 @@ function withEdge(state: Snapshot, edge: FlowEdge): FlowEdge[] {
   return [...state.edges.slice(0, at), edge, ...state.edges.slice(at)];
 }
 
-export const useDesign = create<DesignState>((set) => ({
-  ...fromDesign(stored(SANDBOX_SLOT, null) ?? designSchema.parse(STARTER)),
+export const useDesign = create<DesignState>((set, get) => ({
+  ...fromDesign(designSchema.parse(STARTER)),
   slot: SANDBOX_SLOT,
   level: null,
+  seed: null,
+  workload: null,
+  // Until something is opened there is nothing of the visitor's here to save.
+  transient: true,
   past: [],
   future: [],
 
@@ -209,16 +279,48 @@ export const useDesign = create<DesignState>((set) => ({
   replace: (design) => {
     set((state) => ({ ...remember(state, 'replace'), ...fromDesign(design) }));
   },
-  open: (slot, fallback, level) => {
+  adopt: (document) => {
+    const { level } = get();
+    if (level && brokenRules(level, document.design).length > 0) return false;
+    set((state) => ({
+      ...remember(state, 'replace'),
+      ...fromDesign(document.design),
+      // A level's traffic and seed are its own, whatever the document says.
+      ...(level ? {} : { seed: document.seed ?? null, workload: document.workload ?? null }),
+    }));
+    return true;
+  },
+  open: (slot, fallback, level, { seed, workload, transient = false } = {}) => {
     // The design being left is saved first; its pending save would otherwise be dropped.
     saveNow();
     lastStep = '';
+    const document = (transient ? null : stored(slot, level)) ?? {
+      design: fallback,
+      ...(seed === undefined ? {} : { seed }),
+      ...(workload === undefined ? {} : { workload }),
+    };
     opening = true;
     try {
-      set({ slot, level, past: [], future: [], ...fromDesign(stored(slot, level) ?? fallback) });
+      set({
+        slot,
+        level,
+        transient,
+        seed: level ? null : (document.seed ?? null),
+        workload: level ? null : (document.workload ?? null),
+        past: [],
+        future: [],
+        ...fromDesign(document.design),
+      });
     } finally {
       opening = false;
     }
+  },
+  saveAs: (slot) => {
+    const document = documentOf(get());
+    if (document) write(slot, document);
+  },
+  dropWorkload: () => {
+    set({ workload: null });
   },
   undo: () => {
     set((state) => {
@@ -266,18 +368,15 @@ function saveNow(): void {
   const state = unsaved;
   unsaved = null;
   if (!state) return;
-  const design = currentDesign(state);
-  if (!design) return;
-  try {
-    localStorage.setItem(state.slot, JSON.stringify(design));
-  } catch {
-    // A full or disabled store only costs the user their saved design, not the session.
-  }
+  const document = documentOf(state);
+  if (document) write(state.slot, document);
 }
 
 useDesign.subscribe((state, previous) => {
-  if (opening) return;
-  if (state.nodes === previous.nodes && state.edges === previous.edges) return;
+  if (opening || state.transient) return;
+  if (state.nodes === previous.nodes && state.edges === previous.edges && state.workload === previous.workload && state.seed === previous.seed) {
+    return;
+  }
   unsaved = state;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveNow, SAVE_DELAY_MS);

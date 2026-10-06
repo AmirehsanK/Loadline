@@ -1,3 +1,4 @@
+import '../strict.ts';
 import { findLevel } from '@loadline/scenarios';
 import type { FromWorker, ToWorker } from '../sim/protocol.ts';
 import { Runner } from '../sim/runner.ts';
@@ -36,7 +37,7 @@ self.onmessage = (event: MessageEvent<ToWorker>) => {
         // A level has rules that are functions, which cannot be posted; it is looked up by id.
         const level = message.levelId === null ? null : findLevel(message.levelId);
         if (level === undefined) throw new Error(`There is no level "${message.levelId ?? ''}".`);
-        runner.load(run, message.design, message.seed, message.multiplier, level);
+        runner.load(run, message.design, message.seed, message.multiplier, level, message.workload);
         break;
       }
       case 'play':

@@ -1,7 +1,13 @@
 // Where the visitor is. The address is kept in the fragment (`#/level/stampede`), so the app works
-// from any folder on a static host, and nothing about it is ever sent to a server.
+// from any folder on a static host, and nothing about it is ever sent to a server. That matters
+// most for a shared design, which is the whole of the address after `#/d/`.
 
-export type Route = { page: 'home' } | { page: 'sandbox' } | { page: 'level'; id: string };
+export type Route =
+  | { page: 'home' }
+  | { page: 'sandbox' }
+  | { page: 'level'; id: string }
+  /** A design carried in the link itself. `payload` is untrusted until it has been decoded. */
+  | { page: 'shared'; payload: string };
 
 export const HOME: Route = { page: 'home' };
 
@@ -9,12 +15,14 @@ export const HOME: Route = { page: 'home' };
 export function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   if (parts.length === 1 && parts[0] === 'sandbox') return { page: 'sandbox' };
-  if (parts.length === 2 && parts[0] === 'level') {
+  if (parts.length === 2 && (parts[0] === 'level' || parts[0] === 'd')) {
+    let value: string;
     try {
-      return { page: 'level', id: decodeURIComponent(parts[1]!) };
+      value = decodeURIComponent(parts[1]!);
     } catch {
       return HOME;
     }
+    return parts[0] === 'level' ? { page: 'level', id: value } : { page: 'shared', payload: value };
   }
   return HOME;
 }
@@ -28,6 +36,8 @@ export function hrefOf(route: Route): string {
       return '#/sandbox';
     case 'level':
       return `#/level/${encodeURIComponent(route.id)}`;
+    case 'shared':
+      return `#/d/${encodeURIComponent(route.payload)}`;
   }
 }
 

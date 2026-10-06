@@ -27,7 +27,8 @@ package names (`@loadline/*`), so a rename would be a find-and-replace and a rep
 - The connection is slow and its DNS is intermittent. An `npm install` that hangs is usually the
   network, not the lockfile.
 - The web app's dev server is the `loadline-web` entry in `D:\Git\.claude\launch.json`, on port
-  5183.
+  5183. `loadline-built` serves the production build on 5184 (run `npm run build -w @loadline/web`
+  first); only that one has the content security policy, which the dev server would trip over.
 - **Vite's file watcher misses the second of two saves made within a few milliseconds**, which is
   what two edits to one file in the same tool batch are. The server then keeps serving the first
   save, and the browser reports an error that is no longer in the file. `touch` the file (or every
@@ -95,7 +96,11 @@ These are the rules that make failures emerge instead of being scripted. Each ha
 - **Live metrics never pass through React Flow's `nodes` state.** Node components subscribe to the
   sim store by id, so a 10 Hz update re-renders text, not the graph.
 - **A share link is untrusted input.** Decoding caps the decompressed size, then validates with the
-  schema, before anything renders or runs.
+  schema, before anything renders or runs. The same goes for an imported file and for anything
+  read back from localStorage.
+- **Every web entry point imports `src/strict.ts` first** (`main.tsx`, `embed/main.tsx`, the
+  worker). It tells the schema library not to compile parsers from text, which the content
+  security policy forbids; imported any later, a schema has already tried.
 
 ## Commit and publish
 

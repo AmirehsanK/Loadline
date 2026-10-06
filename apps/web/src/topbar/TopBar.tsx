@@ -1,10 +1,13 @@
+import type { Scenario } from '@loadline/scenarios';
 import { useId } from 'react';
 import { useDesign } from '../design/store.ts';
-import { useMessages } from '../i18n/index.ts';
+import { useLevelText, useMessages } from '../i18n/index.ts';
 import { BackIcon, BoltIcon, LoadMark, PauseIcon, PlayIcon, RedoIcon, RestartIcon, UndoIcon } from '../icons.tsx';
-import { Timeline } from '../level/Timeline.tsx';
+import { Timeline, scriptOfLevel, scriptOfWorkload } from '../level/Timeline.tsx';
+import { ShareButton } from '../share/ShareDialog.tsx';
 import { formatClock, formatCount } from '../metrics/format.ts';
 import { HOME, hrefOf } from '../route.ts';
+import { keepShared, useRoute } from '../session.ts';
 import { inject, pause, play, restart, setMultiplier, setSpeed } from '../sim/controller.ts';
 import { FULL_SPEED } from '../sim/protocol.ts';
 import { useSim } from '../sim/store.ts';
@@ -16,6 +19,7 @@ const quiet = 'rounded-[3px] border border-line hover:border-ink disabled:cursor
 export function TopBar() {
   const m = useMessages();
   const level = useDesign((state) => state.level);
+  const workload = useDesign((state) => state.workload);
   const status = useSim((state) => state.status);
   const failure = useSim((state) => state.failure);
   const running = status === 'running';
@@ -58,9 +62,12 @@ export function TopBar() {
       </div>
 
       <History />
+      <ShareButton />
       <SpeedPicker ends={level !== null} />
       {level ? (
-        <Timeline level={level} />
+        <Timeline script={scriptOfLevel(level)} />
+      ) : workload ? (
+        <Scripted />
       ) : (
         <>
           <TrafficControl />
@@ -69,6 +76,7 @@ export function TopBar() {
       )}
 
       <RunNotice />
+      <SharedNotice />
       {status === 'failed' && failure !== null && (
         <p className="w-full rounded-[3px] bg-oxide-wash px-2 py-1" role="alert">
           <strong>{m.run.failed}.</strong> {failure}
@@ -76,6 +84,22 @@ export function TopBar() {
       )}
       {status === 'blocked' && <p className="w-full rounded-[3px] bg-oxide-wash px-2 py-1">{m.run.blocked}</p>}
     </header>
+  );
+}
+
+/** A sandbox design that came with traffic of its own: its timeline, and a way back to the control. */
+function Scripted() {
+  const m = useMessages();
+  const workload = useDesign((state) => state.workload);
+  const dropWorkload = useDesign((state) => state.dropWorkload);
+  if (!workload) return null;
+  return (
+    <>
+      <Timeline script={scriptOfWorkload(workload)} />
+      <button type="button" onClick={dropWorkload} title={m.shared.scripted} className={`px-2.5 py-1 ${quiet}`}>
+        {m.shared.unscript}
+      </button>
+    </>
   );
 }
 
@@ -178,6 +202,33 @@ function TrafficControl() {
         <BoltIcon />
         {m.run.spike}
       </button>
+    </div>
+  );
+}
+
+/** Over a design that came from a link: that it is not the visitor's, and how to make it so. */
+function SharedNotice() {
+  const m = useMessages();
+  const open = useRoute((state) => state.shared?.status === 'open');
+  const level = useDesign((state) => state.level);
+  if (!open) return null;
+  return level ? <SharedLevelNotice level={level} /> : <SharedBar text={m.shared.banner} keep={m.shared.keepSandbox} />;
+}
+
+function SharedLevelNotice({ level }: { level: Scenario }) {
+  const m = useMessages();
+  return <SharedBar text={m.shared.bannerLevel(useLevelText(level).title)} keep={m.shared.keepLevel} />;
+}
+
+function SharedBar({ text, keep }: { text: string; keep: string }) {
+  const m = useMessages();
+  return (
+    <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-[3px] bg-shallows px-2 py-1" role="status">
+      <p>{text}</p>
+      <button type="button" onClick={keepShared} className="rounded-[3px] border border-ink bg-plate px-2.5 py-0.5 font-bold hover:bg-ink hover:text-plate">
+        {keep}
+      </button>
+      <span className="text-[0.85rem] text-ink-3">{m.shared.keepNote}</span>
     </div>
   );
 }

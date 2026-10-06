@@ -77,7 +77,7 @@ describe('the design being edited', () => {
     store().renameNode('api', 'Front door');
     expect(saved.has(SANDBOX_SLOT)).toBe(false);
     vi.advanceTimersByTime(500);
-    expect(JSON.parse(saved.get(SANDBOX_SLOT)!)).toMatchObject({ nodes: [{}, { id: 'api', name: 'Front door' }, {}] });
+    expect(JSON.parse(saved.get(SANDBOX_SLOT)!)).toMatchObject({ design: { nodes: [{}, { id: 'api', name: 'Front door' }, {}] } });
   });
 
   it('starts over from the starting design when what was saved breaks the rules of the level', () => {

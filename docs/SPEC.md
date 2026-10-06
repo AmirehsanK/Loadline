@@ -48,14 +48,16 @@ packages/
     src/nodes/            one behaviour per component type
     src/metrics/          histogram, samples, failure causes, bottleneck detection
     src/sim.ts            createSimulation → advance / command / samples / report
-    src/codec.ts          share-link encode and decode
   scenarios/              level data, scoring (runScenario), review-prompt builder
+  share/                  a design as the text of a link, and back; uses the platform's
+                          compression streams, which is why it is not part of the engine
   cli/                    loadline validate | simulate | test | share
   mcp/                    stdio MCP server over engine + scenarios
 apps/web/
   index.html, embed.html
   src/worker/             the engine in a Web Worker
-  src/canvas/  src/inspector/  src/metrics/  src/levels/  src/review/  src/i18n/
+  src/canvas/  src/inspector/  src/metrics/  src/level/  src/share/  src/embed/
+  src/review/  src/i18n/
   e2e/                    Playwright
 .github/workflows/        ci.yml, pages.yml
 ```
@@ -198,12 +200,21 @@ Sandbox mode has every component, manual faults and no objectives.
 ### 7.1 Share links and embeds
 
 - The payload is `v1.` followed by the base64url of the deflated JSON (built-in
-  `CompressionStream`), carried in the URL fragment.
-- It holds the design, workload and seed, so the recipient sees the same numbers.
-- A link is untrusted input: decoding caps the decompressed size, then validates with the schema
-  (bounded node counts and numeric ranges) before anything renders.
-- `embed.html#v1.<payload>` is a read-only canvas with play and pause, a KPI strip and an "Open in
-  playground" link. The share dialog offers the link and an `<iframe>` snippet.
+  `CompressionStream`), carried in the URL fragment as `#/d/<payload>`. Nothing is uploaded.
+- It holds the design and what goes with it: the seed, and either the id of the level it answers
+  or traffic and faults of its own. So the recipient sees the same numbers.
+- Settings at their defaults are left out, part by part, and only when reading the part back gives
+  exactly what went in. A level's answer comes to a few hundred characters.
+- A link is untrusted input: decoding checks the length of the text, caps the decompressed size,
+  then validates with the schema (bounded node counts and numeric ranges), and refuses a design
+  the editor could not draw, before anything renders. A refused link says why.
+- A design from a link is looked at, not adopted: it is not saved, running it earns no stars, and
+  a banner offers to make it the visitor's own design, which replaces the one they had.
+- `embed.html#v1.<payload>` is a read-only canvas with run and restart, the numbers that matter
+  and an "Open in Loadline" link. The share dialog offers the link and an `<iframe>` snippet.
+- The same document can be exported as a JSON file and imported again. A file is checked like a
+  link; in a level only its design is taken, and only if it keeps the level's rules.
+- The built pages carry a content security policy that allows their own files and nothing else.
 
 ### 7.2 Persian / RTL
 
