@@ -92,9 +92,9 @@ of every lesson in the editor, in a real browser, and checks that each earns thr
 | 19 | Heavy lifting | Files come from storage by way of a CDN, not through the servers |
 | 20 | Cold start | A function starts an environment for every call that finds none; keep enough ready |
 
-The **sandbox** has every part and no objectives. Scale the traffic with a slider, kill an
-instance, slow a part down, empty a cache, fail a database over, cut a connection, and see what
-the rest of the system does about it.
+The **sandbox** has every part and no objectives. Scale the traffic with a slider, or let it
+follow a ramp, steps, a wave or spikes. Kill an instance, slow a part down, empty a cache, fail a
+database over, cut a connection, and see what the rest of the system does about it.
 
 ![The sandbox, with a service selected](docs/screenshots/sandbox.png)
 

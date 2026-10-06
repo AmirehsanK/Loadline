@@ -11,6 +11,8 @@ import { formatClock, formatCount } from '../metrics/format.ts';
 import { HOME, hrefOf } from '../route.ts';
 import { keepShared, useRoute } from '../session.ts';
 import { inject, pause, play, restart, setMultiplier, setSpeed } from '../sim/controller.ts';
+import { PATTERNS, patternOf, patternWorkload } from '../sim/patterns.ts';
+import type { Pattern } from '../sim/patterns.ts';
 import { FULL_SPEED } from '../sim/protocol.ts';
 import { useSim } from '../sim/store.ts';
 
@@ -92,13 +94,54 @@ function Scripted() {
   const workload = useDesign((state) => state.workload);
   const dropWorkload = useDesign((state) => state.dropWorkload);
   if (!workload) return null;
+  const pattern = patternOf(workload);
   return (
     <>
+      <PatternPicker value={pattern ?? 'own'} />
       <Timeline script={scriptOfWorkload(workload)} />
-      <button type="button" onClick={dropWorkload} title={m.shared.scripted} className={`px-2.5 py-1 ${quiet}`}>
-        {m.shared.unscript}
-      </button>
+      {pattern === null && (
+        <button type="button" onClick={dropWorkload} title={m.shared.scripted} className={`px-2.5 py-1 ${quiet}`}>
+          {m.shared.unscript}
+        </button>
+      )}
     </>
+  );
+}
+
+/**
+ * How the sandbox's traffic changes over time: by hand, or in one of a few shapes. A shape is
+ * scripted traffic like any other, so choosing one starts the run over with it.
+ */
+function PatternPicker({ value }: { value: Pattern | 'steady' | 'own' }) {
+  const m = useMessages();
+  const id = useId();
+  const setWorkload = useDesign((state) => state.setWorkload);
+  const dropWorkload = useDesign((state) => state.dropWorkload);
+  return (
+    <div className="flex items-center gap-2">
+      <label htmlFor={id} className="text-[0.85rem] text-ink-2">
+        {m.run.traffic}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => {
+          const chosen = event.target.value;
+          if (chosen === 'steady') dropWorkload();
+          else if (chosen !== 'own') setWorkload(patternWorkload(chosen as Pattern));
+        }}
+        className={`bg-plate px-2 py-1 ${quiet}`}
+      >
+        <option value="steady">{m.run.patterns.steady}</option>
+        {PATTERNS.map((pattern) => (
+          <option key={pattern} value={pattern}>
+            {m.run.patterns[pattern]}
+          </option>
+        ))}
+        {/* Traffic that came with the design and is none of the shapes above. */}
+        {value === 'own' && <option value="own">{m.run.patterns.own}</option>}
+      </select>
+    </div>
   );
 }
 
@@ -172,8 +215,9 @@ function TrafficControl() {
   );
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor={id} className="text-[0.85rem] text-ink-2">
-        {m.run.traffic}
+      <PatternPicker value="steady" />
+      <label htmlFor={id} className="sr-only">
+        {m.run.trafficLevel}
       </label>
       <input
         id={id}

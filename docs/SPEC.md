@@ -163,6 +163,11 @@ falls behind, the UI shows the real speed; fidelity is never dropped silently.
   each kept in localStorage under a versioned key. Saved data is validated like any other input.
 - **Worker protocol:** typed messages (load, reconfigure, play, pause, speed, multiplier, command →
   frame, failed). A frame is posted about ten times a second and carries the level's result so far.
+- **Traffic patterns:** in the sandbox the traffic is set by hand, or follows one of four shapes:
+  a ramp, steps, a wave, and spikes. A shape is scripted traffic like a level's (`src/sim/patterns.ts`),
+  so the engine knows nothing of it, the timeline draws it, and a link made while one is chosen
+  carries it. There is no shape in which clients slow down when the system does: arrivals are
+  open-loop (rule 1).
 - **Traffic display:** the calls on a connection travel along it as dots. The more calls, the
   closer the dots; for the share that failed, every so many dots one is red.
 - **Editing:** undo and redo on the design store, where a run of changes to one part is one step.

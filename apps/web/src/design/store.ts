@@ -86,6 +86,8 @@ interface DesignState extends Snapshot {
   saveAs: (slot: string) => void;
   /** Lets go of the traffic the design came with, so the traffic control applies again. */
   dropWorkload: () => void;
+  /** Gives the design traffic with a shape of its own. Only the sandbox has a say in its traffic. */
+  setWorkload: (workload: Workload) => void;
   undo: () => void;
   redo: () => void;
 }
@@ -321,6 +323,9 @@ export const useDesign = create<DesignState>((set, get) => ({
   },
   dropWorkload: () => {
     set({ workload: null });
+  },
+  setWorkload: (workload) => {
+    if (get().level === null) set({ workload });
   },
   undo: () => {
     set((state) => {
