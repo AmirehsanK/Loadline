@@ -79,7 +79,9 @@ export const ATTEMPTS: Record<string, Attempt[]> = {
   'write-burst': [
     ['a queue and one worker instance', queued(1), 0],
     ['a queue and two', queued(2), 3],
-    ['a queue and three', queued(3), 0],
+    ['a queue and three', queued(3), 2],
+    ['a queue and four', queued(4), 1],
+    ['a queue and five', queued(5), 0],
     ['two, and a queue that holds only 500', queued(2, 500), 0],
   ],
   stampede: [

@@ -157,11 +157,13 @@ export const guideEn: Record<string, LevelGuide> = {
     why:
       'The sale brings 4,000 orders in ten seconds and two worker instances record 200 a second, so about 2,000 are left in the queue ' +
       'when it ends. They then clear 120 a second more than arrives, and the queue is empty some 17 seconds later. One instance would ' +
-      'clear only 20 a second more than arrives and would not finish in time; a third is more than the budget allows. Size workers for ' +
+      'clear only 20 a second more than arrives and would not finish in time. A third or a fourth would finish sooner, for a wait ' +
+      'that no customer sees, and each one is paid for all day. Size workers for ' +
       'the catch-up, not for the burst.',
     others: [
       'A queue and one worker instance: it fails. More than a thousand orders are still unrecorded when the run ends.',
-      'A queue and three instances: it fails, on cost.',
+      'A queue and three instances: two stars. Four: one. Everything is recorded sooner, which nobody was waiting for, and it costs more.',
+      'Five instances: it fails, on cost.',
       'Two instances and a queue that holds only 500 messages: it fails. The queue fills during the sale and orders are lost.',
     ],
   },

@@ -173,7 +173,7 @@ workload timeline with scripted faults, objectives, two bonus tiers, hints and a
   in.
 - **Stars.** A pass is one star. Meeting the first bonus tier as well is two, and the second on top
   of that is three. The tiers reward a better answer to the same lesson, not a different trick.
-  They have to tell answers apart: on every level but Write burst, the table of attempts has an
+  They have to tell answers apart: on every level the table of attempts has an
   answer that passes with one or two stars, and a test checks that it stays so. Where a level had
   only a pass mark, the fix was a real cost on the other side of the right answer, not a tighter
   number: a timeout far past the slow answers waits for them, randomising lifetimes completely

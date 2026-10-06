@@ -56,7 +56,7 @@ export const writeBurst: Scenario = {
       'Every order is recorded in the ledger before the customer is told it went through. The ledger can record 100 a second, ' +
       'and 80 arrive. Then a sale starts: 400 a second for ten seconds. ' +
       'Lose no order, keep failures under 1% and 99% of requests under 100 ms, have everything recorded by the end, and spend ' +
-      'no more than $290 a month.',
+      'no more than $340 a month.',
     hints: [
       'Does the customer need the order recorded before being answered, or only to know it will be?',
       'A queue takes the order at once and holds it. A worker records orders at its own pace.',
@@ -67,7 +67,8 @@ export const writeBurst: Scenario = {
       'A queue changes what the customer waits for: storing the order, which is instant, and not recording it, which is not. ' +
       'The work is still done, later. During the sale orders pile up in the queue; afterwards the workers catch up. ' +
       'How fast they catch up is what you size them for: what they can do, less what keeps arriving. One instance clears twenty a ' +
-      'second and would need two and a half minutes; two clear a hundred and twenty.',
+      'second and would need two and a half minutes; two clear a hundred and twenty. Three or four clear it sooner still, and ' +
+      'nobody is waiting for that: an order recorded twenty seconds late is still recorded. Pay for what the catch-up needs.',
     rules: {
       'orders-recorded': 'Every order has to be recorded: the orders service must call the ledger, or hand orders to a queue that a worker reads.',
     },
@@ -87,9 +88,11 @@ export const writeBurst: Scenario = {
     { kind: 'p99', maxMs: 100 },
     { kind: 'lost', max: 0 },
     { kind: 'backlog', maxDepth: 50 },
-    { kind: 'cost', maxMonthly: 290 },
+    { kind: 'cost', maxMonthly: 340 },
   ],
-  bonus: [[{ kind: 'cost', maxMonthly: 280 }], [{ kind: 'p99', maxMs: 20 }]],
+  // More workers than the catch-up needs still pass. The stars are for not paying for them: nobody is
+  // waiting for an order to be recorded a few seconds sooner.
+  bonus: [[{ kind: 'cost', maxMonthly: 310 }], [{ kind: 'cost', maxMonthly: 280 }]],
   locked: {
     users: '*',
     api: ['instances', 'concurrency', 'serviceTime', 'autoscale.enabled'],
