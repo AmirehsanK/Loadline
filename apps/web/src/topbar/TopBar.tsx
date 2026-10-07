@@ -1,5 +1,6 @@
 import type { Scenario } from '@loadline/scenarios';
 import { useId } from 'react';
+import { DesignsButton } from '../design/DesignsDialog.tsx';
 import { useDesign } from '../design/store.ts';
 import { LocaleSwitch } from '../i18n/LocaleSwitch.tsx';
 import { useLevelText, useMessages } from '../i18n/index.ts';
@@ -26,6 +27,7 @@ export function TopBar() {
   const workload = useDesign((state) => state.workload);
   const status = useSim((state) => state.status);
   const failure = useSim((state) => state.failure);
+  const shared = useDesign((state) => state.transient);
   const running = status === 'running';
 
   return (
@@ -66,6 +68,8 @@ export function TopBar() {
       </div>
 
       <History />
+      {/* A level keeps its own design; putting designs aside under a name is for the sandbox. */}
+      {!level && !shared && <DesignsButton />}
       <ShareButton />
       <ReviewButton />
       <SpeedPicker ends={level !== null} />

@@ -396,6 +396,11 @@ export const useDesign = create<DesignState>((set, get) => ({
   },
 }));
 
+/** The design on the canvas with its seed and traffic, as it would be saved; null as for `currentDesign`. */
+export function currentDocument(): Document | null {
+  return documentOf(useDesign.getState());
+}
+
 /** The design as the engine sees it, or null while an edit has left it out of bounds. */
 export function currentDesign(state: Snapshot): Design | null {
   try {
