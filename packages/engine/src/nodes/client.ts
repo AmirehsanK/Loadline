@@ -1,4 +1,5 @@
-import { EV_TIMER, FILE, OK, READ, WAITING, WRITE } from '../codes.ts';
+import { EV_TIMER, FILE, NODE_DOWN, OK, READ, UPLOAD, WAITING, WRITE } from '../codes.ts';
+import { pickEdge } from '../edge.ts';
 import { exponential } from '../kernel/dist.ts';
 import { RandomStream } from '../kernel/rng.ts';
 import { ZipfTable } from '../kernel/zipf.ts';
@@ -15,8 +16,12 @@ const TIMER_ARRIVAL = 0;
  * that never waits for a reply. A request is a call at the client; each attempt it makes is a
  * downstream call over the client's one edge, under that edge's timeout and retry policy.
  *
- * Every request is a read, a write or a request for a file, and is about one item, its key. Keys
- * follow a Zipf distribution, so a few items get most of the traffic.
+ * Every request is a read, a write, a request for a file or a file sent in, and is about one item,
+ * its key. Keys follow a Zipf distribution, so a few items get most of the traffic.
+ *
+ * A client may divide its requests among routes, each with a share and a mix of its own. A request
+ * then leaves by the edge that is for its route, so different routes can enter the system at
+ * different parts.
  */
 export class ClientRuntime extends NodeRuntime {
   private params: ClientNode['params'];
@@ -25,6 +30,10 @@ export class ClientRuntime extends NodeRuntime {
   private readonly classRng: RandomStream;
   // A stream of its own, so that a design with no files draws exactly what it drew before files existed.
   private readonly fileRng: RandomStream;
+  // And one for the route, drawn from only when there are routes.
+  private readonly routeRng: RandomStream;
+  /** The routes, each with its number in the run and the weight of it and all before it. */
+  private lanes: { route: number; upTo: number; fileRatio: number; uploadRatio: number; readRatio: number }[] = [];
   private readonly keyRng: RandomStream;
   // Bumped whenever the rate changes, so the arrival already scheduled at the old rate is ignored.
   private generation = 0;
@@ -36,6 +45,8 @@ export class ClientRuntime extends NodeRuntime {
     this.arrivalRng = new RandomStream(sim.seed, `${node.id}/arrivals`);
     this.classRng = new RandomStream(sim.seed, `${node.id}/class`);
     this.fileRng = new RandomStream(sim.seed, `${node.id}/files`);
+    this.routeRng = new RandomStream(sim.seed, `${node.id}/routes`);
+    this.layLanes();
     this.keyRng = new RandomStream(sim.seed, `${node.id}/keys`);
   }
 
@@ -66,14 +77,15 @@ export class ClientRuntime extends NodeRuntime {
   override childDone(call: number, result: number, origin: number, stuck: number): void {
     const sim = this.sim;
     const latency = sim.now - sim.calls.tArrive[call]!;
+    const route = sim.calls.route[call]!;
     this.touch();
     this.busy--;
     if (result === OK) {
       this.countOk(latency);
-      sim.requestOk(latency);
+      sim.requestOk(latency, route);
     } else {
       this.countFailure(result);
-      sim.requestFailed(result, origin, stuck);
+      sim.requestFailed(result, origin, stuck, route);
     }
     sim.calls.release(call);
   }
@@ -85,6 +97,7 @@ export class ClientRuntime extends NodeRuntime {
     if (node.params.keys !== previous.keys || node.params.skew !== previous.skew) {
       this.keys = new ZipfTable(node.params.keys, node.params.skew);
     }
+    this.layLanes();
     if (node.params.rps !== previous.rps) this.rateChanged();
   }
 
@@ -108,20 +121,57 @@ export class ClientRuntime extends NodeRuntime {
     this.sim.queue.push(this.sim.now + gap, EV_TIMER, this.index, TIMER_ARRIVAL, this.generation);
   }
 
+  private layLanes(): void {
+    let upTo = 0;
+    this.lanes = this.params.routes.map((route) => {
+      upTo += route.weight;
+      return { route: this.sim.routeOf(route.name), upTo, fileRatio: route.fileRatio, uploadRatio: route.uploadRatio, readRatio: route.readRatio };
+    });
+  }
+
   private createRequest(): void {
     const sim = this.sim;
     const calls = sim.calls;
+
+    // Which route it comes in by, and so what mix of requests it is drawn from.
+    let route = 0;
+    let mix: { fileRatio: number; uploadRatio: number; readRatio: number } = this.params;
+    const lanes = this.lanes;
+    if (lanes.length > 0) {
+      const at = this.routeRng.next() * lanes[lanes.length - 1]!.upTo;
+      const lane = lanes.find((candidate) => at < candidate.upTo) ?? lanes[lanes.length - 1]!;
+      route = lane.route;
+      mix = lane;
+    }
+
+    let cls = -1;
+    const files = mix.fileRatio + mix.uploadRatio;
+    if (files > 0) {
+      const at = this.fileRng.next();
+      if (at < mix.fileRatio) cls = FILE;
+      else if (at < files) cls = UPLOAD;
+    }
+    if (cls < 0) cls = this.classRng.next() < mix.readRatio ? READ : WRITE;
+    const key = this.keys.pick(this.keyRng.next());
+
+    this.countArrival();
+    sim.requestCreated();
+    const edgeIndex = pickEdge(sim.edges, this.out, cls, route);
+    if (edgeIndex < 0) {
+      // Nothing the client is connected to takes this kind of request on this route.
+      this.countFailure(NODE_DOWN);
+      sim.requestFailed(NODE_DOWN, this.index, 0, route);
+      return;
+    }
     const call = calls.alloc();
     calls.node[call] = this.index;
     calls.state[call] = WAITING;
     calls.tArrive[call] = sim.now;
-    const file = this.params.fileRatio > 0 && this.fileRng.next() < this.params.fileRatio;
-    calls.cls[call] = file ? FILE : this.classRng.next() < this.params.readRatio ? READ : WRITE;
-    calls.key[call] = this.keys.pick(this.keyRng.next());
-    this.countArrival();
+    calls.cls[call] = cls;
+    calls.key[call] = key;
+    calls.route[call] = route;
     this.touch();
     this.busy++;
-    sim.requestCreated();
-    sim.issue(call, this.out[0]!);
+    sim.issue(call, edgeIndex);
   }
 }

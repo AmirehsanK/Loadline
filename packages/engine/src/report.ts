@@ -1,7 +1,7 @@
 import { CALL_STATES, OUTCOMES, TIMEOUT } from './codes.ts';
 import type { CallStateName, OutcomeName } from './codes.ts';
 import type { NodeType } from './model/schema.ts';
-import type { Simulation, WindowSample } from './sim.ts';
+import type { RouteScore, Simulation, WindowSample } from './sim.ts';
 
 export type FailureName = Exclude<OutcomeName, 'ok'>;
 export type FailureCounts = Record<FailureName, number>;
@@ -55,6 +55,9 @@ export interface BlameReport {
   count: number;
 }
 
+/** What clients saw of one route over the whole run. */
+export type RouteReport = RouteScore;
+
 /** Everything a run produced. Two runs of the same design, workload and seed give equal reports. */
 export interface Report {
   version: 1;
@@ -79,6 +82,8 @@ export interface Report {
   nodes: NodeReport[];
   edges: EdgeReport[];
   blame: BlameReport[];
+  /** Present when the design names routes: a report of a design without any is what it always was. */
+  routes?: RouteReport[];
   samples: WindowSample[];
 }
 
@@ -169,6 +174,7 @@ export function buildReport(sim: Simulation): Report {
       poolWaitMs: edge.poolWaitMs,
     })),
     blame: describeBlame(sim),
+    ...(sim.routeTotals().length > 0 ? { routes: sim.routeTotals() } : {}),
     samples: sim.samples.slice(),
   };
 }

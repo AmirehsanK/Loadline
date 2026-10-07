@@ -18,7 +18,7 @@ describe('the design schema', () => {
       version: 1,
       name: '',
       nodes: [
-        { id: 'users', name: '', x: 0, y: 0, type: 'client', params: { rps: 100, fileRatio: 0, readRatio: 0.9, keys: 10_000, skew: 1 } },
+        { id: 'users', name: '', x: 0, y: 0, type: 'client', params: { rps: 100, fileRatio: 0, uploadRatio: 0, readRatio: 0.9, keys: 10_000, skew: 1, routes: [] } },
         {
           id: 'api',
           name: '',
@@ -47,6 +47,7 @@ describe('the design schema', () => {
             backoffFactor: 2,
             jitter: 0,
             appliesTo: 'all',
+            route: '',
             mode: 'sync',
             poolSize: 0,
             breaker: { enabled: false, failureRate: 0.5, window: 20, openMs: 5000 },

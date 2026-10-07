@@ -9,8 +9,9 @@ export function describeObjective(objective: Objective, m: Messages): string {
   const text = m.level.objective;
   switch (objective.kind) {
     case 'p99':
-      return text.p99(formatDuration(objective.maxMs));
+      return objective.route === undefined ? text.p99(formatDuration(objective.maxMs)) : text.p99Of(objective.route, formatDuration(objective.maxMs));
     case 'errors':
+      if (objective.route !== undefined) return text.errorsOf(objective.route, formatShare(objective.maxRate));
       return objective.maxRate === 0 ? text.noErrors : text.errors(formatShare(objective.maxRate));
     case 'cost':
       return text.cost(m.metrics.dollars(formatCount(objective.maxMonthly)));
@@ -48,8 +49,10 @@ export function describeValue(result: ObjectiveResult, m: Messages): string {
  */
 export function isMeasured(result: ObjectiveResult, outcome: Outcome, now: number): boolean {
   if (now <= 0) return false;
-  const kind = result.objective.kind;
-  if (kind === 'p99') return outcome.score.ok > 0;
-  if (kind === 'errors') return outcome.score.ok + outcome.score.failed > 0;
-  return true;
+  const { objective } = result;
+  if (objective.kind !== 'p99' && objective.kind !== 'errors') return true;
+  // An objective about one route is measured once that route has had a request finish.
+  const seen =
+    objective.route === undefined ? outcome.score : (outcome.score.routes?.find((route) => route.name === objective.route) ?? { ok: 0, failed: 0 });
+  return objective.kind === 'p99' ? seen.ok > 0 : seen.ok + seen.failed > 0;
 }

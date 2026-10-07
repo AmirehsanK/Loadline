@@ -69,9 +69,9 @@ function describeObjective({ objective, value, met }: ObjectiveResult): string {
   const mark = met ? 'met   ' : 'missed';
   switch (objective.kind) {
     case 'p99':
-      return `${mark}  p99 within ${duration(objective.maxMs)}: ${duration(value)}`;
+      return `${mark}  p99${objective.route === undefined ? '' : ` of ${objective.route}`} within ${duration(objective.maxMs)}: ${duration(value)}`;
     case 'errors':
-      return `${mark}  no more than ${share(objective.maxRate)} failing: ${share(value)}`;
+      return `${mark}  no more than ${share(objective.maxRate)}${objective.route === undefined ? '' : ` of ${objective.route}`} failing: ${share(value)}`;
     case 'cost':
       return `${mark}  no more than ${dollars(objective.maxMonthly)} a month: ${dollars(value)}`;
     case 'backlog':
@@ -122,6 +122,24 @@ export function describeRun(document: Document, run: Run): string {
       2,
     ),
   );
+  if (report.routes) {
+    lines.push('');
+    lines.push(
+      ...table(
+        [
+          ['Route', 'Ok', 'Failed', 'p50', 'p99'],
+          ...report.routes.map((route) => [
+            route.name,
+            count(route.ok),
+            count(route.failed),
+            route.ok > 0 ? duration(route.p50) : '–',
+            route.ok > 0 ? duration(route.p99) : '–',
+          ]),
+        ],
+        2,
+      ),
+    );
+  }
   lines.push('');
   lines.push(`Where the time goes: ${run.bottleneck ? describeBottleneck(run.bottleneck) : 'nothing is flowing.'}`);
   if (report.blame.length > 0) {

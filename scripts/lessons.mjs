@@ -258,6 +258,14 @@ const LESSONS = {
     await select('Checkout');
     await set('Environments kept ready', 18);
   },
+  'slow-lane': async () => {
+    await connect('People', 'Photos');
+    await selectConnection('users', 'bucket');
+    await choose('Route', 'post');
+    await set('Give up after', 10000);
+    await select('API');
+    await set('Instances', 1);
+  },
 };
 
 let failed = false;

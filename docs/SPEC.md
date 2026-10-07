@@ -104,7 +104,7 @@ user retrying and a service retrying its database.
 
 | Type | Main parameters | What emerges |
 |---|---|---|
-| Client | rate, share of files, share of reads, number of items and how unevenly they are asked for | overload, retry storms |
+| Client | rate, share of files fetched and sent in, share of reads, number of items and how unevenly they are asked for, routes | overload, retry storms |
 | Load balancer | algorithm (round-robin, random, least-connections, two-choices), health-check interval | uneven load, failover delay |
 | Service | instances, concurrency, queue, service-time distribution, autoscaling (target, min/max, boot time, cooldown) | thread starvation, scaling lag |
 | Cache | capacity, TTL and jitter, single-flight toggle | hit ratio, cold start, stampede |
@@ -120,7 +120,12 @@ The first eight were v1. The last three were added on 6 October 2026 at the owne
 comparison with another playground showed what this one could not draw: where files come from,
 and code that runs without a server. Each came with its tests and a level, as section 11 asks.
 
-- **Edges** carry network latency, a filter (all, data, read, write, file), a mode (sync, async), and the
+- **Routes.** A client may divide its requests among up to eight named routes, each with a weight
+  and a mix of its own. An edge can be kept for one route, and a client may have an edge for each,
+  so routes can enter the system at different parts. A level's p99 and error objectives can be
+  about one route. Added on 7 October 2026, with files that are sent in as well as fetched, at
+  the owner's request.
+- **Edges** carry network latency, a filter (all, data, read, write, file), a route, a mode (sync, async), and the
   caller's policy: timeout, retries, backoff, jitter, circuit breaker, and pool size for database
   edges.
 - **A multi-instance service needs a load balancer in front.** Without one, only the first
@@ -249,6 +254,7 @@ tests: an engine change that moves a row has changed what a level teaches.
 | 18 | Failover | A replica for reads, a queue for writes, and a worker that waits between tries |
 | 19 | Heavy lifting | Files come from storage by way of a CDN, not through the servers |
 | 20 | Cold start | A function starts an environment for every call that finds none; keep enough ready |
+| 21 | Slow lane | A slow route holds up a quick one that shares its slots; give it its own way in |
 
 The first ten came with the plan. The next eight were added afterwards, one for each thing the
 engine could already do and no level asked for: the ways a balancer picks an instance, a timeout
@@ -259,7 +265,7 @@ behaviour needs a level, and a level should not need a new behaviour made up for
 
 The last two are the other half of that rule. The CDN, the object store and the function were new
 behaviour, so each had to bring a level: Heavy lifting for the first two together, Cold start for
-the third.
+the third. Slow lane is the level for routes and for files sent in, which arrived together.
 
 Sandbox mode has every component, manual faults and no objectives.
 
@@ -380,13 +386,15 @@ Sandbox mode has every component, manual faults and no objectives.
 
 | 11 | The rest of that comparison: shapes of traffic in the sandbox, notes on the drawing, designs kept by name, a tour of the workbench | Each looked at in a real browser in both languages; the stores behind them tested |
 
+| 12 | Routes with weights, and files sent in | A test per behaviour; a level, with its lesson; the same hashes in every browser |
+
 Milestones 6, 7 and 8 are independent of each other and can be reordered. Milestones 0–5 already
 make a complete, deployed piece.
 
-**State on 7 October 2026.** All twelve are built, and what each was to be checked by passes, with
+**State on 7 October 2026.** All thirteen are built, and what each was to be checked by passes, with
 these exceptions:
 
-- 6: the Persian copy has not been reviewed, the guide's included, nor what milestones 10 and 11
+- 6: the Persian copy has not been reviewed, the guide's included, nor what milestones 10 to 12
   added to it.
 - 7: the tests solve a level through the MCP tools and get a share link back, in memory and over
   standard input and output. No agent has been pointed at the server through `.mcp.json` yet.
@@ -412,7 +420,7 @@ What is automated, and runs in CI on every push:
   request are unit-tested without a browser.
 - **CLI:** `loadline test` against an example file with a passing and a failing assertion.
 - **MCP:** every tool is called through the protocol, in memory and from a separate process.
-- **Between JavaScript engines:** `npm run browsers` makes twenty-one runs (the engine's reference
+- **Between JavaScript engines:** `npm run browsers` makes twenty-two runs (the engine's reference
   system, and the reference answer to each level) in Node and in each installed browser, and the
   hash of every report must be the same. CI runs it in Firefox and Chrome. On the development
   machine Edge is checked as well. Safari's engine is not: it cannot be started from a script.
@@ -435,9 +443,9 @@ What is run on demand, in a real browser:
 
 Data-correctness accounting (stale reads, lost writes, duplicates), export to docker-compose plus a
 load script, multi-region, sharding and hot partitions, accounts and leaderboards, real cloud
-pricing, mobile editing, multiplayer. From the comparison of milestone 10: traffic split into
-routes with weights of their own, and a CDN that makes one fetch serve everyone waiting for the
-same file.
+pricing, mobile editing, multiplayer. From the comparison of milestone 10: a CDN that makes one
+fetch serve everyone waiting for the same file. A file has no size: one sent in differs from one
+fetched only in how long storage takes over it.
 
 ## 11. Risks
 

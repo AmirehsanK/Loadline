@@ -538,4 +538,34 @@ export const guideEn: Record<string, LevelGuide> = {
       'Forty: it fails, on cost.',
     ],
   },
+  'slow-lane': {
+    problem:
+      'Of 300 requests a second, 270 look at the feed and 30 post a photo. A feed request is 15 ms of work and a quick read. A ' +
+      'post is 15 ms of work and then about 400 ms of waiting for Photos, and it holds a slot the whole time. Thirty of those ' +
+      'a second keep about 12 of the 16 slots of API waiting, and the feed needs 5 or 6. There is not room for both. The ' +
+      'waiting room fills, and about a quarter of all requests fail, feed and posts alike.',
+    idea:
+      'Give the slow route its own way in. The requests of one route can leave the client by a connection of their own, so ' +
+      'posts can go straight to storage and never take a slot from the feed. A wall like that between kinds of work is called ' +
+      'a bulkhead. For uploads in particular it is the direct, or presigned, upload.',
+    steps: [
+      'Connect People to Photos.',
+      'Select the connection from People to Photos and set "Route" to post. The feed still goes by the other connection.',
+      'On the same connection, set "Give up after" to 10,000 ms.',
+      'Select API and set "Instances" to 1.',
+    ],
+    why:
+      'Posts now hold nothing but their own connection, so the API carries only the feed: about 5 slots of work, which one ' +
+      'instance of 8 does easily. That is the second star. When storage slows down a post takes over a second, and nothing ' +
+      'else notices. The third star is for letting it. With 3 seconds to finish, nearly 2 posts in 100 are given up on, most ' +
+      'of them during the slow spell and most of them about to arrive. With 10 seconds almost none is.',
+    others: [
+      'Three or four instances of API: it fails. There is some room until storage slows down, and then there is none.',
+      'Six instances: it fails, on cost, and the feed is still slow while storage is.',
+      'A pool of 4 connections from API to Photos: it fails, and worse than before. A post waiting for a connection still holds its slot.',
+      'The direct connection and nothing else: one star. With one instance as well: two.',
+      'Ten seconds on the direct connection with both instances kept: one star. The second star is for the instance.',
+      'One instance, and one second on the direct connection: it fails. Posts that would have finished are counted as failures.',
+    ],
+  },
 };

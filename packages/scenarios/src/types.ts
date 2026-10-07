@@ -2,10 +2,10 @@ import type { Design, Issue, NodeType, Score, Workload } from '@loadline/engine'
 
 /** One thing a design has to achieve. All are judged over the scored period of the run. */
 export type Objective =
-  /** The slowest 1% of successful requests take no longer than this. */
-  | { kind: 'p99'; maxMs: number }
-  /** No more than this share of requests fail. */
-  | { kind: 'errors'; maxRate: number }
+  /** The slowest 1% of successful requests take no longer than this. With `route`, of that route's. */
+  | { kind: 'p99'; maxMs: number; route?: string }
+  /** No more than this share of requests fail. With `route`, of that route's. */
+  | { kind: 'errors'; maxRate: number; route?: string }
   /** The design costs no more than this, in dollars a month, averaged over the run. */
   | { kind: 'cost'; maxMonthly: number }
   /** The queues hold no more than this many messages between them when the run ends. */

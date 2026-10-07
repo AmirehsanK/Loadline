@@ -58,15 +58,23 @@ export function brokenRules(scenario: Scenario, design: Design): string[] {
   return [...new Set([...broken, ...(scenario.rules?.(design) ?? [])])];
 }
 
-function judge(objective: Objective, design: Design, sim: Simulation): ObjectiveResult {
+/** What clients saw, of everything or of one route. A route the design does not name saw nothing. */
+function seen(sim: Simulation, route: string | undefined): { ok: number; failed: number; p99: number } {
   const score = sim.score();
+  if (route === undefined) return score;
+  return score.routes?.find((candidate) => candidate.name === route) ?? { ok: 0, failed: 0, p99: 0 };
+}
+
+function judge(objective: Objective, design: Design, sim: Simulation): ObjectiveResult {
   switch (objective.kind) {
     case 'p99': {
+      const score = seen(sim, objective.route);
       // With nothing succeeding there is no latency to judge, and that is not a pass.
       const value = score.ok > 0 ? score.p99 : Infinity;
       return { objective, value, met: value <= objective.maxMs };
     }
     case 'errors': {
+      const score = seen(sim, objective.route);
       const finished = score.ok + score.failed;
       const value = finished > 0 ? score.failed / finished : 1;
       return { objective, value, met: value <= objective.maxRate };

@@ -1,4 +1,4 @@
-import { EV_SERVICE_DONE, FREE, IN_SERVICE, NODE_DOWN, OK, WRITE } from '../codes.ts';
+import { EV_SERVICE_DONE, FREE, IN_SERVICE, NODE_DOWN, OK, stores } from '../codes.ts';
 import { PRICES } from '../cost.ts';
 import { makeSampler } from '../kernel/dist.ts';
 import type { Sampler } from '../kernel/dist.ts';
@@ -32,7 +32,7 @@ export class ObjectStoreRuntime extends NodeRuntime {
     if (!this.admit(call)) return;
     const sim = this.sim;
     const calls = sim.calls;
-    const work = (calls.cls[call] === WRITE ? this.writeTime(this.workRng) : this.readTime(this.workRng)) * this.slowFactor;
+    const work = (stores(calls.cls[call]!) ? this.writeTime(this.workRng) : this.readTime(this.workRng)) * this.slowFactor;
     this.touch();
     this.busy++;
     calls.state[call] = IN_SERVICE;

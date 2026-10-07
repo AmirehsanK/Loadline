@@ -17,8 +17,8 @@ function getPath(source: unknown, path: string): unknown {
 }
 
 describe('the levels', () => {
-  it('are twenty, each with its own id and seed, and can be found by id', () => {
-    expect(LEVELS).toHaveLength(20);
+  it('are twenty-one, each with its own id and seed, and can be found by id', () => {
+    expect(LEVELS).toHaveLength(21);
     expect(new Set(LEVELS.map((level) => level.id)).size).toBe(LEVELS.length);
     expect(new Set(LEVELS.map((level) => level.seed)).size).toBe(LEVELS.length);
     for (const level of LEVELS) expect(findLevel(level.id)).toBe(level);

@@ -15,6 +15,7 @@ import { poolParty } from './pool-party.ts';
 import { readHeavy } from './read-heavy.ts';
 import { retryStorm } from './retry-storm.ts';
 import { slowDependency } from './slow-dependency.ts';
+import { slowLane } from './slow-lane.ts';
 import { stampede } from './stampede.ts';
 import { theBill } from './the-bill.ts';
 import { writeBurst } from './write-burst.ts';
@@ -42,6 +43,7 @@ export const LEVELS: readonly Scenario[] = [
   failover,
   heavyLifting,
   coldStart,
+  slowLane,
 ];
 
 export function findLevel(id: string): Scenario | undefined {

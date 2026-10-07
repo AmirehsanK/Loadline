@@ -95,6 +95,13 @@ export function lintDesign(design: Design): Issue[] {
     push(incoming, edge.to, edge);
   }
 
+  const routes = new Set(design.nodes.flatMap((node) => (node.type === 'client' ? node.params.routes.map((route) => route.name) : [])));
+  for (const edge of design.edges) {
+    if (edge.params.route !== '' && !routes.has(edge.params.route)) {
+      warning('unknown-route', `Edge "${edge.id}" is for the route "${edge.params.route}", which no client has, so nothing uses it.`, { edgeId: edge.id });
+    }
+  }
+
   let clients = 0;
   for (const node of design.nodes) {
     const where = { nodeId: node.id };
@@ -106,8 +113,21 @@ export function lintDesign(design: Design): Issue[] {
         clients++;
         if (out.length === 0) {
           warning('client-unconnected', `The client "${node.id}" is not connected, so it sends no traffic.`, where);
-        } else if (out.length > 1) {
-          error('client-fan-out', `The client "${node.id}" has ${out.length} outgoing edges; it can have one.`, where);
+        } else if (new Set(out.map((edge) => `${edge.params.route}\n${edge.params.appliesTo}`)).size < out.length) {
+          // A request leaves a client by one edge. Two for the same requests leave it no way to choose.
+          error(
+            'client-fan-out',
+            `The client "${node.id}" has more than one outgoing edge for the same requests; each needs a route or a kind of request of its own.`,
+            where,
+          );
+        }
+        if (new Set(node.params.routes.map((route) => route.name)).size < node.params.routes.length) {
+          error('duplicate-route', `Two routes of the client "${node.id}" share a name.`, where);
+        }
+        for (const route of node.params.routes) {
+          if (route.weight > 0 && out.length > 0 && !out.some((edge) => edge.params.route === '' || edge.params.route === route.name)) {
+            warning('route-unconnected', `No connection from "${node.id}" takes the route "${route.name}", so its requests fail.`, where);
+          }
         }
         break;
       case 'load-balancer':

@@ -63,7 +63,8 @@ function system(language: ReviewInput['language']): string {
     '- A service instance runs `concurrency` calls at once and holds `queue` more; beyond that it rejects. Without a load balancer in front, every call lands on the first instance.',
     '- A database runs `concurrency` queries at full speed. More than that share its cores and all of them slow down. `poolSize` on the connection into it limits how many a caller sends at once.',
     '- A cache holds real items. A hit skips the store behind it. A queue answers the publisher at once and a worker takes messages at its own pace.',
-    '- A request is a read, a write, or a request for a file. A CDN answers for the files it holds and fetches the rest; it passes reads and writes on untouched. An object store takes the same time for any number of files at once.',
+    '- A request is a read, a write, a request for a file, or a file sent in. A CDN answers for the files it holds and fetches the rest; it passes everything else on untouched. An object store takes the same time for any number of files at once.',
+    '- A client may divide its requests among named routes. A connection can be kept for one route, and a client can have a connection for each, so routes can enter the system at different parts.',
     '- A function runs each call in an environment of its own, up to `maxConcurrency`, and refuses the rest. A call that finds no environment ready waits `coldStartMs` for one. It is charged for the time its calls take, waiting included.',
     '- Latency percentiles are of the requests that succeeded. Costs are made-up dollars a month.',
     '',
@@ -88,9 +89,17 @@ function describeNode(node: DesignNode): string {
   const name = node.name === '' ? node.id : `${node.id} ("${node.name}")`;
   switch (node.type) {
     case 'client': {
-      const { rps, fileRatio, readRatio, keys, skew } = node.params;
-      const files = fileRatio > 0 ? `${share(fileRatio)} of them for files and of the rest ` : '';
-      return `${name}: client sending ${count(rps)} requests a second, ${files}${share(readRatio)} ${fileRatio > 0 ? '' : 'of them '}reads, over ${count(keys)} items (skew ${String(skew)})`;
+      const { rps, keys, skew, routes } = node.params;
+      const mix = (of: { fileRatio: number; uploadRatio: number; readRatio: number }) => {
+        const files = [...(of.fileRatio > 0 ? [`${share(of.fileRatio)} for files`] : []), ...(of.uploadRatio > 0 ? [`${share(of.uploadRatio)} files sent in`] : [])];
+        return files.length > 0 ? `${files.join(', ')}, and of the rest ${share(of.readRatio)} reads` : `${share(of.readRatio)} reads`;
+      };
+      const weight = routes.reduce((sum, route) => sum + route.weight, 0);
+      const what =
+        routes.length === 0
+          ? mix(node.params)
+          : `by ${String(routes.length)} routes: ${routes.map((route) => `"${route.name}" (${share(weight > 0 ? route.weight / weight : 0)} of requests; ${mix(route)})`).join('; ')}`;
+      return `${name}: client sending ${count(rps)} requests a second, ${what}, over ${count(keys)} items (skew ${String(skew)})`;
     }
     case 'service':
     case 'worker': {
@@ -134,13 +143,14 @@ function describeNode(node: DesignNode): string {
 
 /** A connection and the caller's policy on it, leaving out what is at its usual value. */
 function describeEdge(edge: DesignEdge): string {
-  const { timeoutMs, retries, backoffMs, jitter, poolSize, breaker, appliesTo, mode } = edge.params;
+  const { timeoutMs, retries, backoffMs, jitter, poolSize, breaker, appliesTo, mode, route } = edge.params;
   const policy = [
     timeoutMs === 0 ? 'no timeout' : `timeout ${duration(timeoutMs)}`,
     ...(retries > 0 ? [`${String(retries)} retries${backoffMs > 0 ? ` after ${duration(backoffMs)}${jitter > 0 ? ' with jitter' : ''}` : ' at once'}`] : []),
     ...(poolSize > 0 ? [`pool of ${String(poolSize)} connections per caller instance`] : []),
     ...(breaker.enabled ? [`circuit breaker (opens at ${share(breaker.failureRate)} failing, for ${duration(breaker.openMs)})`] : []),
     ...(appliesTo === 'all' ? [] : [appliesTo === 'data' ? 'everything but files' : `${appliesTo}s only`]),
+    ...(route === '' ? [] : [`the route "${route}" only`]),
     ...(mode === 'async' ? ['not waited for'] : []),
   ];
   return `${edge.from} -> ${edge.to}: ${policy.join(', ')}`;
@@ -149,9 +159,9 @@ function describeEdge(edge: DesignEdge): string {
 function describeObjective(objective: Objective): string {
   switch (objective.kind) {
     case 'p99':
-      return `p99 within ${duration(objective.maxMs)}`;
+      return `p99 ${objective.route === undefined ? '' : `of the route "${objective.route}" `}within ${duration(objective.maxMs)}`;
     case 'errors':
-      return `no more than ${share(objective.maxRate)} of requests failing`;
+      return `no more than ${share(objective.maxRate)} of ${objective.route === undefined ? '' : `the route "${objective.route}"'s `}requests failing`;
     case 'cost':
       return `no more than ${dollars(objective.maxMonthly)} a month`;
     case 'backlog':

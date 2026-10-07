@@ -26,7 +26,7 @@ Drag-and-simulate sandboxes are not new. This one tries to do the unglamorous pa
   share link carries all three, so whoever opens it sees the numbers you saw.
 - **One engine, three ways in.** The same code runs in a Web Worker behind the canvas, at the
   command line, and behind an MCP server for agents. One function scores a level in all three.
-- **Twenty levels, each teaching one thing.** Each ships with a reference answer. CI proves on five
+- **Twenty-one levels, each teaching one thing.** Each ships with a reference answer. CI proves on five
   seeds that the design a level starts from fails and that the reference earns three stars.
 - **No backend.** It is a static site. Designs live in your browser and in links, and nothing is
   uploaded.
@@ -92,10 +92,15 @@ of every lesson in the editor, in a real browser, and checks that each earns thr
 | 18 | Failover | A replica for reads, a queue for writes, and a worker that waits between tries |
 | 19 | Heavy lifting | Files come from storage by way of a CDN, not through the servers |
 | 20 | Cold start | A function starts an environment for every call that finds none; keep enough ready |
+| 21 | Slow lane | A slow route holds up a quick one that shares its slots; give it its own way in |
 
 The **sandbox** has every part and no objectives. Scale the traffic with a slider, or let it
 follow a ramp, steps, a wave or spikes. Kill an instance, slow a part down, empty a cache, fail a
 database over, cut a connection, and see what the rest of the system does about it.
+
+A client's traffic can be divided among **routes**, each with a weight and a mix of reads, writes,
+files fetched and files sent in. A connection can be kept for one route, and routes can enter the
+system at different parts.
 
 Put a design aside under a name with **Designs** and come back to it, and write on the drawing
 with a **Note**: words of your own, with a line to the part they are about. Notes travel with the
@@ -154,15 +159,15 @@ The engine also does not use `Math.log`, `Math.exp` or `Math.pow`: the language 
 JavaScript engine approximate them in its own way, and one differing bit in a sampled service time
 is enough to reorder two events. It has its own, built from arithmetic that is defined exactly.
 
-`npm run browsers` puts that to the test. Twenty-one runs (a reference system on a scripted bad
+`npm run browsers` puts that to the test. Twenty-two runs (a reference system on a scripted bad
 day, and the reference answer to each level) are made in Node and in each browser that is
 installed, and every report has to hash the same.
 
 | Engine | Where | Reports |
 |---|---|---|
 | V8 | Node 26 | the reference |
-| V8 | Chrome 154, Edge 154 | identical on all twenty-one |
-| SpiderMonkey | Firefox 157 | identical on all twenty-one |
+| V8 | Chrome 154, Edge 154 | identical on all twenty-two |
+| SpiderMonkey | Firefox 157 | identical on all twenty-two |
 | JavaScriptCore | Safari | not checked; it cannot be started from a script this way |
 
 With the built-in functions put back, Chrome disagreed with Node on sixteen of the nineteen runs
@@ -345,7 +350,7 @@ Vite, React, Tailwind, [React Flow](https://reactflow.dev) for the canvas,
 ## Working on it
 
 ```bash
-npm run check                        # typecheck, lint, nearly 570 tests, build
+npm run check                        # typecheck, lint, about 600 tests, build
 npm test -w @loadline/engine         # one package
 npm run bench -w @loadline/engine    # events per second
 npm run browsers                     # the same runs in each installed browser as in Node

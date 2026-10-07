@@ -187,25 +187,25 @@ export class ServiceRuntime extends NodeRuntime {
     if (target instanceof CacheRuntime) {
       if (result === OK && calls.reply[call] === 1) {
         // Found: skip the store behind the cache.
-        calls.step[call] = this.storeAfter(step, cls) + 1;
+        calls.step[call] = this.storeAfter(step, cls, calls.route[call]!) + 1;
         this.advance(call);
         return;
       }
       // Not found. A cache that failed is treated the same way: the store still has the answer.
       calls.step[call] = step + 1;
-      if (target.singleFlight && this.canShare(step, cls) && this.joinFlight(call, step)) return;
+      if (target.singleFlight && this.canShare(step, cls, calls.route[call]!) && this.joinFlight(call, step)) return;
       this.advance(call);
       return;
     }
 
     // If this was the store behind a cache that the read missed, others may be waiting on it too.
-    const cacheStep = this.cacheBefore(step, cls);
+    const cacheStep = this.cacheBefore(step, cls, calls.route[call]!);
     if (cacheStep >= 0) this.landFlight(call, cacheStep, result, origin, stuck);
     if (result !== OK) {
       this.complete(call, result, origin, stuck);
       return;
     }
-    if (cacheStep >= 0) sim.detach(this.out[cacheStep]!, READ, calls.key[call]!, CACHE_SET, calls.orphan[call]!);
+    if (cacheStep >= 0) sim.detach(this.out[cacheStep]!, READ, calls.key[call]!, CACHE_SET, calls.orphan[call]!, calls.route[call]);
     calls.step[call] = step + 1;
     this.advance(call);
   }
@@ -363,6 +363,7 @@ export class ServiceRuntime extends NodeRuntime {
     const sim = this.sim;
     const calls = sim.calls;
     const cls = calls.cls[call]!;
+    const route = calls.route[call]!;
     for (;;) {
       const step = calls.step[call]!;
       if (step >= this.out.length) {
@@ -371,24 +372,24 @@ export class ServiceRuntime extends NodeRuntime {
       }
       const edgeIndex = this.out[step]!;
       const edge = sim.edges[edgeIndex]!;
-      if (!edgeCarries(edge, cls)) {
+      if (!edgeCarries(edge, cls, route)) {
         calls.step[call] = step + 1;
         continue;
       }
       const toCache = sim.nodes[edge.to]!.type === 'cache';
-      if (toCache && cls === FILE) {
+      if (toCache && cls >= FILE) {
         // A cache of data holds no files; what keeps files near the people asking is a CDN.
         calls.step[call] = step + 1;
         continue;
       }
       if (toCache && cls !== READ) {
         // A write makes the cached copy stale, so it is removed. The write does not wait for that.
-        sim.detach(edgeIndex, cls, calls.key[call]!, CACHE_DELETE, calls.orphan[call]!);
+        sim.detach(edgeIndex, cls, calls.key[call]!, CACHE_DELETE, calls.orphan[call]!, route);
         calls.step[call] = step + 1;
         continue;
       }
       if (edge.async && !toCache) {
-        sim.detach(edgeIndex, cls, calls.key[call]!, 0, calls.orphan[call]!);
+        sim.detach(edgeIndex, cls, calls.key[call]!, 0, calls.orphan[call]!, route);
         calls.step[call] = step + 1;
         continue;
       }
@@ -399,19 +400,19 @@ export class ServiceRuntime extends NodeRuntime {
   }
 
   /** The step of the store that a cache at `step` stands in front of: the next edge this call uses. */
-  private storeAfter(step: number, cls: number): number {
+  private storeAfter(step: number, cls: number, route: number): number {
     for (let next = step + 1; next < this.out.length; next++) {
-      if (edgeCarries(this.sim.edges[this.out[next]!]!, cls)) return next;
+      if (edgeCarries(this.sim.edges[this.out[next]!]!, cls, route)) return next;
     }
     return this.out.length;
   }
 
   /** If the edge at `step` is the store behind a cache this read went through, that cache's step. */
-  private cacheBefore(step: number, cls: number): number {
+  private cacheBefore(step: number, cls: number, route: number): number {
     if (cls !== READ) return -1;
     for (let previous = step - 1; previous >= 0; previous--) {
       const edge = this.sim.edges[this.out[previous]!]!;
-      if (!edgeCarries(edge, cls)) continue;
+      if (!edgeCarries(edge, cls, route)) continue;
       return this.sim.nodes[edge.to]!.type === 'cache' ? previous : -1;
     }
     return -1;
@@ -501,8 +502,8 @@ export class ServiceRuntime extends NodeRuntime {
   }
 
   /** Whether a miss at the cache at `cacheStep` is followed by a store call that others could wait for. */
-  private canShare(cacheStep: number, cls: number): boolean {
-    const store = this.storeAfter(cacheStep, cls);
+  private canShare(cacheStep: number, cls: number, route: number): boolean {
+    const store = this.storeAfter(cacheStep, cls, route);
     if (store >= this.out.length) return false;
     const edge = this.sim.edges[this.out[store]!]!;
     return !edge.async && this.sim.nodes[edge.to]!.type !== 'cache';

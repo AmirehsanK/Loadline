@@ -1,4 +1,4 @@
-import { EV_TIMER, FREE, IN_SERVICE, NODE_DOWN, OK, QUEUE_FULL, WRITE } from '../codes.ts';
+import { EV_TIMER, FREE, IN_SERVICE, NODE_DOWN, OK, QUEUE_FULL, stores } from '../codes.ts';
 import { databaseServerPrice } from '../cost.ts';
 import { makeSampler } from '../kernel/dist.ts';
 import type { Sampler } from '../kernel/dist.ts';
@@ -90,8 +90,9 @@ export class DatabaseRuntime extends NodeRuntime {
     const calls = this.sim.calls;
     if (!this.admit(call)) return;
 
-    // A file kept in a database is read like anything else in it.
-    const chosen = calls.cls[call] !== WRITE ? this.pickReader() : this.primary;
+    // A file kept in a database is read, and written, like anything else in it.
+    const writing = stores(calls.cls[call]!);
+    const chosen = writing ? this.primary : this.pickReader();
     const server = this.servers[chosen]!;
     if (!server.up) {
       this.reject(call, NODE_DOWN);
@@ -102,7 +103,7 @@ export class DatabaseRuntime extends NodeRuntime {
       return;
     }
 
-    const work = (calls.cls[call] !== WRITE ? this.readTime(this.workRng) : this.writeTime(this.workRng)) * this.slowFactor;
+    const work = (writing ? this.writeTime(this.workRng) : this.readTime(this.workRng)) * this.slowFactor;
     this.catchUp(server);
     server.active++;
     server.running.push(server.progress + work, call);

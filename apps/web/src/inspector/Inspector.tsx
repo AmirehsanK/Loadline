@@ -1,5 +1,5 @@
 import { PRICES, cachePrice, databaseServerPrice, instancePrice } from '@loadline/engine';
-import type { CommandInput, Dist, Issue } from '@loadline/engine';
+import type { CommandInput, Dist, Issue, Route } from '@loadline/engine';
 import type { ReactNode } from 'react';
 import { EDGE_FIELDS, NODE_FIELDS, getPath, setPath } from '../design/fields.ts';
 import type { FieldSpec } from '../design/fields.ts';
@@ -12,6 +12,7 @@ import { canRemove, canRemoveEdge, isLocked, lockedPaths } from '../level/rules.
 import { formatCount } from '../metrics/format.ts';
 import { inject } from '../sim/controller.ts';
 import { useSim } from '../sim/store.ts';
+import { RouteChoice, RoutesField } from './RoutesField.tsx';
 import { NumberField, SelectField, TextField, ToggleField } from './fields.tsx';
 
 /** How long a fault injected from the inspector lasts, in simulated time. */
@@ -54,6 +55,7 @@ function NodeSettings({ node }: { node: FlowNode }) {
         }}
       />
       <Fields
+        owner={node.id}
         specs={NODE_FIELDS[node.type]}
         texts={texts}
         values={node.data.params}
@@ -91,6 +93,7 @@ function EdgeSettings({ edge }: { edge: FlowEdge }) {
     <div className="flex flex-col gap-3">
       <p className="font-bold">{m.inspector.connection(from || edge.source, to || edge.target)}</p>
       <Fields
+        owner={edge.id}
         specs={EDGE_FIELDS}
         texts={m.fields.edge}
         values={params}
@@ -116,6 +119,8 @@ function EdgeSettings({ edge }: { edge: FlowEdge }) {
 }
 
 interface FieldsProps {
+  /** The id of the part or connection the settings belong to. */
+  owner: string;
   specs: FieldSpec[];
   texts: Record<string, FieldText>;
   values: object;
@@ -125,12 +130,13 @@ interface FieldsProps {
 }
 
 /** One control per setting, from the field table. */
-function Fields({ specs, texts, values, locked, onChange }: FieldsProps) {
+function Fields({ owner, specs, texts, values, locked, onChange }: FieldsProps) {
   const m = useMessages();
   return (
     <>
       {specs.map((spec) => {
         if (spec.when !== undefined && getPath(values, spec.when) !== true) return null;
+        if (spec.unless !== undefined && (getPath(values, spec.unless) as unknown[]).length > 0) return null;
         const text = texts[spec.path] ?? { label: spec.path };
         const value = getPath(values, spec.path);
         const set = (next: unknown) => {
@@ -171,6 +177,31 @@ function Fields({ specs, texts, values, locked, onChange }: FieldsProps) {
             return <ToggleField key={spec.path} {...shared} value={value === true} onChange={set} />;
           case 'work':
             return <WorkField key={spec.path} label={text.label} locked={shared.locked} value={value as Dist} onChange={set} />;
+          case 'routes':
+            return (
+              <RoutesField
+                key={spec.path}
+                nodeId={owner}
+                label={text.label}
+                hint={text.hint}
+                locked={shared.locked}
+                routes={value as Route[]}
+                mix={values as Route}
+                onChange={set}
+              />
+            );
+          case 'route':
+            return (
+              <RouteChoice
+                key={spec.path}
+                label={text.label}
+                hint={text.hint}
+                locked={shared.locked}
+                any={text.options?.any ?? ''}
+                value={value as string}
+                onChange={set}
+              />
+            );
         }
       })}
     </>

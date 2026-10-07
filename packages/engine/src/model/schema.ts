@@ -26,17 +26,39 @@ const nodeBase = {
   y: coordinateSchema,
 };
 
+const routeNameSchema = z.string().regex(/^[A-Za-z0-9_-]{1,24}$/, 'must be 1-24 letters, digits, "_" or "-"');
+
+/**
+ * One of the ways into a system: a path, a page, a kind of thing people come to do. It has a share
+ * of the traffic and a mix of its own, and an edge can be kept for the requests of one route.
+ */
+export const routeSchema = z.object({
+  name: routeNameSchema,
+  /** Its share of the client's requests, against the weights of the other routes. */
+  weight: z.number().min(0).max(1000).default(1),
+  fileRatio: fraction.default(0),
+  uploadRatio: fraction.default(0),
+  readRatio: fraction.default(0.9),
+});
+
 export const clientParamsSchema = z.object({
   /** New requests per second, before the workload's multiplier. */
   rps: z.number().min(0).max(200_000).default(100),
   /** Share of requests that are for a file: an image, a script, the same for everyone who asks. */
   fileRatio: fraction.default(0),
-  /** Of the requests that are not for a file, the share that only read. The rest write. */
+  /** Share of requests that send a file in: a photo posted, a video uploaded. */
+  uploadRatio: fraction.default(0),
+  /** Of the requests that are not about a file, the share that only read. The rest write. */
   readRatio: fraction.default(0.9),
   /** How many different items requests ask about. */
   keys: count(1, 1_000_000).default(10_000),
   /** How unevenly requests are spread over the items: 0 is evenly, 1 is typical of real traffic. */
   skew: z.number().min(0).max(2).default(1),
+  /**
+   * The routes the requests are divided among. With any, each route's own mix replaces the three
+   * shares above. With none, every request is of the one unnamed route.
+   */
+  routes: z.array(routeSchema).max(8).default([]),
 });
 
 export const autoscaleSchema = z.object({
@@ -199,6 +221,8 @@ export const edgeParamsSchema = z.object({
   jitter: fraction.default(0),
   /** Which requests use this edge. `data` is reads and writes, which is everything but files. */
   appliesTo: z.enum(['all', 'read', 'write', 'file', 'data']).default('all'),
+  /** The route whose requests use this edge; empty for every route. */
+  route: z.union([z.literal(''), routeNameSchema]).default(''),
   /** `async` hands the call over and carries on without waiting for the result. */
   mode: z.enum(['sync', 'async']).default('sync'),
   /** Calls each instance of the caller may have open over this edge at once; 0 is no limit. */
@@ -279,6 +303,7 @@ export type Design = z.output<typeof designSchema>;
 export type DesignInput = z.input<typeof designSchema>;
 export type DesignNode = z.output<typeof nodeSchema>;
 export type ClientNode = z.output<typeof clientNodeSchema>;
+export type Route = z.output<typeof routeSchema>;
 export type ServiceNode = z.output<typeof serviceNodeSchema>;
 export type WorkerNode = z.output<typeof workerNodeSchema>;
 export type LoadBalancerNode = z.output<typeof loadBalancerNodeSchema>;

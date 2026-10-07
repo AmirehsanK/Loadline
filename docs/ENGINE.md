@@ -93,16 +93,33 @@ generation and check it.
 
 ### 2.4 Requests have a kind and a key
 
-Every request is a **read**, a **write** or a request for a **file**, and is about one item, its
-**key**. Calls made on its behalf inherit both. A read and a write are about data, which is
-different for each person asking. A file is an image or a script: the same for everyone, which is
-what lets a copy of it be handed over by something that knows nothing else.
+Every request is a **read**, a **write**, a request for a **file** or a file **sent in**, and is
+about one item, its **key**. Calls made on its behalf inherit both. A read and a write are about
+data, which is different for each person asking. A file is an image or a script: the same for
+everyone, which is what lets a copy of it be handed over by something that knows nothing else. A
+file sent in is a photo posted or a video uploaded: to an edge it is a file, and to whatever
+stores it, a write.
 
 - An edge can carry all requests, only reads, only writes, only files, or everything but files.
   That is how a design says "writes also go to the payments service", or "files come from storage".
-- A client's `fileRatio` is the share of its requests that are for a file, and `readRatio` the
-  share of the rest that only read. Whether a request is for a file is drawn from a stream of its
-  own, so a design with no files in it draws exactly what it drew before files existed.
+- A client's `fileRatio` is the share of its requests that are for a file, `uploadRatio` the share
+  that send one in, and `readRatio` the share of the rest that only read. Whether a request is
+  about a file is drawn from a stream of its own, so a design with no files in it draws exactly
+  what it drew before files existed.
+
+A client may also divide its requests among **routes**: named ways in, each with a weight and a mix
+of its own in place of the client's. A request carries its route as it carries its kind, and every
+call made for it inherits it.
+
+- An edge can be kept for one route. Inside the system that sends one route's calls to a
+  dependency the others never touch.
+- A client can have an edge for each route, so routes can enter at different parts. A request
+  leaves by the edge that names it most exactly: one for its route before one for every route, and
+  then one for its kind before one for everything. With no edge that takes it, it fails at the
+  client.
+- What clients saw is kept for each route as well as for all of them, so a report, and a level's
+  objective, can be about one route. A design that names no route has none of this in its report,
+  and draws nothing from the stream the routes are drawn from.
 - Keys are drawn from a Zipf distribution: key `i` is chosen in proportion to `1 / i^skew`. A few
   items get most of the traffic, as in real systems, which is what makes caches work.
 
@@ -297,9 +314,9 @@ into `advance` steps.
 
 ### 5.1 Checked in other engines
 
-`npm run browsers` makes twenty-one runs in Node and in each browser that is installed, and compares
+`npm run browsers` makes twenty-two runs in Node and in each browser that is installed, and compares
 the hash of every whole report: the reference system of `test/golden.test.ts` on its bad day, and
-the reference answer to each of the twenty levels. Between them they use every kind of part, every
+the reference answer to each of the twenty-one levels. Between them they use every kind of part, every
 edge policy, four kinds of fault, autoscaling, and all three of the functions above. Nothing drives
 the browsers. A page makes the runs and posts the hashes to the server that served it
 (`scripts/browsers.mjs`).
@@ -307,8 +324,8 @@ the browsers. A page makes the runs and posts the hashes to the server that serv
 | Engine | Where | Reports |
 |---|---|---|
 | V8 | Node 26.4 | the reference |
-| V8 | Chrome 154, Edge 154 | identical on all nineteen |
-| SpiderMonkey | Firefox 157 | identical on all nineteen |
+| V8 | Chrome 154, Edge 154 | identical on all twenty-two |
+| SpiderMonkey | Firefox 157 | identical on all twenty-two |
 | JavaScriptCore | Safari | not checked: it cannot be started from a script this way |
 
 CI repeats it on every push, in the Firefox and Chrome that come with the runner. The hashes there
@@ -484,6 +501,10 @@ a test.
 - **A function has no pool.** Every environment opens its own connection. A surge a service would
   have queued behind its slots arrives at the database all at once, and the database refuses what
   it has no connection left for.
+- **Routes that share a service share its slots.** Search is a tenth of the traffic and waits a
+  second and a half on its index. Sharing 16 slots with browsing, which is 10 ms of work, it holds
+  nearly all of them, and browsing's p99 passes 200 ms. Give each route a service of its own and
+  browsing's p99 is under 20 ms, while search is exactly as slow as it was.
 - **Autoscaling arrives late.** With instances that take 30 s to start, a sixfold surge is 35
   seconds of errors before the first new instance is ready. With 2 s it is a quarter of that.
 - **And leaves late, on purpose.** When the surge ends the instances stay for a cooldown and then

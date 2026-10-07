@@ -15,6 +15,7 @@ import { pooled } from '../src/levels/pool-party.ts';
 import { cached } from '../src/levels/read-heavy.ts';
 import { impatient, system as retryStorm } from '../src/levels/retry-storm.ts';
 import { shop as slowDependency } from '../src/levels/slow-dependency.ts';
+import { app } from '../src/levels/slow-lane.ts';
 import { catalog } from '../src/levels/stampede.ts';
 import { system as theBill } from '../src/levels/the-bill.ts';
 import { queued } from '../src/levels/write-burst.ts';
@@ -251,5 +252,18 @@ export const ATTEMPTS: Record<string, Attempt[]> = {
     ['twenty-four', checkout(24), 2],
     ['thirty', checkout(30), 1],
     ['forty', checkout(40), 0],
+  ],
+  'slow-lane': [
+    // Room for the posts as they are, and none once storage slows down.
+    ['three instances', app({ instances: 3 }), 0],
+    ['four', app({ instances: 4 }), 0],
+    ['six', app({ instances: 6 }), 0],
+    // A post waiting for a connection still holds its slot.
+    ['a pool of 4 from the API to storage', app({ pool: 4 }), 0],
+    ['posts straight to storage, nothing else changed', app({ direct: true }), 1],
+    ['that, with one instance', app({ direct: true, instances: 1 }), 2],
+    ['that, and ten seconds for a post', app({ direct: true, instances: 1, timeoutMs: 10_000 }), 3],
+    ['ten seconds, with both instances kept', app({ direct: true, timeoutMs: 10_000 }), 1],
+    ['one instance, and one second for a post', app({ direct: true, instances: 1, timeoutMs: 1000 }), 0],
   ],
 };

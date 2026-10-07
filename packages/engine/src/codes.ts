@@ -62,6 +62,11 @@ export const REFUSED = 8;
 export const READ = 0;
 export const WRITE = 1;
 export const FILE = 2;
+/** A file being sent in rather than fetched: a photo posted, a video uploaded. */
+export const UPLOAD = 3;
+
+/** Whether a request of this kind changes what is stored. */
+export const stores = (cls: number): boolean => cls === WRITE || cls === UPLOAD;
 
 /** What a call to a cache asks it to do, carried in the call's tag. */
 export const CACHE_GET = 0;

@@ -34,6 +34,7 @@ export type {
   ObjectStoreNode,
   QueueNode,
   RateLimiterNode,
+  Route,
   ServiceNode,
   WorkerNode,
   Workload,
@@ -41,6 +42,6 @@ export type {
 } from './model/schema.ts';
 export type { NodeWindow } from './nodes/base.ts';
 export { buildReport, describeBlame, hashReport, totalMonthlyCost } from './report.ts';
-export type { BlameReport, EdgeReport, FailureCounts, FailureName, NodeReport, Report } from './report.ts';
+export type { BlameReport, EdgeReport, FailureCounts, FailureName, NodeReport, Report, RouteReport } from './report.ts';
 export { Simulation, createSimulation } from './sim.ts';
-export type { EdgeWindow, Gauge, Score, SimOptions, WindowSample } from './sim.ts';
+export type { EdgeWindow, Gauge, RouteScore, Score, SimOptions, WindowSample } from './sim.ts';

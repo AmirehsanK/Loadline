@@ -8,8 +8,10 @@ import type { NodeType } from '@loadline/engine';
 const WHAT: Record<NodeType, string> = {
   client:
     'Sends requests at a steady rate (rps), whatever happens to them: it does not slow down when the system does. ' +
-    'fileRatio is the share that ask for a file (an image, a script); of the rest, readRatio is the share that only read. ' +
-    'keys and skew say how many different items are asked for and how unevenly. Has exactly one outgoing edge.',
+    'fileRatio is the share that ask for a file (an image, a script) and uploadRatio the share that send one in; of the rest, readRatio is the share that only read. ' +
+    'keys and skew say how many different items are asked for and how unevenly. ' +
+    'routes: [{ name, weight, fileRatio, uploadRatio, readRatio }] divides the requests among named routes by weight, each with its own mix in place of the client\'s. ' +
+    'It usually has one outgoing edge. It may have several if no two are for the same requests: give each a `route` or an `appliesTo` of its own, and a request leaves by the edge that names it most exactly.',
   cdn:
     'Stands in front of everything and keeps copies of files. A request for a file it holds is answered there; one it does not hold is fetched over ' +
     'the outgoing edge that carries files (appliesTo file, else all) and kept for ttlMs, up to `capacity` files. Reads and writes of data pass through ' +
@@ -43,7 +45,8 @@ const WHAT: Record<NodeType, string> = {
 
 const EDGES =
   'An edge is a call from one part to another, and carries the caller\'s policy: timeoutMs (0 waits forever), retries with backoffMs, backoffFactor and jitter, ' +
-  'poolSize (connections per caller instance; 0 is no limit), a circuit breaker, latencyMs each way, appliesTo (all, read, write, file, or data which is reads and writes but not files) and mode ' +
+  'poolSize (connections per caller instance; 0 is no limit), a circuit breaker, latencyMs each way, appliesTo (all, read, write, file which is files fetched and sent in, or data which is reads and writes but not files), ' +
+  'route (the name of a client\'s route, to keep the edge for that route\'s requests; empty for every route) and mode ' +
   '(sync waits for the answer; async hands the call over and moves on). A timeout does not cancel the work downstream.';
 
 const DOCUMENT =

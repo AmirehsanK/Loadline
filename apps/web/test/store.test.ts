@@ -338,3 +338,58 @@ describe('notes on the drawing', () => {
     expect(noteIds()).toEqual([]);
   });
 });
+
+describe('routes in the editor', () => {
+  const routed = designSchema.parse({
+    nodes: [
+      { id: 'users', type: 'client', params: { routes: [{ name: 'feed', weight: 9 }, { name: 'post', weight: 1 }] } },
+      { id: 'api', type: 'service' },
+      { id: 'bucket', type: 'object-store' },
+      { id: 'other', type: 'service' },
+    ],
+    edges: [{ id: 'users--api', from: 'users', to: 'api' }],
+  });
+  const routeOf = (id: string) => store().edges.find((edge) => edge.id === id)?.data?.params.route;
+
+  beforeEach(() => {
+    store().open('test:routes', routed, null, { transient: true });
+  });
+
+  it('give a client a second connection, for the first of its routes that has none', () => {
+    store().connect(link('users', 'bucket'));
+    expect(routeOf('users--bucket')).toBe('feed');
+    store().connect(link('users', 'other'));
+    expect(routeOf('users--other')).toBe('post');
+  });
+
+  it('refuse a client a connection once every route has one', () => {
+    store().connect(link('users', 'bucket'));
+    store().connect(link('users', 'other'));
+    store().addNode('service', 'Service', { x: 0, y: 0 });
+    const added = nodeIds().at(-1)!;
+    store().connect(link('users', added));
+    expect(edgeIds()).toEqual(['users--api', 'users--bucket', 'users--other']);
+  });
+
+  it('rename a route on the connections kept for it, as one step', () => {
+    store().connect(link('users', 'bucket'));
+    later();
+    store().renameRoute('users', 0, 'timeline');
+    expect(paramsOf('users').routes).toMatchObject([{ name: 'timeline' }, { name: 'post' }]);
+    expect(routeOf('users--bucket')).toBe('timeline');
+    store().undo();
+    expect(routeOf('users--bucket')).toBe('feed');
+    expect(paramsOf('users').routes).toMatchObject([{ name: 'feed' }, { name: 'post' }]);
+  });
+
+  it('will not give two routes of a client one name', () => {
+    store().renameRoute('users', 0, 'post');
+    expect(paramsOf('users').routes).toMatchObject([{ name: 'feed' }, { name: 'post' }]);
+  });
+
+  it('leave a level’s routes as the level set them', () => {
+    openLevel('slow-lane');
+    store().renameRoute('users', 0, 'timeline');
+    expect(paramsOf('users').routes).toMatchObject([{ name: 'feed' }, { name: 'post' }]);
+  });
+});

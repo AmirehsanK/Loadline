@@ -75,7 +75,41 @@ export interface Score {
   p50: number;
   p95: number;
   p99: number;
+  /** The same for each route, in the order the design names them. Absent when it names none. */
+  routes?: RouteScore[];
 }
+
+/** What clients saw of one route. */
+export interface RouteScore {
+  name: string;
+  ok: number;
+  failed: number;
+  meanMs: number;
+  p50: number;
+  p95: number;
+  p99: number;
+}
+
+/** The requests of one route: over the whole run, and over the scored period. */
+interface RouteTally {
+  name: string;
+  ok: number;
+  failed: number;
+  latency: Histogram;
+  scoreOk: number;
+  scoreFailed: number;
+  scoreLatency: Histogram;
+}
+
+const routeScore = (name: string, ok: number, failed: number, latency: Histogram): RouteScore => ({
+  name,
+  ok,
+  failed,
+  meanMs: latency.mean(),
+  p50: latency.quantile(0.5),
+  p95: latency.quantile(0.95),
+  p99: latency.quantile(0.99),
+});
 
 export interface EdgeWindow {
   calls: number;
@@ -175,6 +209,10 @@ export class Simulation {
   private handedOver = 0;
   private readonly blame = new Map<number, number>();
   private readonly nodeIndex = new Map<string, number>();
+  // The routes the design's clients name, numbered from 1 in the order they are first named. A call
+  // carries the number. 0 is the route of a request that has none.
+  private readonly routeIndex = new Map<string, number>();
+  private readonly tallies: RouteTally[] = [];
   private readonly edgeIndex = new Map<string, number>();
 
   // The traffic multiplier is the workload's own level times every spike in force.
@@ -196,6 +234,7 @@ export class Simulation {
     this.phases = [...(options.workload?.phases ?? [])].sort((a, b) => a.atMs - b.atMs);
     this.chaos = [...(options.workload?.chaos ?? [])].sort((a, b) => a.atMs - b.atMs);
 
+    this.nameRoutes(design);
     design.nodes.forEach((node, index) => {
       this.nodeIndex.set(node.id, index);
       this.nodes.push(this.build(node, index));
@@ -214,6 +253,7 @@ export class Simulation {
         reads: true,
         writes: true,
         files: true,
+        route: 0,
         async: false,
         severed: false,
         extraLatencyMs: 0,
@@ -379,6 +419,7 @@ export class Simulation {
     const issues = lintDesign(design);
     if (hasErrors(issues)) throw new DesignError(issues.filter((issue) => issue.level === 'error'));
 
+    this.nameRoutes(design);
     design.nodes.forEach((node, i) => {
       this.nodes[i]!.reconfigure(node);
     });
@@ -437,7 +478,7 @@ export class Simulation {
    * Hands a call over an edge without waiting for the result: a message published, a cache entry
    * written. Nothing hears how it turns out.
    */
-  detach(edgeIndex: number, cls: number, key: number, tag: number, orphan: number): void {
+  detach(edgeIndex: number, cls: number, key: number, tag: number, orphan: number, route = 0): void {
     const edge = this.edges[edgeIndex]!;
     const calls = this.calls;
     edge.calls++;
@@ -454,8 +495,14 @@ export class Simulation {
     calls.key[call] = key;
     calls.tag[call] = tag;
     calls.orphan[call] = orphan;
+    calls.route[call] = route;
     calls.state[call] = TRAVELING;
     this.queue.push(this.now + edge.params.latencyMs + edge.extraLatencyMs, EV_ARRIVE, call, 0, 0);
+  }
+
+  /** The number of a route, or 0 for no name. A name no client has is -1: nothing comes in by it. */
+  routeOf(name: string): number {
+    return name === '' ? 0 : (this.routeIndex.get(name) ?? -1);
   }
 
   /** Hands a finished call back to its caller. The reply takes the edge's latency to arrive. */
@@ -504,22 +551,37 @@ export class Simulation {
     this.windowCreated++;
   }
 
-  requestOk(latencyMs: number): void {
+  requestOk(latencyMs: number, route = 0): void {
+    const scored = this.now >= this.scoreFrom;
     this.ok++;
     this.windowOk++;
     this.latency.record(latencyMs);
     this.windowLatency.record(latencyMs);
     // A request belongs to the period it finished in.
-    if (this.now >= this.scoreFrom) {
+    if (scored) {
       this.scoreOk++;
       this.scoreLatency.record(latencyMs);
     }
+    const tally = this.tallies[route - 1];
+    if (!tally) return;
+    tally.ok++;
+    tally.latency.record(latencyMs);
+    if (scored) {
+      tally.scoreOk++;
+      tally.scoreLatency.record(latencyMs);
+    }
   }
 
-  requestFailed(result: number, origin: number, stuck: number): void {
+  requestFailed(result: number, origin: number, stuck: number, route = 0): void {
+    const scored = this.now >= this.scoreFrom;
     this.failed++;
     this.windowFailed++;
-    if (this.now >= this.scoreFrom) this.scoreFailed++;
+    if (scored) this.scoreFailed++;
+    const tally = this.tallies[route - 1];
+    if (tally) {
+      tally.failed++;
+      if (scored) tally.scoreFailed++;
+    }
     this.failedBy[result]!++;
     const key = (origin * OUTCOMES.length + result) * CALL_STATES.length + stuck;
     this.blame.set(key, (this.blame.get(key) ?? 0) + 1);
@@ -551,7 +613,15 @@ export class Simulation {
       p50: latency.quantile(0.5),
       p95: latency.quantile(0.95),
       p99: latency.quantile(0.99),
+      ...(this.tallies.length > 0
+        ? { routes: this.tallies.map((tally) => routeScore(tally.name, tally.scoreOk, tally.scoreFailed, tally.scoreLatency)) }
+        : {}),
     };
+  }
+
+  /** What clients have seen of each route since the run began. Empty when the design names none. */
+  routeTotals(): RouteScore[] {
+    return this.tallies.map((tally) => routeScore(tally.name, tally.ok, tally.failed, tally.latency));
   }
 
   /** The sampling windows closed since the last call. */
@@ -588,9 +658,26 @@ export class Simulation {
     }
   }
 
+  /**
+   * Gives a number to each route the clients name. A route keeps its number for the whole run, so
+   * one that is renamed while the run is in progress is a new route, and the old one stops growing.
+   */
+  private nameRoutes(design: Design): void {
+    for (const node of design.nodes) {
+      if (node.type !== 'client') continue;
+      for (const route of node.params.routes) {
+        // A call has a byte for its route.
+        if (this.routeIndex.has(route.name) || this.tallies.length >= 255) continue;
+        this.tallies.push({ name: route.name, ok: 0, failed: 0, latency: new Histogram(), scoreOk: 0, scoreFailed: 0, scoreLatency: new Histogram() });
+        this.routeIndex.set(route.name, this.tallies.length);
+      }
+    }
+  }
+
   /** Applies an edge's parameters, at the start and whenever they are changed. */
   private configure(edge: EdgeRuntime, params: EdgeParams): void {
     edge.params = params;
+    edge.route = this.routeOf(params.route);
     const kinds = params.appliesTo;
     edge.reads = kinds === 'all' || kinds === 'data' || kinds === 'read';
     edge.writes = kinds === 'all' || kinds === 'data' || kinds === 'write';
@@ -654,6 +741,7 @@ export class Simulation {
     calls.from[child] = poolIndex;
     calls.cls[child] = calls.cls[parent]!;
     calls.key[child] = calls.key[parent]!;
+    calls.route[child] = calls.route[parent]!;
     calls.orphan[child] = calls.orphan[parent]!;
     calls.state[child] = TRAVELING;
     calls.awaited[parent] = child;

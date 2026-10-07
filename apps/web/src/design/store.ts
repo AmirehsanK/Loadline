@@ -8,7 +8,7 @@ import type { Connection, EdgeChange, NodeChange } from '@xyflow/react';
 import { create } from 'zustand';
 import { allowedParts, canRemove, canRemoveEdge, forcedSettings, lockedPaths } from '../level/rules.ts';
 import { getPath, setPath } from './fields.ts';
-import { STARTER, canConnect, createArrow, createEdge, createNode, createNote, fromDesign, isArrowId, isNoteId, toDesign } from './model.ts';
+import { STARTER, canConnect, createArrow, createNode, createNote, edgeToDraw, fromDesign, isArrowId, isNoteId, toDesign } from './model.ts';
 import type { FlowArrow, FlowEdge, FlowNode, FlowNote } from './model.ts';
 
 /** Where the sandbox's design is kept between visits. */
@@ -73,6 +73,8 @@ interface DesignState extends Snapshot {
   addNote: (position: { x: number; y: number }) => void;
   writeNote: (id: string, text: string) => void;
   renameNode: (id: string, name: string) => void;
+  /** Renames one of a client's routes, and with it every connection that was kept for that route. */
+  renameRoute: (id: string, index: number, name: string) => void;
   /** Replaces a node's settings. */
   patchNode: (id: string, params: FlowNode['data']['params']) => void;
   /** Replaces an edge's settings. */
@@ -244,7 +246,7 @@ export const useDesign = create<DesignState>((set, get) => ({
         return { ...remember(state, 'connect'), arrows: [...state.arrows, createArrow(source, target)] };
       }
       return canConnect(state.nodes, state.edges, source, target)
-        ? { ...remember(state, 'connect'), edges: withEdge(state, createEdge(source, target)) }
+        ? { ...remember(state, 'connect'), edges: withEdge(state, edgeToDraw(state.nodes, state.edges, source, target)) }
         : state;
     });
   },
@@ -284,6 +286,26 @@ export const useDesign = create<DesignState>((set, get) => ({
         node.id === id ? ({ ...node, ariaLabel: name || id, data: { ...node.data, name } } as FlowNode) : node,
       ),
     }));
+  },
+  renameRoute: (id, index, name) => {
+    set((state) => {
+      const client = state.nodes.find((node) => node.id === id);
+      if (client?.type !== 'client') return state;
+      const { params } = client.data;
+      const before = params.routes[index]?.name;
+      if (before === undefined || before === name || params.routes.some((route) => route.name === name)) return state;
+      const routes = params.routes.map((route, at) => (at === index ? { ...route, name } : route));
+      if (touchesLock(state.level, id, 'client', params, { ...params, routes })) return state;
+      // Another client may have a route of the old name; its connections keep it.
+      const stillNamed = state.nodes.some((node) => node.id !== id && node.type === 'client' && node.data.params.routes.some((route) => route.name === before));
+      return {
+        ...remember(state, `route:${id}:${index}`),
+        nodes: state.nodes.map((node) => (node.id === id ? ({ ...node, data: { ...node.data, params: { ...params, routes } } } as FlowNode) : node)),
+        edges: stillNamed
+          ? state.edges
+          : state.edges.map((edge) => (edge.data?.params.route === before ? { ...edge, data: { params: { ...edge.data.params, route: name } } } : edge)),
+      };
+    });
   },
   patchNode: (id, params) => {
     set((state) => {

@@ -44,6 +44,8 @@ export class CallPool {
   cls: Uint8Array;
   /** The item the request is about. Downstream calls inherit it. */
   key: Int32Array;
+  /** Which of the design's routes the request came in by; 0 when it has none. Downstream calls inherit it. */
+  route: Uint8Array;
   /**
    * Meaning depends on the node: the operation asked of a cache, a message's delivery count, the
    * instance a balancer last sent the call to.
@@ -85,6 +87,7 @@ export class CallPool {
     this.attempt = new Int32Array(0);
     this.cls = new Uint8Array(0);
     this.key = new Int32Array(0);
+    this.route = new Uint8Array(0);
     this.tag = new Int32Array(0);
     this.result = new Uint8Array(0);
     this.reply = new Uint8Array(0);
@@ -125,6 +128,7 @@ export class CallPool {
     this.attempt[slot] = 0;
     this.cls[slot] = 0;
     this.key[slot] = 0;
+    this.route[slot] = 0;
     this.tag[slot] = 0;
     this.result[slot] = 0;
     this.reply[slot] = 0;
@@ -157,6 +161,7 @@ export class CallPool {
     this.attempt = extend(this.attempt, new Int32Array(capacity));
     this.cls = extend(this.cls, new Uint8Array(capacity));
     this.key = extend(this.key, new Int32Array(capacity));
+    this.route = extend(this.route, new Uint8Array(capacity));
     this.tag = extend(this.tag, new Int32Array(capacity));
     this.result = extend(this.result, new Uint8Array(capacity));
     this.reply = extend(this.reply, new Uint8Array(capacity));

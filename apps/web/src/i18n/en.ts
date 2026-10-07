@@ -252,7 +252,9 @@ export const en = {
     // What an objective asks, given its limit.
     objective: {
       p99: (limit: string) => `99% of requests answered within ${limit}`,
+      p99Of: (route: string, limit: string) => `99% of ${route} requests answered within ${limit}`,
       errors: (limit: string) => `No more than ${limit} of requests fail`,
+      errorsOf: (route: string, limit: string) => `No more than ${limit} of ${route} requests fail`,
       noErrors: 'No request fails',
       cost: (limit: string) => `Costs no more than ${limit} a month`,
       backlog: (limit: string) => `No more than ${limit} messages still waiting at the end`,
@@ -424,7 +426,12 @@ export const en = {
       client: {
         rps: { label: 'Requests per second', hint: 'Before the traffic control above is applied.' },
         fileRatio: { label: 'Share that ask for a file', hint: 'An image, a script: the same for everyone who asks. The rest read or write data.' },
+        uploadRatio: { label: 'Share that send a file in', hint: 'A photo posted, a video uploaded.' },
         readRatio: { label: 'Share that only read', hint: 'Of the requests for data. 0 is all writes, 1 is all reads.' },
+        routes: {
+          label: 'Routes',
+          hint: 'Ways into the system, each with a share of the requests and a mix of its own. A connection can be kept for one route.',
+        },
         keys: { label: 'Different items asked about' },
         skew: { label: 'How uneven the demand is', hint: '0 spreads requests evenly. 1 is typical: a few items get most of them.' },
       },
@@ -497,7 +504,21 @@ export const en = {
         provisioned: { label: 'Environments kept ready', hint: 'Always ready, and paid for whether or not they are used.' },
       },
     },
+    routes: {
+      add: 'Add a route',
+      name: 'Name of the route',
+      remove: (name: string) => `Remove the route ${name}`,
+      weight: 'Weight',
+      weightOf: (name: string) => `Weight of ${name}`,
+      read: 'Only read',
+      readOf: (name: string) => `Share of ${name} that only read`,
+      file: 'Ask for a file',
+      fileOf: (name: string) => `Share of ${name} that ask for a file`,
+      upload: 'Send a file in',
+      uploadOf: (name: string) => `Share of ${name} that send a file in`,
+    },
     edge: {
+      route: { label: 'Route', hint: 'Keeps the connection for the requests of one route.', options: { any: 'Every route' } },
       appliesTo: { label: 'Used by', options: { all: 'Every request', data: 'Everything but files', read: 'Reads only', write: 'Writes only', file: 'Files only' } },
       mode: { label: 'The caller', options: { sync: 'Waits for the answer', async: 'Hands it over and moves on' } },
       timeoutMs: { label: 'Give up after', hint: '0 waits forever.' },
@@ -524,6 +545,9 @@ export const en = {
     'cache-fronts-nothing': (name: string) => `${name} checks a cache but has no store to read after it.`,
     'queue-unread': (name: string) => `Nothing takes messages from ${name}, so it only fills up.`,
     'cdn-no-files': (name: string) => `No connection from ${name} carries files, so it has nothing to keep.`,
+    'client-fan-out': (name: string) => `${name} has more than one connection for the same requests. Give each a route, or a kind of request, of its own.`,
+    'duplicate-route': (name: string) => `Two routes of ${name} have the same name.`,
+    'route-unconnected': (name: string) => `One of the routes of ${name} has no connection that takes it, so its requests fail.`,
   },
   metrics: {
     title: 'What clients see',

@@ -9,11 +9,17 @@ export type Field =
   | { kind: 'choice'; path: string; options: readonly string[] }
   | { kind: 'toggle'; path: string }
   /** A duration and how much it varies. */
-  | { kind: 'work'; path: string };
+  | { kind: 'work'; path: string }
+  /** A client's routes: a list, each with a name, a weight and a mix. */
+  | { kind: 'routes'; path: string }
+  /** Which of the design's routes a connection is kept for. */
+  | { kind: 'route'; path: string };
 
 export type FieldSpec = Field & {
   /** Shown only while the setting at this path is true. */
   when?: string;
+  /** Not shown while the list at this path has anything in it. */
+  unless?: string;
 };
 
 const MS = { unit: 'ms' } as const;
@@ -21,10 +27,13 @@ const MS = { unit: 'ms' } as const;
 export const NODE_FIELDS: Record<NodeType, FieldSpec[]> = {
   client: [
     { kind: 'number', path: 'rps', min: 0, max: 200_000, step: 10 },
-    { kind: 'number', path: 'fileRatio', min: 0, max: 1, step: 0.05 },
-    { kind: 'number', path: 'readRatio', min: 0, max: 1, step: 0.05 },
+    // With routes, each has a mix of its own and these three are not asked.
+    { kind: 'number', path: 'fileRatio', min: 0, max: 1, step: 0.05, unless: 'routes' },
+    { kind: 'number', path: 'uploadRatio', min: 0, max: 1, step: 0.05, unless: 'routes' },
+    { kind: 'number', path: 'readRatio', min: 0, max: 1, step: 0.05, unless: 'routes' },
     { kind: 'number', path: 'keys', min: 1, max: 1_000_000, step: 1000, integer: true },
     { kind: 'number', path: 'skew', min: 0, max: 2, step: 0.1 },
+    { kind: 'routes', path: 'routes' },
   ],
   service: [
     { kind: 'number', path: 'instances', min: 1, max: 1000, integer: true },
@@ -90,6 +99,7 @@ export const NODE_FIELDS: Record<NodeType, FieldSpec[]> = {
 
 export const EDGE_FIELDS: FieldSpec[] = [
   { kind: 'choice', path: 'appliesTo', options: ['all', 'data', 'read', 'write', 'file'] },
+  { kind: 'route', path: 'route' },
   { kind: 'choice', path: 'mode', options: ['sync', 'async'] },
   { kind: 'number', path: 'timeoutMs', min: 0, max: 600_000, step: 100, ...MS },
   { kind: 'number', path: 'retries', min: 0, max: 10, integer: true },

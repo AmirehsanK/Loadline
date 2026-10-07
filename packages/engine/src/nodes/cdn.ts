@@ -1,4 +1,5 @@
-import { EV_SERVICE_DONE, FILE, IN_SERVICE, NODE_DOWN, OK, WRITE } from '../codes.ts';
+import { EV_SERVICE_DONE, FILE, IN_SERVICE, NODE_DOWN, OK, UPLOAD } from '../codes.ts';
+import { pickEdge } from '../edge.ts';
 import { PRICES } from '../cost.ts';
 import type { CdnNode, DesignNode } from '../model/schema.ts';
 import type { Simulation } from '../sim.ts';
@@ -13,7 +14,8 @@ const SERVE_MS = 1;
  * Everything from the clients passes through it. A request for a file it holds is answered on the
  * spot and goes no further. One it does not hold is fetched over the edge that carries files, and
  * kept. Reads and writes of data are passed on untouched: no two people get the same answer to
- * those, so there is nothing to keep.
+ * those, so there is nothing to keep. A file sent in is passed on too, and the copy held of it is
+ * dropped, since it is a copy of what was there before.
  *
  * Like a cache it holds real keys (docs/SPEC.md §4.1, rule 4), so how much it takes off what is
  * behind it is a fact about what has been asked for, and when it is emptied all of that comes back.
@@ -66,7 +68,7 @@ export class CdnRuntime extends NodeRuntime {
       this.passed++;
     }
 
-    const edgeIndex = this.edgeFor(cls);
+    const edgeIndex = pickEdge(sim.edges, this.out, cls, calls.route[call]!);
     if (edgeIndex < 0) {
       this.reject(call, NODE_DOWN);
       return;
@@ -93,6 +95,7 @@ export class CdnRuntime extends NodeRuntime {
     this.busy--;
     if (result === OK) {
       if (calls.cls[call] === FILE) this.store(calls.key[call]!);
+      else if (calls.cls[call] === UPLOAD) this.items.delete(calls.key[call]!);
       this.countOk(sim.now - calls.tArrive[call]!);
     } else {
       this.countFailure(result);
@@ -122,25 +125,6 @@ export class CdnRuntime extends NodeRuntime {
 
   override detail(): Record<string, number> {
     return { hits: this.hits, misses: this.misses, evictions: this.evictions, items: this.items.size, passed: this.passed };
-  }
-
-  /**
-   * The edge a call of this kind leaves by: the one that names its kind most exactly, so that an
-   * edge for files wins over one for everything whichever was drawn first. -1 if none carries it.
-   */
-  private edgeFor(cls: number): number {
-    const exact = cls === FILE ? 'file' : cls === WRITE ? 'write' : 'read';
-    let best = -1;
-    let rank = 0;
-    for (const edgeIndex of this.out) {
-      const kinds = this.sim.edges[edgeIndex]!.params.appliesTo;
-      const fits = kinds === exact ? 3 : kinds === 'data' && cls !== FILE ? 2 : kinds === 'all' ? 1 : 0;
-      if (fits > rank) {
-        rank = fits;
-        best = edgeIndex;
-      }
-    }
-    return best;
   }
 
   private store(key: number): void {

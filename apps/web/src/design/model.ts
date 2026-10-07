@@ -171,8 +171,22 @@ export function createNode(type: NodeType, name: string, nodes: FlowNode[], posi
 }
 
 /** A new edge with the schema's default policy. */
-export function createEdge(source: string, target: string): FlowEdge {
-  return toFlowEdge(edgeSchema.parse({ id: `${source}--${target}`, from: source, to: target }));
+export function createEdge(source: string, target: string, route = ''): FlowEdge {
+  return toFlowEdge(edgeSchema.parse({ id: `${source}--${target}`, from: source, to: target, params: { route } }));
+}
+
+/**
+ * The connection that drawing a line from `source` to `target` makes. A client that already has a
+ * connection can only have another for requests the first is not for, so its next one is given the
+ * first of its routes that has none yet. With no route to spare it is an ordinary connection, and
+ * the engine's check then turns it down.
+ */
+export function edgeToDraw(nodes: FlowNode[], edges: FlowEdge[], source: string, target: string): FlowEdge {
+  const from = nodes.find((node) => node.id === source);
+  const taken = edges.filter((edge) => edge.source === source).map((edge) => edge.data?.params.route ?? '');
+  if (from?.type !== 'client' || taken.length === 0) return createEdge(source, target);
+  const free = from.data.params.routes.find((route) => !taken.includes(route.name));
+  return createEdge(source, target, free?.name ?? '');
 }
 
 /**
@@ -184,7 +198,7 @@ export function canConnect(nodes: FlowNode[], edges: FlowEdge[], source: string,
   try {
     const errors = (list: FlowEdge[]) =>
       lintDesign(toDesign(nodes, list)).filter((issue) => issue.level === 'error').length;
-    return errors([...edges, createEdge(source, target)]) <= errors(edges);
+    return errors([...edges, edgeToDraw(nodes, edges, source, target)]) <= errors(edges);
   } catch {
     return false;
   }
