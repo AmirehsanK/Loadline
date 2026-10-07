@@ -61,7 +61,8 @@ Passing earns one star. The other two are for a better answer to the same lesson
 different trick. There are three hints if you want them and, after the third, a solution.
 
 **The guide** is for anyone who would rather be shown, or who is stuck. It says how to read the
-screen and what the words mean, and has a lesson on every level: what is going wrong, the idea
+screen and what the words mean, and has a lesson on every level (a first visit to the workbench
+is also offered a one-minute tour of it): what is going wrong, the idea
 that fixes it and the name it goes by elsewhere, what to change step by step, why that is the best
 answer, and what else people try and what comes of it. The answer is run and scored on the page,
 and one button puts it on the canvas so you can watch it work. `npm run lessons` follows the steps
@@ -95,6 +96,10 @@ of every lesson in the editor, in a real browser, and checks that each earns thr
 The **sandbox** has every part and no objectives. Scale the traffic with a slider, or let it
 follow a ramp, steps, a wave or spikes. Kill an instance, slow a part down, empty a cache, fail a
 database over, cut a connection, and see what the rest of the system does about it.
+
+Put a design aside under a name with **Designs** and come back to it, and write on the drawing
+with a **Note**: words of your own, with a line to the part they are about. Notes travel with the
+design and are never simulated.
 
 ![The sandbox, with a service selected](docs/screenshots/sandbox.png)
 
@@ -340,7 +345,7 @@ Vite, React, Tailwind, [React Flow](https://reactflow.dev) for the canvas,
 ## Working on it
 
 ```bash
-npm run check                        # typecheck, lint, nearly 500 tests, build
+npm run check                        # typecheck, lint, nearly 570 tests, build
 npm test -w @loadline/engine         # one package
 npm run bench -w @loadline/engine    # events per second
 npm run browsers                     # the same runs in each installed browser as in Node

@@ -1,4 +1,4 @@
-/* global document -- the functions given to the page run in the page, not here */
+/* global document, localStorage -- the functions given to the page run in the page, not here */
 
 // Follows the guide's lesson on every level by hand, in the editor, and checks what it earns.
 //
@@ -23,6 +23,10 @@ const only = process.argv.slice(2);
 
 const browser = await chromium.launch({ channel: process.env.BROWSER === 'chrome' ? 'chrome' : 'msedge' });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, reducedMotion: 'reduce', locale: 'en-US' });
+// A visitor who has seen the tour: its offer sits where these steps drop new parts.
+await context.addInitScript(() => {
+  localStorage.setItem('loadline:tour:v1', 'seen');
+});
 const page = await context.newPage();
 const problems = [];
 page.on('console', (message) => {

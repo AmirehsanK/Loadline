@@ -161,6 +161,15 @@ falls behind, the UI shows the real speed; fidelity is never dropped silently.
   same rules; the editor only makes sure nobody finds out at the end of a run.
 - **Storage:** the sandbox design, the design in progress for each level, and the stars earned are
   each kept in localStorage under a versioned key. Saved data is validated like any other input.
+- **Designs kept by name:** the sandbox can put the design on the canvas aside under a name, and
+  open one again later, which replaces the canvas as a step undo takes back. The list is one more
+  key in localStorage, read back as input: an entry that is not a design that can be opened is
+  left out.
+- **Notes:** words on the drawing, and a dashed line from a note to a part it is about. They are
+  part of the design document, so links, files and storage carry them, and no part of a run reads
+  them: a design with notes hashes the same as it does without.
+- **A tour:** a first visit to the workbench is offered a walk round it, five stops, in a corner
+  where it is in nobody's way. It never starts by itself, and it is not offered twice.
 - **Worker protocol:** typed messages (load, reconfigure, play, pause, speed, multiplier, command →
   frame, failed). A frame is posted about ten times a second and carries the level's result so far.
 - **Traffic patterns:** in the sandbox the traffic is set by hand, or follows one of four shapes:
@@ -369,13 +378,16 @@ Sandbox mode has every component, manual faults and no objectives.
 
 | 10 | Content delivery and serverless: requests for files, CDN, object store, function | A test per behaviour; a level for each, with its lesson; the same hashes in every browser |
 
+| 11 | The rest of that comparison: shapes of traffic in the sandbox, notes on the drawing, designs kept by name, a tour of the workbench | Each looked at in a real browser in both languages; the stores behind them tested |
+
 Milestones 6, 7 and 8 are independent of each other and can be reordered. Milestones 0–5 already
 make a complete, deployed piece.
 
-**State on 6 October 2026.** All ten are built, and what each was to be checked by passes, with
+**State on 7 October 2026.** All twelve are built, and what each was to be checked by passes, with
 these exceptions:
 
-- 6: the Persian copy has not been reviewed, the guide's included.
+- 6: the Persian copy has not been reviewed, the guide's included, nor what milestones 10 and 11
+  added to it.
 - 7: the tests solve a level through the MCP tools and get a share link back, in memory and over
   standard input and output. No agent has been pointed at the server through `.mcp.json` yet.
 - 8: no review has been run with a real key.
@@ -423,7 +435,9 @@ What is run on demand, in a real browser:
 
 Data-correctness accounting (stale reads, lost writes, duplicates), export to docker-compose plus a
 load script, multi-region, sharding and hot partitions, accounts and leaderboards, real cloud
-pricing, mobile editing, multiplayer.
+pricing, mobile editing, multiplayer. From the comparison of milestone 10: traffic split into
+routes with weights of their own, and a CDN that makes one fetch serve everyone waiting for the
+same file.
 
 ## 11. Risks
 

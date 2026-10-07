@@ -56,7 +56,7 @@ export function Palette() {
   const addNote = useDesign((state) => state.addNote);
   const count = useDesign((state) => state.notes.length);
   return (
-    <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto border-e border-line bg-plate p-3" aria-labelledby="parts-title">
+    <aside data-tour="panel" className="flex min-h-0 flex-col gap-3 overflow-y-auto border-e border-line bg-plate p-3" aria-labelledby="parts-title">
       <h2 id="parts-title" className="marking">
         {m.parts.title}
       </h2>

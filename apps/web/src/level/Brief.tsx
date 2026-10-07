@@ -22,7 +22,7 @@ export function Brief({ level }: { level: Scenario }) {
   const parts = allowedParts(level);
 
   return (
-    <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto border-e border-line bg-plate p-3" aria-labelledby="level-title">
+    <aside data-tour="panel" className="flex min-h-0 flex-col gap-4 overflow-y-auto border-e border-line bg-plate p-3" aria-labelledby="level-title">
       <header className="flex flex-col gap-1.5">
         <p className="font-mono text-[0.85rem] text-ink-2">{m.level.number(index, LEVELS.length)}</p>
         <h2 id="level-title" className="marking text-[1.6rem]!">

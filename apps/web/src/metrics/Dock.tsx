@@ -34,6 +34,7 @@ export function Dock() {
     // The one row is pinned to the dock's height, so a long table scrolls inside it instead of
     // stretching it.
     <section
+      data-tour="numbers"
       className="grid h-64 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(0,1fr)] border-t border-line bg-plate"
       aria-labelledby="metrics-title"
     >

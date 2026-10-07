@@ -27,6 +27,8 @@ async function visitor(locale, stars = {}) {
     ([language, progress]) => {
       localStorage.setItem('loadline:locale:v1', language);
       localStorage.setItem('loadline:progress:v1', progress);
+      // The pictures are of the app in use, not of the offer a first visit gets.
+      localStorage.setItem('loadline:tour:v1', 'seen');
     },
     [locale, JSON.stringify(stars)],
   );

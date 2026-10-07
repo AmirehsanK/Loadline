@@ -14,6 +14,7 @@ import { Dock } from './metrics/Dock.tsx';
 import { HOME, hrefOf } from './route.ts';
 import { useRoute } from './session.ts';
 import { TopBar } from './topbar/TopBar.tsx';
+import { Tour } from './tour/Tour.tsx';
 
 export function App() {
   const m = useMessages();
@@ -77,6 +78,8 @@ function useHistoryKeys(): void {
 function Workbench() {
   const level = useDesign((state) => state.level);
   const slot = useDesign((state) => state.slot);
+  // A design from a link is somebody else's to look at; the tour is for a visitor's own bench.
+  const own = useDesign((state) => !state.transient);
   const payload = useRoute((state) => (state.route.page === 'shared' ? state.route.payload : ''));
   useHistoryKeys();
 
@@ -86,9 +89,10 @@ function Workbench() {
         <TopBar />
         <div className={`grid min-h-0 ${level ? 'grid-cols-[19rem_minmax(0,1fr)_19rem]' : 'grid-cols-[13rem_minmax(0,1fr)_20rem]'}`}>
           {level ? <Brief level={level} /> : <Palette />}
-          <main id="canvas" className="min-w-0">
+          <main id="canvas" data-tour="canvas" className="relative min-w-0">
             {/* A different design is a different canvas, fitted to the view afresh. */}
             <Canvas key={slot + payload} />
+            {own && <Tour inLevel={level !== null} />}
           </main>
           <Inspector />
         </div>

@@ -24,7 +24,7 @@ export function Inspector() {
   const issues = useSim((state) => state.issues);
 
   return (
-    <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto border-s border-line bg-plate p-3" aria-labelledby="settings-title">
+    <aside data-tour="settings" className="flex min-h-0 flex-col gap-4 overflow-y-auto border-s border-line bg-plate p-3" aria-labelledby="settings-title">
       <h2 id="settings-title" className="marking">
         {m.inspector.title}
       </h2>

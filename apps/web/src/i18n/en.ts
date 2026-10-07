@@ -147,6 +147,44 @@ export const en = {
     removeNamed: (name: string) => `Delete ${name}`,
     close: 'Close',
   },
+  tour: {
+    title: 'A tour of this screen',
+    offer: 'New here? A one-minute tour of this screen.',
+    start: 'Show me',
+    decline: 'No thanks',
+    again: 'Tour',
+    progress: (step: number, total: number) => `${step} of ${total}`,
+    next: 'Next',
+    back: 'Back',
+    done: 'Done',
+    skip: 'Skip the tour',
+    stops: {
+      brief: {
+        title: 'The brief',
+        text: 'What is wrong with this system, and what counts as fixing it. Each thing to achieve shows how the run stands against it. There are hints further down, and a lesson if you would rather be shown.',
+      },
+      parts: {
+        title: 'The parts',
+        text: 'Everything a design can be made of. Drag one onto the canvas, or press it. A note is for words of your own.',
+      },
+      canvas: {
+        title: 'The design',
+        text: 'Calls go from left to right. Drag from the dot on the edge of one part to another to connect them. Select a part or a connection to change it, and press Backspace to remove it.',
+      },
+      settings: {
+        title: 'Settings',
+        text: 'Whatever is selected has its settings here: how many instances, how long to wait for an answer, how many times to retry. Problems with the design are listed here too.',
+      },
+      run: {
+        title: 'Run',
+        text: 'Sends traffic through the design. Every request is simulated one by one and no failure is scripted, so what you see is what this design does.',
+      },
+      numbers: {
+        title: 'What clients saw',
+        text: 'How many requests failed and how slow the slow ones were, over time. On the far side: where the time is going and why requests failed, traced to the part responsible.',
+      },
+    },
+  },
   review: {
     button: 'Review',
     title: 'Ask for a review',

@@ -7,6 +7,7 @@ import { useLevelText, useMessages } from '../i18n/index.ts';
 import { BackIcon, BoltIcon, LoadMark, PauseIcon, PlayIcon, RedoIcon, RestartIcon, UndoIcon } from '../icons.tsx';
 import { Timeline, scriptOfLevel, scriptOfWorkload } from '../level/Timeline.tsx';
 import { ReviewButton } from '../review/ReviewDialog.tsx';
+import { useTour } from '../tour/state.ts';
 import { ShareButton } from '../share/ShareDialog.tsx';
 import { formatClock, formatCount } from '../metrics/format.ts';
 import { HOME, hrefOf } from '../route.ts';
@@ -29,6 +30,7 @@ export function TopBar() {
   const failure = useSim((state) => state.failure);
   const shared = useDesign((state) => state.transient);
   const running = status === 'running';
+  const startTour = useTour((state) => state.start);
 
   return (
     <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-plate px-4 py-2">
@@ -44,7 +46,7 @@ export function TopBar() {
         {m.level.back}
       </a>
 
-      <div className="flex items-center gap-1.5" role="group" aria-label={m.run.controls}>
+      <div data-tour="run" className="flex items-center gap-1.5" role="group" aria-label={m.run.controls}>
         <button
           type="button"
           disabled={status === 'blocked'}
@@ -77,6 +79,11 @@ export function TopBar() {
       {/* Kept together at the far end, so that a bar too narrow for one row does not strand either. */}
       <div className="ms-auto flex items-center gap-4">
         {!level && !workload && <Clock />}
+        {!shared && (
+          <button type="button" onClick={startTour} className="text-ink-2 underline hover:text-ink">
+            {m.tour.again}
+          </button>
+        )}
         <LocaleSwitch />
       </div>
 
