@@ -263,3 +263,78 @@ describe('undo and redo', () => {
     expect(design()).toEqual(shape(level('first-traffic').starter));
   });
 });
+
+describe('notes on the drawing', () => {
+  const noteIds = () => store().notes.map((note) => note.id);
+  const arrowsOf = () => store().arrows.map((arrow) => [arrow.source, arrow.target]);
+
+  it('are added, written in, and saved with the design, which runs as it did without them', () => {
+    const before = design();
+    store().addNote({ x: 10, y: 20 });
+    const [id] = noteIds();
+    store().writeNote(id!, 'the store is what is short');
+    expect(currentDesign(store())!.notes).toEqual([{ id: 'n1', text: 'the store is what is short', x: 10, y: 20, to: [] }]);
+    expect(design()).toEqual(before);
+
+    vi.advanceTimersByTime(1000);
+    store().open(SANDBOX_SLOT, designSchema.parse(STARTER), null);
+    expect(store().notes.map((note) => note.data.text)).toEqual(['the store is what is short']);
+  });
+
+  it('point at parts with a line that is not a connection', () => {
+    store().addNote({ x: 0, y: 0 });
+    const [id] = noteIds();
+    store().connect(link(id!, 'api'));
+    // Drawn twice it is still one line, and it cannot point at something that is not there.
+    store().connect(link(id!, 'api'));
+    store().connect(link(id!, 'nothing'));
+    expect(arrowsOf()).toEqual([[id, 'api']]);
+    expect(edgeIds()).toEqual(['users--api', 'api--store']);
+    expect(currentDesign(store())!.notes![0]!.to).toEqual(['api']);
+
+    vi.advanceTimersByTime(1000);
+    store().open(SANDBOX_SLOT, designSchema.parse(STARTER), null);
+    expect(arrowsOf()).toEqual([[id, 'api']]);
+  });
+
+  it('lose the line to a part that is removed, and go when they are deleted, lines and all', () => {
+    store().addNote({ x: 0, y: 0 });
+    const [id] = noteIds();
+    store().connect(link(id!, 'api'));
+    store().connect(link(id!, 'store'));
+    store().remove('node', 'store');
+    expect(arrowsOf()).toEqual([[id, 'api']]);
+
+    // The canvas deletes a note as it does a part: the lines from it first, then the note.
+    store().onEdgesChange(store().arrows.map((arrow) => ({ type: 'remove' as const, id: arrow.id })));
+    store().onNodesChange([{ type: 'remove', id: id! }]);
+    expect(noteIds()).toEqual([]);
+    expect(arrowsOf()).toEqual([]);
+    expect(nodeIds()).toEqual(['users', 'api']);
+    expect(currentDesign(store())!.notes).toBeUndefined();
+  });
+
+  it('are steps that undo takes back, a run of typing being one of them', () => {
+    store().addNote({ x: 0, y: 0 });
+    const [id] = noteIds();
+    later();
+    store().writeNote(id!, 'a');
+    store().writeNote(id!, 'ab');
+    store().undo();
+    expect(store().notes[0]!.data.text).toBe('');
+    store().undo();
+    expect(noteIds()).toEqual([]);
+    store().redo();
+    store().redo();
+    expect(store().notes[0]!.data.text).toBe('ab');
+  });
+
+  it('may be added and removed in a level, whatever the level locks', () => {
+    openLevel('first-traffic');
+    store().addNote({ x: 0, y: 0 });
+    const [id] = noteIds();
+    store().connect(link(id!, 'api'));
+    store().onNodesChange([{ type: 'remove', id: id! }]);
+    expect(noteIds()).toEqual([]);
+  });
+});

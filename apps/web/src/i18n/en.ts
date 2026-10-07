@@ -309,6 +309,12 @@ export const en = {
   canvas: {
     label: 'System design',
   },
+  notes: {
+    add: 'Note',
+    hint: 'Words on the drawing. Drag from its edge to a part to point at it.',
+    label: 'Note',
+    placeholder: 'Write a note',
+  },
   node: {
     perSecond: (rate: string) => `${rate}/s`,
     tail: (duration: string) => `p99 ${duration}`,

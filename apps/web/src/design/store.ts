@@ -8,8 +8,8 @@ import type { Connection, EdgeChange, NodeChange } from '@xyflow/react';
 import { create } from 'zustand';
 import { allowedParts, canRemove, canRemoveEdge, forcedSettings, lockedPaths } from '../level/rules.ts';
 import { getPath, setPath } from './fields.ts';
-import { STARTER, canConnect, createEdge, createNode, fromDesign, toDesign } from './model.ts';
-import type { FlowEdge, FlowNode } from './model.ts';
+import { STARTER, canConnect, createArrow, createEdge, createNode, createNote, fromDesign, isArrowId, isNoteId, toDesign } from './model.ts';
+import type { FlowArrow, FlowEdge, FlowNode, FlowNote } from './model.ts';
 
 /** Where the sandbox's design is kept between visits. */
 export const SANDBOX_SLOT = 'loadline:design:v1';
@@ -44,7 +44,12 @@ const SAVE_DELAY_MS = 400;
 interface Snapshot {
   nodes: FlowNode[];
   edges: FlowEdge[];
+  /** Notes on the drawing and the lines from them to parts. They are saved, and never simulated. */
+  notes: FlowNote[];
+  arrows: FlowArrow[];
 }
+
+const snapshot = ({ nodes, edges, notes, arrows }: Snapshot): Snapshot => ({ nodes, edges, notes, arrows });
 
 interface DesignState extends Snapshot {
   /** The storage key the design is saved under. */
@@ -59,11 +64,14 @@ interface DesignState extends Snapshot {
   /** What undo and redo go back and forward to. */
   past: Snapshot[];
   future: Snapshot[];
-  onNodesChange: (changes: NodeChange<FlowNode>[]) => void;
-  onEdgesChange: (changes: EdgeChange<FlowEdge>[]) => void;
+  /** Changes from the canvas, to parts and to notes alike; each goes to the list it belongs to. */
+  onNodesChange: (changes: NodeChange<FlowNode | FlowNote>[]) => void;
+  onEdgesChange: (changes: EdgeChange<FlowEdge | FlowArrow>[]) => void;
   connect: (connection: Connection) => void;
   /** Adds a part. `name` is what its kind is called, to name it "Service 2" and so on. */
   addNode: (type: NodeType, name: string, position: { x: number; y: number }) => void;
+  addNote: (position: { x: number; y: number }) => void;
+  writeNote: (id: string, text: string) => void;
   renameNode: (id: string, name: string) => void;
   /** Replaces a node's settings. */
   patchNode: (id: string, params: FlowNode['data']['params']) => void;
@@ -163,7 +171,7 @@ function remember(state: DesignState, step: string): Pick<DesignState, 'past' | 
   lastStep = step;
   lastStepAt = now;
   if (continues) return { past: state.past, future: [] };
-  return { past: [...state.past, { nodes: state.nodes, edges: state.edges }].slice(-HISTORY_LIMIT), future: [] };
+  return { past: [...state.past, snapshot(state)].slice(-HISTORY_LIMIT), future: [] };
 }
 
 /** Where a new connection goes among the ones the design already has. */
@@ -192,33 +200,67 @@ export const useDesign = create<DesignState>((set, get) => ({
 
   onNodesChange: (incoming) => {
     set((state) => {
-      const changes = incoming.filter((change) => change.type !== 'remove' || canRemove(state.level, change.id));
-      const moved = changes.flatMap((change) => (change.type === 'position' ? [change.id] : []));
-      const history = changes.some((change) => change.type === 'remove')
+      const idOf = (change: NodeChange<FlowNode | FlowNote>) => (change.type === 'add' || change.type === 'replace' ? change.item.id : change.id);
+      const allowed = incoming.filter((change) => change.type !== 'remove' || isNoteId(change.id) || canRemove(state.level, change.id));
+      const forNotes = allowed.filter((change) => isNoteId(idOf(change))) as NodeChange<FlowNote>[];
+      const forParts = allowed.filter((change) => !isNoteId(idOf(change))) as NodeChange<FlowNode>[];
+      const moved = allowed.flatMap((change) => (change.type === 'position' ? [change.id] : []));
+      const history = allowed.some((change) => change.type === 'remove')
         ? remember(state, 'delete')
         : moved.length > 0
           ? remember(state, `move:${moved.join(',')}`)
           : {};
-      return { ...history, nodes: applyNodeChanges(changes, state.nodes) };
+      return {
+        ...history,
+        ...(forParts.length > 0 ? { nodes: applyNodeChanges(forParts, state.nodes) } : {}),
+        ...(forNotes.length > 0 ? { notes: applyNodeChanges(forNotes, state.notes) } : {}),
+      };
     });
   },
   onEdgesChange: (incoming) => {
     set((state) => {
-      const changes = incoming.filter((change) => {
-        if (change.type !== 'remove') return true;
+      const idOf = (change: EdgeChange<FlowEdge | FlowArrow>) => (change.type === 'add' || change.type === 'replace' ? change.item.id : change.id);
+      const allowed = incoming.filter((change) => {
+        if (change.type !== 'remove' || isArrowId(change.id)) return true;
         const edge = state.edges.find((candidate) => candidate.id === change.id);
         return !edge || canRemoveEdge(state.level, edge);
       });
-      const history = changes.some((change) => change.type === 'remove') ? remember(state, 'delete') : {};
-      return { ...history, edges: applyEdgeChanges(changes, state.edges) };
+      const forArrows = allowed.filter((change) => isArrowId(idOf(change))) as EdgeChange<FlowArrow>[];
+      const forEdges = allowed.filter((change) => !isArrowId(idOf(change))) as EdgeChange<FlowEdge>[];
+      const history = allowed.some((change) => change.type === 'remove') ? remember(state, 'delete') : {};
+      return {
+        ...history,
+        ...(forEdges.length > 0 ? { edges: applyEdgeChanges(forEdges, state.edges) } : {}),
+        ...(forArrows.length > 0 ? { arrows: applyEdgeChanges(forArrows, state.arrows) } : {}),
+      };
     });
   },
   connect: ({ source, target }) => {
-    set((state) =>
-      canConnect(state.nodes, state.edges, source, target)
+    set((state) => {
+      if (isNoteId(source)) {
+        // A line drawn from a note points at a part. It is not a call, so nothing checks it but this.
+        const drawn = state.arrows.some((arrow) => arrow.source === source && arrow.target === target);
+        if (drawn || !state.nodes.some((node) => node.id === target)) return state;
+        return { ...remember(state, 'connect'), arrows: [...state.arrows, createArrow(source, target)] };
+      }
+      return canConnect(state.nodes, state.edges, source, target)
         ? { ...remember(state, 'connect'), edges: withEdge(state, createEdge(source, target)) }
-        : state,
-    );
+        : state;
+    });
+  },
+  addNote: (position) => {
+    set((state) => ({
+      ...remember(state, 'add'),
+      nodes: state.nodes.map((node) => ({ ...node, selected: false })),
+      edges: state.edges.map((edge) => ({ ...edge, selected: false })),
+      notes: [...state.notes.map((note) => ({ ...note, selected: false })), { ...createNote(state.notes, position), selected: true }],
+    }));
+  },
+  writeNote: (id, text) => {
+    set((state) => ({
+      ...remember(state, `write:${id}`),
+      notes: state.notes.map((note) => (note.id === id ? { ...note, data: { text } } : note)),
+    }));
   },
   addNode: (type, name, position) => {
     set((state) => {
@@ -275,6 +317,7 @@ export const useDesign = create<DesignState>((set, get) => ({
         ...remember(state, 'delete'),
         nodes: state.nodes.filter((node) => node.id !== id),
         edges: state.edges.filter((edge) => edge.source !== id && edge.target !== id),
+        arrows: state.arrows.filter((arrow) => arrow.target !== id),
       };
     });
   },
@@ -335,7 +378,7 @@ export const useDesign = create<DesignState>((set, get) => ({
       return {
         ...previous,
         past: state.past.slice(0, -1),
-        future: [...state.future, { nodes: state.nodes, edges: state.edges }],
+        future: [...state.future, snapshot(state)],
       };
     });
   },
@@ -346,7 +389,7 @@ export const useDesign = create<DesignState>((set, get) => ({
       lastStep = '';
       return {
         ...next,
-        past: [...state.past, { nodes: state.nodes, edges: state.edges }],
+        past: [...state.past, snapshot(state)],
         future: state.future.slice(0, -1),
       };
     });
@@ -356,7 +399,7 @@ export const useDesign = create<DesignState>((set, get) => ({
 /** The design as the engine sees it, or null while an edit has left it out of bounds. */
 export function currentDesign(state: Snapshot): Design | null {
   try {
-    return toDesign(state.nodes, state.edges);
+    return toDesign(state.nodes, state.edges, '', state.notes, state.arrows);
   } catch {
     return null;
   }
@@ -379,9 +422,8 @@ function saveNow(): void {
 
 useDesign.subscribe((state, previous) => {
   if (opening || state.transient) return;
-  if (state.nodes === previous.nodes && state.edges === previous.edges && state.workload === previous.workload && state.seed === previous.seed) {
-    return;
-  }
+  const drawing = state.nodes === previous.nodes && state.edges === previous.edges && state.notes === previous.notes && state.arrows === previous.arrows;
+  if (drawing && state.workload === previous.workload && state.seed === previous.seed) return;
   unsaved = state;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveNow, SAVE_DELAY_MS);

@@ -1,23 +1,31 @@
 import type { NodeType } from '@loadline/engine';
 import { Background, BackgroundVariant, Controls, ReactFlow, useReactFlow } from '@xyflow/react';
+import { useMemo } from 'react';
 import type { DragEvent } from 'react';
-import { canConnect } from '../design/model.ts';
-import type { FlowEdge, FlowNode } from '../design/model.ts';
+import { canConnect, isNoteId } from '../design/model.ts';
+import type { FlowArrow, FlowEdge, FlowNode, FlowNote } from '../design/model.ts';
 import { useDesign } from '../design/store.ts';
 import { useMessages } from '../i18n/index.ts';
 import { canRemove, canRemoveEdge } from '../level/rules.ts';
 import { useSim } from '../sim/store.ts';
 import { FlowEdgeView } from './FlowEdgeView.tsx';
 import { PART_MIME } from './Palette.tsx';
+import { NoteView } from './NoteView.tsx';
 import { NODE_VIEWS } from './nodes.tsx';
 
 const edgeTypes = { flow: FlowEdgeView };
+const nodeTypes = { ...NODE_VIEWS, note: NoteView };
 
 /** The design, drawn. With `readOnly` it can be panned and zoomed and nothing else. */
 export function Canvas({ readOnly = false }: { readOnly?: boolean }) {
   const m = useMessages();
   const nodes = useDesign((state) => state.nodes);
   const edges = useDesign((state) => state.edges);
+  const notes = useDesign((state) => state.notes);
+  const arrows = useDesign((state) => state.arrows);
+  // Notes are drawn under the parts they are about, and their lines under the connections.
+  const drawnNodes = useMemo(() => [...notes, ...nodes], [notes, nodes]);
+  const drawnEdges = useMemo(() => [...arrows, ...edges], [arrows, edges]);
   const onNodesChange = useDesign((state) => state.onNodesChange);
   const onEdgesChange = useDesign((state) => state.onEdgesChange);
   const connect = useDesign((state) => state.connect);
@@ -43,20 +51,23 @@ export function Canvas({ readOnly = false }: { readOnly?: boolean }) {
       }}
       onDrop={onDrop}
     >
-      <ReactFlow<FlowNode, FlowEdge>
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={NODE_VIEWS}
+      <ReactFlow<FlowNode | FlowNote, FlowEdge | FlowArrow>
+        nodes={drawnNodes}
+        edges={drawnEdges}
+        nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={connect}
-        isValidConnection={({ source, target }) => canConnect(nodes, edges, source, target)}
-        // The delete key takes out only what the level lets go.
+        isValidConnection={({ source, target }) =>
+          // A note may point at any part; a part may only call what the engine lets it call.
+          isNoteId(source) ? !isNoteId(target) : !isNoteId(target) && canConnect(nodes, edges, source, target)
+        }
+        // The delete key takes out only what the level lets go. A note is nobody's but the player's.
         onBeforeDelete={({ nodes: doomedNodes, edges: doomedEdges }) =>
           Promise.resolve({
-            nodes: doomedNodes.filter((node) => canRemove(level, node.id)),
-            edges: doomedEdges.filter((edge) => canRemoveEdge(level, edge)),
+            nodes: doomedNodes.filter((node) => isNoteId(node.id) || canRemove(level, node.id)),
+            edges: doomedEdges.filter((edge) => isNoteId(edge.source) || canRemoveEdge(level, edge)),
           })
         }
         fitView

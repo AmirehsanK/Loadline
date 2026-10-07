@@ -141,3 +141,32 @@ describe('connecting parts', () => {
     }
   });
 });
+
+describe('notes', () => {
+  const noted = designSchema.parse({
+    ...STARTER,
+    notes: [
+      { id: 'why', text: 'slow on purpose', x: 5, y: -40, to: ['store', 'gone'] },
+      { id: 'todo', text: '' },
+    ],
+  });
+
+  it('come through the canvas unchanged, less a line to a part that is not there', () => {
+    const { nodes, edges, notes, arrows } = fromDesign(noted);
+    expect(arrows.map((arrow) => [arrow.source, arrow.target])).toEqual([['note:why', 'store']]);
+    expect(toDesign(nodes, edges, noted.name, notes, arrows).notes).toEqual([
+      { id: 'why', text: 'slow on purpose', x: 5, y: -40, to: ['store'] },
+      { id: 'todo', text: '', x: 0, y: 0, to: [] },
+    ]);
+  });
+
+  it('are not part of what a run depends on', () => {
+    expect(simulationKey(noted)).toBe(simulationKey(designSchema.parse(STARTER)));
+    expect(structureKey(noted)).toBe(structureKey(designSchema.parse(STARTER)));
+  });
+
+  it('leave a design without any written exactly as before', () => {
+    const { nodes, edges } = fromDesign(designSchema.parse(STARTER));
+    expect('notes' in toDesign(nodes, edges)).toBe(false);
+  });
+});

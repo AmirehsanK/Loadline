@@ -49,6 +49,7 @@ const EDGES =
 const DOCUMENT =
   'A design is { name?, nodes: [{ id, type, name?, x?, y?, params? }], edges: [{ id, from, to, params? }] }. Ids are 1-64 letters, digits, "_" or "-". ' +
   'Every setting left out takes the default shown here. All times are in milliseconds. ' +
+  'A design may also carry notes: [{ id, text, x?, y?, to?: [part ids] }], words on the drawing that the simulation ignores. ' +
   'A duration of work is { kind: "const" | "exp" | "lognormal", mean, cv? }. ' +
   'Costs are made-up dollars a month: an instance is 15 + 3 per slot, a database server 40 + 12 per core, a cache 10 + 2 per 1000 items, a load balancer 20, a rate limiter 10, a queue 15, a CDN 25, an object store 5. ' +
   'A function has no fixed cost: 24 for each environment busy all month (so in proportion to the time its calls take), plus 6 for each provisioned one.';

@@ -1,5 +1,5 @@
 import { designSchema, edgeSchema, lintDesign, nodeSchema } from '@loadline/engine';
-import type { Design, DesignEdge, DesignInput, DesignNode, NodeType } from '@loadline/engine';
+import type { Design, DesignEdge, DesignInput, DesignNode, DesignNote, NodeType } from '@loadline/engine';
 import { MarkerType } from '@xyflow/react';
 import type { Edge, Node } from '@xyflow/react';
 
@@ -10,6 +10,16 @@ import type { Edge, Node } from '@xyflow/react';
 export type FlowNodeOf<T extends NodeType> = Node<{ name: string; params: Extract<DesignNode, { type: T }>['params'] }, T>;
 export type FlowNode = { [T in NodeType]: FlowNodeOf<T> }[NodeType];
 export type FlowEdge = Edge<{ params: DesignEdge['params'] }, 'flow'>;
+/** A note on the drawing, and the line from a note to a part it points at. Neither is simulated. */
+export type FlowNote = Node<{ text: string }, 'note'>;
+export type FlowArrow = Edge<Record<string, never>, 'straight'>;
+
+// A note's id on the canvas has a colon in it, which the id of a part cannot have, so the two can
+// share one canvas without ever being taken for each other.
+const NOTE_PREFIX = 'note:';
+export const isNoteId = (id: string): boolean => id.startsWith(NOTE_PREFIX);
+const arrowId = (note: string, part: string) => `${note}>${part}`;
+export const isArrowId = (id: string): boolean => id.startsWith(NOTE_PREFIX);
 
 /** What a new visitor sees: a small system that copes at normal traffic and saturates at about 1.6x. */
 export const STARTER: DesignInput = {
@@ -52,8 +62,42 @@ const toFlowEdge = (edge: DesignEdge): FlowEdge => ({
   data: { params: edge.params },
 });
 
-export function fromDesign(design: Design): { nodes: FlowNode[]; edges: FlowEdge[] } {
+/** The line from a note to a part: dashed, so that it is not taken for a connection. */
+export function createArrow(note: string, part: string): FlowArrow {
   return {
+    id: arrowId(note, part),
+    type: 'straight',
+    source: note,
+    target: part,
+    markerEnd: ARROW,
+    style: { stroke: ARROW.color, strokeDasharray: '5 4' },
+  };
+}
+
+const toFlowNote = (note: DesignNote): FlowNote => ({
+  id: `${NOTE_PREFIX}${note.id}`,
+  type: 'note',
+  position: { x: note.x, y: note.y },
+  data: { text: note.text },
+});
+
+/** A new, empty note with an unused id. */
+export function createNote(notes: FlowNote[], position: { x: number; y: number }): FlowNote {
+  const taken = new Set(notes.map((note) => note.id));
+  let n = 1;
+  while (taken.has(`${NOTE_PREFIX}n${n}`)) n++;
+  return toFlowNote({ id: `n${n}`, text: '', x: position.x, y: position.y, to: [] });
+}
+
+export function fromDesign(design: Design): { nodes: FlowNode[]; edges: FlowEdge[]; notes: FlowNote[]; arrows: FlowArrow[] } {
+  const parts = new Set(design.nodes.map((node) => node.id));
+  const notes = design.notes ?? [];
+  return {
+    notes: notes.map(toFlowNote),
+    // A note may point at a part that has since gone; that line is simply not drawn.
+    arrows: notes.flatMap((note) =>
+      [...new Set(note.to)].filter((part) => parts.has(part)).map((part) => createArrow(`${NOTE_PREFIX}${note.id}`, part)),
+    ),
     nodes: design.nodes.map(
       (node) =>
         ({
@@ -69,9 +113,20 @@ export function fromDesign(design: Design): { nodes: FlowNode[]; edges: FlowEdge
   };
 }
 
-export function toDesign(nodes: FlowNode[], edges: FlowEdge[], name = ''): Design {
+export function toDesign(nodes: FlowNode[], edges: FlowEdge[], name = '', notes: FlowNote[] = [], arrows: FlowArrow[] = []): Design {
   return designSchema.parse({
     name,
+    ...(notes.length === 0
+      ? {}
+      : {
+          notes: notes.map((note) => ({
+            id: note.id.slice(NOTE_PREFIX.length),
+            text: note.data.text,
+            x: Math.round(note.position.x),
+            y: Math.round(note.position.y),
+            to: arrows.filter((arrow) => arrow.source === note.id).map((arrow) => arrow.target),
+          })),
+        }),
     nodes: nodes.map((node) => ({
       id: node.id,
       type: node.type,

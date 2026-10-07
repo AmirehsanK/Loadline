@@ -179,6 +179,16 @@ export function WorkerIcon() {
   );
 }
 
+/** A sheet with a corner turned down. */
+export function NoteIcon() {
+  return (
+    <Icon size={16}>
+      <path d="M3 2.5h7L13 5.5v8H3v-11Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M10 2.5v3h3M5.5 8h5M5.5 10.5h3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </Icon>
+  );
+}
+
 export function UndoIcon() {
   return (
     <Icon>

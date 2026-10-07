@@ -213,11 +213,26 @@ export const edgeSchema = z.object({
   params: edgeParamsSchema.prefault({}),
 });
 
+/**
+ * Words on the drawing, for whoever reads it. Like a part's name and place, a note is carried with
+ * the design and the simulation never looks at it.
+ */
+export const noteSchema = z.object({
+  id: idSchema,
+  text: z.string().max(500).default(''),
+  x: coordinateSchema,
+  y: coordinateSchema,
+  /** The parts it points at. */
+  to: z.array(idSchema).max(8).default([]),
+});
+
 export const designSchema = z.object({
   version: z.literal(1).default(1),
   name: z.string().max(120).default(''),
   nodes: z.array(nodeSchema).max(200).default([]),
   edges: z.array(edgeSchema).max(500).default([]),
+  // Left out altogether when there are none, so a design without notes is written as it always was.
+  notes: z.array(noteSchema).max(100).optional(),
 });
 
 const optionalDuration = duration(86_400_000).optional();
@@ -275,6 +290,7 @@ export type CdnNode = z.output<typeof cdnNodeSchema>;
 export type ObjectStoreNode = z.output<typeof objectStoreNodeSchema>;
 export type FunctionNode = z.output<typeof functionNodeSchema>;
 export type DesignEdge = z.output<typeof edgeSchema>;
+export type DesignNote = z.output<typeof noteSchema>;
 export type EdgeParams = z.output<typeof edgeParamsSchema>;
 export type NodeType = DesignNode['type'];
 export type Command = z.output<typeof commandSchema>;

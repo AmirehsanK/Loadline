@@ -312,6 +312,12 @@ export const fa: Messages = {
   canvas: {
     label: 'طرح سیستم',
   },
+  notes: {
+    add: 'یادداشت',
+    hint: 'نوشته‌ای روی طرح. برای اشاره به یک قطعه، از لبهٔ آن تا قطعه خط بکشید.',
+    label: 'یادداشت',
+    placeholder: 'یادداشتی بنویسید',
+  },
   node: {
     perSecond: (rate: string) => `${rate}/s`,
     tail: (duration: string) => `p99 ${duration}`,

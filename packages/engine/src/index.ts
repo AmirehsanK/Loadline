@@ -26,6 +26,7 @@ export type {
   DesignEdge,
   DesignInput,
   DesignNode,
+  DesignNote,
   EdgeParams,
   FunctionNode,
   LoadBalancerNode,

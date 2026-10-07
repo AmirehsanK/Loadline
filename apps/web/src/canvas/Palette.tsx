@@ -1,6 +1,7 @@
 import type { NodeType } from '@loadline/engine';
 import { useDesign } from '../design/store.ts';
 import { useMessages } from '../i18n/index.ts';
+import { NoteIcon } from '../icons.tsx';
 import { allowedParts } from '../level/rules.ts';
 import { PART_ICONS } from './nodes.tsx';
 
@@ -52,12 +53,32 @@ export function PartsList({ types }: { types: readonly NodeType[] }) {
 /** The left-hand panel of the sandbox: every kind of part. */
 export function Palette() {
   const m = useMessages();
+  const addNote = useDesign((state) => state.addNote);
+  const count = useDesign((state) => state.notes.length);
   return (
     <aside className="flex min-h-0 flex-col gap-3 overflow-y-auto border-e border-line bg-plate p-3" aria-labelledby="parts-title">
       <h2 id="parts-title" className="marking">
         {m.parts.title}
       </h2>
       <PartsList types={allowedParts(null)} />
+      <button
+        type="button"
+        aria-describedby="note-hint"
+        onClick={() => {
+          addNote({ x: 40 + (count % 6) * 30, y: -80 - (count % 6) * 30 });
+        }}
+        className="flex w-full items-start gap-2 rounded-[3px] border border-dashed border-ink-3 px-2 py-1.5 text-start hover:border-ink"
+      >
+        <span className="mt-0.5 text-ink">
+          <NoteIcon />
+        </span>
+        <span>
+          <span className="block font-bold">{m.notes.add}</span>
+          <span id="note-hint" className="block text-[0.85rem] leading-snug text-ink-2">
+            {m.notes.hint}
+          </span>
+        </span>
+      </button>
     </aside>
   );
 }
