@@ -5,15 +5,38 @@
 // Every figure here is a setting of the level or follows from one, and every line under `others`
 // is a row of `packages/scenarios/test/attempts.ts`, which the tests run. If a level is retuned,
 // read its guide again with the level's brief, hints and debrief.
+//
+// A lesson is written for someone who has not met these parts before. So before it says what is
+// wrong, it says what each part on the canvas is and what the words mean, and after the steps it
+// says what each setting they touched does. A lesson repeats what an earlier one explained: a
+// reader may open any of them first.
+
+/** Something named, and what it is. */
+export interface GuideEntry {
+  term: string;
+  text: string;
+}
 
 /** What the guide says about one level. The level's own title and brief are not repeated. */
 export interface LevelGuide {
+  /**
+   * The parts in this level and what each one is and does here. A part the level starts with goes
+   * by the name it has on the canvas, and one the player adds by the name of its kind. A test
+   * checks both, and that no part the level starts with is left out.
+   */
+  parts: GuideEntry[];
+  /** The words this lesson uses that a newcomer may not know. */
+  words: GuideEntry[];
   /** What is going on, and why the design the level starts from cannot cope. */
   problem: string;
   /** The idea that fixes it, with the name it goes by elsewhere. */
   idea: string;
   /** What to change on the canvas, in order. Together they make the level's reference design. */
   steps: string[];
+  /** What each setting the steps change does, by its label in the inspector, which a test checks. */
+  settings: GuideEntry[];
+  /** What to look at while it runs, before the change and after it. */
+  watch: string[];
   /** Why that is the best answer: what each change buys. */
   why: string;
   /** What else a player might try, and what comes of it. */
@@ -22,6 +45,63 @@ export interface LevelGuide {
 
 export const guideEn: Record<string, LevelGuide> = {
   'first-traffic': {
+    parts: [
+      {
+        term: 'Users',
+        text:
+          'A client. It stands for everyone using the system, and it is where requests come from. It sends them at a set rate ' +
+          'whether or not answers come back, as a real crowd does. Here the rate climbs to 300 a second. It is fixed: this is ' +
+          'the load you have to carry.',
+      },
+      {
+        term: 'API',
+        text:
+          'A service: a program that does some work for each request and then answers. One running copy of it is an instance. ' +
+          'An instance works on 8 requests at a time, and each of those places is a slot. A request that finds every slot taken ' +
+          'waits in the waiting room, which holds 64, and one that finds that full as well is turned away at once.',
+      },
+      {
+        term: 'Load balancer',
+        text:
+          'The part you will add. It does no work of its own. It stands in front of a service and hands each call to one of ' +
+          'its instances, so that they share the load.',
+      },
+    ],
+    words: [
+      { term: 'Request', text: 'One thing a user asks for: a page, a search, a purchase. It succeeds if an answer comes back in time, and fails if it does not.' },
+      {
+        term: 'Capacity',
+        text:
+          'How many requests a part can finish each second. For a service it is the number of slots divided by the time one ' +
+          'request takes: 8 slots at 40 ms each finish about 200 a second.',
+      },
+      {
+        term: 'How busy',
+        text:
+          'The share of slots in use, which is what the gauge on a part shows. 300 requests a second where there is room for ' +
+          '400 is 75% busy. The line across the gauge, the load line, is at 80%.',
+      },
+      {
+        term: 'p99',
+        text:
+          'The level asks for 99% of requests under 500 ms. Line up every answer from the fastest to the slowest: p99 is the ' +
+          'time of the one that is 99% of the way along. It is what the unlucky requests get, and it is the first number to go ' +
+          'bad when a queue forms.',
+      },
+    ],
+    settings: [
+      {
+        term: 'Instances',
+        text:
+          'How many copies of the service are running. Each has its own slots and its own waiting room, and each is paid for ' +
+          'by the month. By itself the setting changes nothing: with no balancer in front, every call still goes to the first copy.',
+      },
+    ],
+    watch: [
+      'Before you change anything, press Run and watch the gauge on API while traffic climbs, from 0:15 to 0:30. Once it passes the load line, a count of waiting requests appears on the part and grows, and soon after that the Failed number under the canvas starts to rise.',
+      'After the change, the same climb leaves the gauge at about three quarters. Nothing waits for long, and p99 stays well under 500 ms.',
+      'Look at the cost under the canvas as well. It went up with the second instance: that is what room to spare costs.',
+    ],
     problem:
       'One instance works on 8 requests at a time and each takes about 40 ms, so it finishes about 200 a second. Traffic climbs to 300. ' +
       'From the moment more arrives than can be finished, the waiting room fills, everyone in it waits, and what does not fit is turned ' +
@@ -48,6 +128,55 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'read-heavy': {
+    parts: [
+      {
+        term: 'Readers',
+        text:
+          'A client: the people using the site. They send 450 requests a second, and 95 in every 100 only read. There are ' +
+          '20,000 different items to ask about, but demand is very uneven: a few favourites get most of the requests.',
+      },
+      {
+        term: 'API',
+        text:
+          'A service. Here it does very little itself, about 2 ms of work, and then asks the database for the item, holding ' +
+          'its slot while it waits for the answer.',
+      },
+      {
+        term: 'Database',
+        text:
+          'Where the data is kept. Each read or write is a query, and a query runs on a core. This one has 4 cores and a query ' +
+          'takes about 12 ms, so at full speed it finishes about 330 a second. Given more queries than cores, they share the ' +
+          'cores and every one of them slows down. In this level it cannot be changed.',
+      },
+      {
+        term: 'Cache',
+        text:
+          'The part you will add. A small, fast memory of recent answers. The API asks it first. If the item is there, which is ' +
+          'a hit, the answer comes back at once. If it is not, a miss, the API asks the database and the cache remembers the ' +
+          'answer for the next reader.',
+      },
+    ],
+    words: [
+      {
+        term: 'Read and write',
+        text: 'A read asks for data and changes nothing, so the answer one reader got will do for the next. A write changes data, and has to reach the database.',
+      },
+      { term: 'Query', text: 'One question put to a database, or one change made to it.' },
+      { term: 'Share of hits', text: 'The share of reads the cache answered by itself. The Cache shows it on the canvas while the level runs.' },
+    ],
+    settings: [
+      {
+        term: 'Items it can hold',
+        text:
+          'The size of the cache. When it is full, the item that has gone longest without being asked for is dropped to make ' +
+          'room for a new one. A larger cache costs more.',
+      },
+    ],
+    watch: [
+      'Before the change, the gauge on Database is at the top and the part says how many queries too many it has at once. Over a third of requests fail.',
+      'After it, watch the first seconds closely. The cache starts empty, so the database carries everything. Then the share of hits on the Cache climbs and the gauge on Database comes down.',
+      'Try a smaller cache and a larger one and compare the share of hits. It rises quickly at first and then hardly at all: that is the uneven demand at work.',
+    ],
     problem:
       '450 requests a second arrive, and 95 in every 100 are reads. Each read is a query, and the database finishes about 330 a second ' +
       'at full speed: 4 cores, 12 ms a query. It cannot be made bigger. So it falls behind, the queries that pile up share its cores and ' +
@@ -71,6 +200,49 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'pool-party': {
+    parts: [
+      { term: 'Users', text: 'A client, sending 300 requests a second. It is fixed.' },
+      {
+        term: 'API',
+        text:
+          'A service with slots to spare: 128 of them. It does 1 ms of work and then runs a query on the database, holding its ' +
+          'slot until the answer is back.',
+      },
+      {
+        term: 'Database',
+        text:
+          'Stores the data. It has 4 cores and a query takes 10 ms, so at full speed it finishes 400 a second. It accepts ' +
+          'hundreds of connections, and that is the trouble: accepting a query is not the same as having a core free to run it.',
+      },
+    ],
+    words: [
+      { term: 'Connection', text: 'The line a caller keeps open to another part while a call is in progress. One connection carries one query at a time.' },
+      {
+        term: 'Connection pool',
+        text:
+          'A fixed number of connections that the caller shares out. A request that needs the database while all of them are in ' +
+          'use waits, in order, for one to be handed back.',
+      },
+      {
+        term: 'Sharing cores',
+        text:
+          'Four cores run four queries at once. Forty queries on four cores take turns, so each takes about ten times as long, ' +
+          'and a little more is lost in switching between them. That is why a crowded database finishes less than a calm one.',
+      },
+    ],
+    settings: [
+      {
+        term: 'Connections per instance',
+        text:
+          'The size of the pool on this connection: how many calls each instance of the caller may have in progress to the ' +
+          'other part at once. 0 means no limit, which is how the level starts.',
+      },
+    ],
+    watch: [
+      'Before the change, the traffic never passes what the database can do, and yet after the first burst its gauge goes to the top and stays there. The panel that says where the time goes reports that it is running more queries than it has cores for.',
+      'After it, the gauge on Database settles at about three quarters, and the waiting, when there is any, shows on API instead: a few requests, for a moment.',
+      'Then set the pool to 2 and run it again. Now API is the part that waits, for a free connection, while the database is half idle.',
+    ],
     problem:
       'The database has 4 cores and a query takes 10 ms, so at full speed it finishes 400 a second, and only 300 are asked for. But the ' +
       'API opens as many connections as it likes. One burst puts more than four queries on the cores at once. They share the cores, so ' +
@@ -91,6 +263,58 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'slow-dependency': {
+    parts: [
+      {
+        term: 'Shoppers',
+        text:
+          'A client, sending 200 requests a second. Four in five are browsing, which only reads. One in five is a purchase, ' +
+          'which writes: 40 a second.',
+      },
+      {
+        term: 'Shop',
+        text:
+          'A service, and the one that is yours. It has 32 slots and does 5 ms of work on each request. For a purchase it then ' +
+          'calls Payments and waits for the answer, holding its slot.',
+      },
+      {
+        term: 'Payments',
+        text:
+          'Another service, standing for one that somebody else runs. It normally answers in 20 ms. At 0:20 it becomes a ' +
+          'hundred times slower, two seconds a call, and stays that way for forty seconds. Nothing about it can be changed.',
+      },
+    ],
+    words: [
+      { term: 'Dependency', text: 'A part that another part needs in order to answer. Payments is a dependency of Shop.' },
+      {
+        term: 'Waiting for the answer',
+        text:
+          'When one part calls another and waits, it keeps its own slot until the answer comes. So a slow part at the back can ' +
+          'fill up a healthy part in front of it.',
+      },
+      {
+        term: 'Failing fast',
+        text: 'Giving up early on purpose. A request that fails in a fraction of a second costs far less than one that waits for seconds and fails anyway.',
+      },
+      {
+        term: 'Circuit breaker',
+        text:
+          'A switch on a connection. When enough recent calls have failed it stops calling for a while, so that callers fail at ' +
+          'once, and then lets a call through to see whether the other part has recovered. This level can be passed without one.',
+      },
+    ],
+    settings: [
+      {
+        term: 'Give up after',
+        text:
+          'The timeout on this connection: how long the caller waits for an answer before it gives up and counts the call as ' +
+          'failed. Its slot is given back at that moment. The work at the other end is not cancelled.',
+      },
+    ],
+    watch: [
+      'Before the change, watch Shop when Payments turns slow at 0:20. Its gauge goes to the top within a second or two, though Shop itself is doing almost no work: its slots are full of purchases that are waiting.',
+      'After it, the gauge on Shop rises a little and stays under the load line. Browsing carries on as if nothing had happened.',
+      'The failures that are left are the purchases made while Payments is slow. The panel that says why requests failed names Payments, not Shop.',
+    ],
     problem:
       'A fifth of the traffic is purchases, 40 a second, and each calls Payments. When Payments takes two seconds a call, every purchase ' +
       "holds one of the Shop's slots for two seconds: 80 slots wanted, and the Shop has 32. Browsing never touches Payments, but it " +
@@ -112,6 +336,52 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'retry-storm': {
+    parts: [
+      {
+        term: 'Users',
+        text:
+          'A client, sending 400 requests a second. It waits 150 ms for an answer, and as the level starts it sends a failed ' +
+          'call again at once, up to three times.',
+      },
+      {
+        term: 'API',
+        text:
+          'A service with 16 slots. A request takes about 30 ms, so it can finish about 530 a second. Its waiting room holds ' +
+          '512. At 0:20 it becomes three times slower, for five seconds.',
+      },
+    ],
+    words: [
+      { term: 'Retry', text: 'Sending a call again after it failed or timed out. It hides a brief fault from the user, and it is extra load.' },
+      {
+        term: 'Work for nobody',
+        text:
+          'A timeout ends the waiting, not the work. The call that was given up on keeps its place in the waiting room and is ' +
+          'served when its turn comes, though nobody wants the answer any more.',
+      },
+      { term: 'Backoff', text: 'Waiting before a retry, and longer before each further one.' },
+      { term: 'Jitter', text: 'Randomness added to a wait, so that callers who failed at the same moment do not all come back at the same moment.' },
+      { term: 'Load shedding', text: 'Turning work away early, on purpose, so that the work that is accepted can still be finished in time.' },
+    ],
+    settings: [
+      {
+        term: 'Waiting room, per instance',
+        text:
+          'How many requests may wait for a free slot. A long one lets requests wait longer than anyone will wait for them. A ' +
+          'short one refuses them at once when the service is busy, which is quicker for everybody.',
+      },
+      { term: 'Retries', text: 'How many more times the caller sends a call that failed or timed out. 2 means up to 3 tries in all.' },
+      { term: 'Wait before the first retry', text: 'How long the caller waits before it sends the call a second time. 0 sends it again at once.' },
+      { term: 'Each further wait is longer by', text: 'What each wait is multiplied by to give the next one. With 2, a wait of 50 ms is followed by one of 100 ms.' },
+      {
+        term: 'Randomise the wait',
+        text: 'With 0 every retry comes exactly on time. With 1 each comes at a moment picked at random between no wait at all and the full wait.',
+      },
+    ],
+    watch: [
+      'Before the change, compare the rate shown on Users with the rate arriving at API once the slow spell is over, at 0:25. The API is receiving several times what the users send, and its waiting room never empties.',
+      'After it, some calls are refused during the slow five seconds, and a few seconds later everything is as it was before.',
+      'In the panel that says why requests failed, the storm reads as calls that timed out waiting in line at API. With the short waiting room those are gone.',
+    ],
     problem:
       'The API can finish about 530 requests a second and gets 400. For five seconds it is three times slower, and calls start to pass ' +
       'the 150 ms the users will wait. Every call that times out is tried again at once, up to three times: up to four times the ' +
@@ -139,6 +409,61 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'write-burst': {
+    parts: [
+      {
+        term: 'Customers',
+        text: 'A client that places orders, 80 a second. Every one is a write. At 0:20 a sale begins, and for ten seconds 400 a second arrive.',
+      },
+      {
+        term: 'Orders',
+        text:
+          'The service that takes an order. It has plenty of slots and does 2 ms of work, and then has the order recorded ' +
+          'before it answers the customer.',
+      },
+      {
+        term: 'Ledger',
+        text: 'The service that records each order. It works on 4 at a time and each takes 40 ms, so it records 100 a second. You will take it out.',
+      },
+      {
+        term: 'Queue',
+        text:
+          'A part you will add. It holds messages in the order they arrive and tells the sender at once that it has them. It ' +
+          'does no work on them.',
+      },
+      {
+        term: 'Worker',
+        text:
+          'A part you will add. It takes messages from a queue and does the work, at its own pace: as fast as its instances can ' +
+          'go, however many are waiting. Here an instance records as the Ledger did, 4 at a time and 40 ms each.',
+      },
+    ],
+    words: [
+      { term: 'Burst', text: 'A short spell of traffic far above the usual.' },
+      {
+        term: 'Asynchronous',
+        text: 'The caller hands the work over and does not wait for it to be done. The opposite, waiting for the answer, is called synchronous.',
+      },
+      { term: 'Backlog', text: 'The messages waiting in a queue. It grows while more arrive than the workers finish, and shrinks when fewer do.' },
+      { term: 'Lost message', text: 'A message the queue had to refuse because it was full. The level allows none.' },
+    ],
+    settings: [
+      {
+        term: 'The caller',
+        text:
+          'Whether the caller waits for the work to be done. If it waits for the answer, it holds its slot until then. If it ' +
+          'hands the work over and moves on, it is free as soon as the other part has taken the message, which is how to talk ' +
+          'to a queue.',
+      },
+      {
+        term: 'Instances',
+        text: 'On a worker, how many copies take messages from the queue. Each one adds 100 orders a second, and each one is paid for all day.',
+      },
+    ],
+    watch: [
+      'Before the change, the gauge on Ledger goes to the top at 0:20, its waiting room fills, and four customers in ten are turned away.',
+      'After it, watch the number waiting on the Queue. It climbs to about 2,000 during the sale and then falls steadily, and the queue is empty about 17 seconds after the sale ends.',
+      'The numbers under the canvas hardly move through the sale. The customers are answered as quickly as on a quiet day.',
+    ],
     problem:
       'Every order is recorded in the Ledger before the customer is answered, and the Ledger records 100 a second: 4 at a time, 40 ms ' +
       'each. Normally 80 arrive. Then a sale brings 400 a second for ten seconds. Every customer is waiting on the Ledger, so the ' +
@@ -168,6 +493,52 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   stampede: {
+    parts: [
+      { term: 'Shoppers', text: 'A client. Its traffic builds up to 1,500 reads a second, nearly all of them for the same 40 products.' },
+      {
+        term: 'Catalog',
+        text:
+          'A service with slots to spare. For each request it asks the cache first, and goes to the database only for what the ' +
+          'cache does not have.',
+      },
+      {
+        term: 'Cache',
+        text:
+          'A memory of recent answers. It holds 100 items and keeps each one until it is pushed out, so normally it answers ' +
+          'almost everything. At 0:25 a deploy empties it.',
+      },
+      {
+        term: 'Database',
+        text:
+          'Stores the products. It has 8 cores and a query takes 40 ms, so it finishes 200 a second. It is small because the ' +
+          'cache normally leaves it little to do, and it cannot be made bigger.',
+      },
+    ],
+    words: [
+      {
+        term: 'Deploy',
+        text: 'Putting a new version of the software into service. It often restarts things, and a cache that has been restarted is an empty one.',
+      },
+      { term: 'Cold cache', text: 'A cache with nothing in it yet. Every request misses until it has filled again.' },
+      { term: 'Stampede', text: 'Many requests missing the same item at the same moment, and all of them going to fetch it.' },
+    ],
+    settings: [
+      {
+        term: 'Fetch a missing item once, for everyone waiting on it',
+        text:
+          'When it is on, the first request that misses an item goes to fetch it, and every other request for that item waits ' +
+          'for that one answer. When it is off, every request that misses fetches the item for itself.',
+      },
+      {
+        term: 'Connections per instance',
+        text: 'The size of the connection pool: how many queries each instance of Catalog may have in progress on the database at once. 0 is no limit.',
+      },
+    ],
+    watch: [
+      'Before the change, watch 0:25. The share of hits on the Cache drops to nothing, the Database shows hundreds of queries too many at once, and for several seconds almost nobody is answered.',
+      'After it, the same moment is a blip. The cache is full again almost at once, because each product was fetched one time.',
+      'The level is scored only from 0:23, around the moment the cache is emptied. What comes before is the cache filling for the first time.',
+    ],
     problem:
       '1,500 reads a second arrive, nearly all for the same 40 products. The cache answers almost every one, so the database behind it ' +
       'is small: 8 cores and 40 ms a query, 200 a second. Then a deploy empties the cache. In the next second every request misses, and ' +
@@ -191,6 +562,54 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'black-friday': {
+    parts: [
+      {
+        term: 'Shoppers',
+        text:
+          'A client. On a normal day it sends 100 requests a second. From 0:30 to 1:00 the sale takes that up to 650, and ' +
+          'between 1:20 and 1:30 it falls back.',
+      },
+      {
+        term: 'Balancer',
+        text: 'A load balancer. It spreads the calls over whatever instances of Shop are running at the moment, new ones included as they start.',
+      },
+      {
+        term: 'Shop',
+        text:
+          'A service. One instance works on 4 requests at a time at 20 ms each, so it finishes 200 a second. It starts with 2 ' +
+          'instances. A new one takes 10 seconds to start, and one is taken away only after 20 seconds of not being needed.',
+      },
+    ],
+    words: [
+      { term: 'Autoscaling', text: 'A service changing its own number of instances as the load changes: more when it is busy, fewer when it is quiet.' },
+      {
+        term: 'Start-up time',
+        text: 'How long a new instance takes before it can do any work. Until then, the instances that are already there carry everything.',
+      },
+      {
+        term: 'Room to spare',
+        text: 'Slots that are free on purpose. Elsewhere it is called headroom. It is what takes up a rise in load while help is still on its way.',
+      },
+      { term: 'Average cost', text: 'The bill is averaged over the run. An instance that runs for a minute costs a small part of one that runs all day.' },
+    ],
+    settings: [
+      {
+        term: 'Add and remove instances by itself',
+        text: 'Turns autoscaling on. The service then watches how busy its slots are, and orders instances or gives them up to suit.',
+      },
+      {
+        term: 'Share of slots to keep busy',
+        text:
+          'The target it steers by. Above it, it adds instances; well below it, it removes them. A low target means more are ' +
+          'running than the load strictly needs, and that is the room to spare.',
+      },
+      { term: 'Most instances', text: 'The upper limit. It never runs more than this, however busy it gets.' },
+    ],
+    watch: [
+      'Before the change, the gauge on Shop passes the load line soon after the climb starts at 0:30, and is at the top long before the peak.',
+      'After it, watch the count of instances on Shop. It goes up in steps during the climb, each step some ten seconds after the load that called for it, and comes back down after the sale.',
+      'Set the target to 0.8 and run it again. The count still goes up, but always too late, and requests fail all the way up the climb.',
+    ],
     problem:
       'One instance handles 4 requests at a time at 20 ms each: 200 a second. Two are plenty for the 100 a second of a normal day. Then ' +
       'the sale takes traffic to 650 over thirty seconds. Two instances cannot carry that, and enough instances for the peak, running ' +
@@ -217,6 +636,47 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'node-down': {
+    parts: [
+      { term: 'Users', text: 'A client, sending 240 requests a second.' },
+      {
+        term: 'Balancer',
+        text:
+          'A load balancer in front of API. It checks whether each instance is alive, and as the level starts it checks every ' +
+          'ten seconds. Between checks it knows nothing, and goes on sending calls to an instance that has died.',
+      },
+      {
+        term: 'API',
+        text:
+          'A service with 2 instances. Each works on 8 requests at a time at 40 ms each, so each finishes about 200 a second. ' +
+          'About 21 seconds in, one of them dies.',
+      },
+    ],
+    words: [
+      { term: 'Dead instance', text: 'An instance that has stopped. It answers nothing, and a call sent to it fails at once.' },
+      {
+        term: 'Health check',
+        text: 'A balancer asking each instance, every so often, whether it is still there. One that does not answer gets no more calls.',
+      },
+      {
+        term: 'Redundancy',
+        text: 'Having more than the load needs, so that losing one leaves enough. Running one more instance than is needed is called N+1.',
+      },
+    ],
+    settings: [
+      { term: 'Instances', text: 'How many copies of API run. Count them for the moment after one has died, not for a normal day.' },
+      { term: 'Check for dead instances every', text: 'The time between health checks. A dead instance goes on being sent calls until the next one.' },
+      {
+        term: 'Retries',
+        text:
+          'How many more times a failed call is sent. On the connection from the balancer to the service, the call goes to an ' +
+          'instance again, so one that landed on the dead instance is tried on a live one and the user sees nothing.',
+      },
+    ],
+    watch: [
+      'Before the change, watch 0:21. The count of instances on API drops from 2 to 1, half the calls turn red until the next health check, and after that the one instance left is over the load line.',
+      'After it, the count drops from 3 to 2 and little else changes. The gauge on API rises to about 60%, still under the load line.',
+      'The Failed number under the canvas is what the stars count here. With the retry in place it stays at 0.',
+    ],
     problem:
       '240 requests a second are shared by two instances that can each do 200, so each is 60% busy. It looks like room to spare. When ' +
       'one dies, the other is asked for 240 and can do 200. And for up to ten seconds the balancer has not noticed, and goes on sending ' +
@@ -243,6 +703,60 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'the-bill': {
+    parts: [
+      {
+        term: 'Users',
+        text:
+          'A client. It sends 600 requests a second, and 900 during the busy stretch from 0:40 to 1:00. Nine in ten are reads, ' +
+          'of 5,000 different items.',
+      },
+      { term: 'Balancer', text: 'A load balancer, spreading calls over the instances of API.' },
+      {
+        term: 'API',
+        text:
+          'A service. One instance works on 12 requests at a time, at about 10 ms each. For a read it asks the cache and then, ' +
+          'on a miss, the database. For a write it goes to the database and also leaves an email in the queue.',
+      },
+      { term: 'Cache', text: 'Remembers recent answers, each for 20 seconds. It starts with room for 50,000 items, ten times as many as exist.' },
+      {
+        term: 'Database',
+        text: 'Stores the data. It starts with 32 cores and 2 read replicas, which are extra copies of it that answer reads.',
+      },
+      { term: 'Emails to send', text: 'A queue. Each write leaves a message here, and is answered without waiting for the email to go.' },
+      {
+        term: 'Mailer',
+        text:
+          'A worker. It takes emails from the queue and sends them, 4 at a time for each instance and about 60 ms each. It ' +
+          'starts with 6 instances.',
+      },
+    ],
+    words: [
+      { term: 'Rightsizing', text: 'Making each part as large as its load needs, and no larger.' },
+      {
+        term: 'Peak and average',
+        text:
+          'A part that people wait on has to be big enough for the busiest moment. A part behind a queue only has to keep up ' +
+          'over time, because the queue holds the difference.',
+      },
+      { term: 'Over-provisioned', text: 'Larger than the load needs. It is safe, and it is paid for every month.' },
+    ],
+    settings: [
+      { term: 'Instances', text: 'How many copies of a service or of a worker run. Each is paid for by the month.' },
+      {
+        term: 'Queries at full speed at once',
+        text: "The database's cores. Each runs one query at a time at full speed, and more cores cost more.",
+      },
+      {
+        term: 'Read replicas',
+        text: 'Extra copies of the database that answer reads. Each is another whole server to pay for. 0 means the one server does everything.',
+      },
+      { term: 'Items it can hold', text: 'The size of the cache. Beyond the number of items that exist, more room holds nothing.' },
+    ],
+    watch: [
+      'Run it first as it is. Through the busy stretch the gauges on API, Database and Mailer are all far below the load line: that is what too large looks like.',
+      'After the change, the same gauges stand much nearer the line at the peak and still under it, and the cost under the canvas is a fraction of what it was.',
+      'The number waiting on Emails to send stays small with 2 instances of Mailer. Try 1: it builds up during the busy stretch and is still there when the run ends.',
+    ],
     problem:
       'Nothing is failing here. Every part is several times larger than its load needs: 8 API instances, a database of 32 cores with 2 ' +
       'read replicas, a cache for 50,000 items when 5,000 exist, and 6 mailer instances. It costs $1,987 a month.',
@@ -269,6 +783,46 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'luck-of-the-draw': {
+    parts: [
+      { term: 'Users', text: 'A client, sending 850 requests a second.' },
+      {
+        term: 'Balancer',
+        text:
+          'A load balancer in front of API. As the level starts it picks an instance at random for each call, without looking ' +
+          'at how busy any of them is.',
+      },
+      {
+        term: 'API',
+        text:
+          'A service with 10 small instances. Each works on only 2 requests at a time at about 20 ms each, so each finishes 100 ' +
+          'a second and all of them together 1,000. It is fixed: the fix is in how the calls are shared out.',
+      },
+    ],
+    words: [
+      { term: 'Balancing rule', text: 'How a load balancer decides which instance gets the next call. It is also called the balancing algorithm.' },
+      {
+        term: 'Lumpy',
+        text: 'Random choices do not spread evenly. At any moment a few of the instances have been picked several times running, and a few not at all.',
+      },
+      {
+        term: 'The slow few',
+        text: 'The requests that take longest, which is what p99 measures. Here they are slow only because they were sent to an instance that already had a queue.',
+      },
+    ],
+    settings: [
+      {
+        term: 'How it picks an instance',
+        text:
+          'The balancing rule. At random looks at nothing. Each in turn goes round the instances in order. The least busy looks ' +
+          'at all of them and takes the one with the fewest calls in progress. The less busy of two picked at random looks at ' +
+          'just two.',
+      },
+    ],
+    watch: [
+      'Before the change, the gauge on API shows about 85% busy, which is the average over all the instances. The waiting is hidden inside it: some instances have a queue while others are idle.',
+      'After it, the gauge reads the same, because the same work is being done. What changes is p99 under the canvas, which falls to about a third.',
+      'Try each of the rules in turn and compare p99. Nothing else about the system changes.',
+    ],
     problem:
       'Ten instances each work on 2 requests at a time at 20 ms apiece: 100 a second each, 1,000 together. 850 arrive, so on ' +
       'average each is 85% busy and there is room. But the balancer picks at random, and random is lumpy. At any moment some ' +
@@ -290,6 +844,48 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   patience: {
+    parts: [
+      { term: 'Users', text: 'A client, sending 1,000 searches a second. All of them are reads.' },
+      {
+        term: 'Site',
+        text:
+          'A thin service in front. It does 2 ms of work, passes the search on to Search and waits for the answer. As the level ' +
+          'starts it waits 100 ms, and asks again up to twice if no answer has come.',
+      },
+      {
+        term: 'Search',
+        text:
+          'The service that does the searching. It has 72 slots and a search takes 60 ms on average, so it has room for 1,200 a ' +
+          'second. But the time varies a great deal from one search to the next. It is fixed.',
+      },
+    ],
+    words: [
+      {
+        term: 'Uneven work',
+        text:
+          'Not every request takes the same time. Here half the searches finish in under 30 ms and a few take many times the ' +
+          'average. The average says little about the slow ones.',
+      },
+      {
+        term: 'The tail',
+        text: 'The slowest few answers. Trimming the tail means cutting those off and asking again, which is usually quicker than waiting for them.',
+      },
+      {
+        term: 'A timeout that is too early',
+        text: 'One that cuts off answers that were healthy and on their way. Each of those becomes a failure and, with retries, extra load.',
+      },
+    ],
+    settings: [
+      {
+        term: 'Give up after',
+        text: 'The timeout: how long Site waits for Search before it gives up on that try. Search is not told, and carries on with the work.',
+      },
+    ],
+    watch: [
+      'Before the change, nothing is ever broken, and still the gauge on Search goes to the top and stays there. Compare the 1,000 a second that Users send with the rate arriving at Search.',
+      'After it, Search receives only a little more than Users send, and its gauge comes off the top.',
+      'Try 150 ms, and then 1,000 ms. The first brings the storm back. The second never fails and is slow: look at p99.',
+    ],
     problem:
       'Search answers in 60 ms on average, but very unevenly: half its answers take under 30 ms, and about one in six takes ' +
       'more than 100 ms. That is exactly where the site gives up. It calls each of those slow answers a failure and asks ' +
@@ -316,6 +912,46 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'full-house': {
+    parts: [
+      { term: 'Fans', text: 'A client. It sends 150 requests a second, and during the sale, from 0:20 to 1:00, 450.' },
+      {
+        term: 'Tickets',
+        text:
+          'The service that sells tickets. It works on 10 requests at a time at about 40 ms each, so it finishes 250 a second, ' +
+          'and its waiting room holds 256. It is fixed: it may not grow.',
+      },
+      {
+        term: 'Rate limiter',
+        text:
+          'The part you will add. A door in front of a service. It lets a set number of calls through each second and refuses ' +
+          'the rest at once, without making them wait.',
+      },
+    ],
+    words: [
+      {
+        term: 'Overload',
+        text: 'More work arriving than can be done, with no way of doing more. Somebody has to be turned away. The only choice is who, and how quickly.',
+      },
+      { term: 'Load shedding', text: 'Turning the excess away early and on purpose, so that those who are let in are served quickly.' },
+      {
+        term: 'Saved-up allowance',
+        text:
+          'A rate limiter counts its allowance like tokens in a bucket. While traffic is below the rate, the unused tokens pile ' +
+          'up, to a limit, and a sudden rush may spend them all at once.',
+      },
+    ],
+    settings: [
+      { term: 'Calls let through per second', text: 'The steady rate of the door. Set it a little under what the service behind it can finish.' },
+      {
+        term: 'Calls let through at once after a quiet spell',
+        text: 'How much unused allowance can be saved up. After a quiet time, this many calls may pass in the same instant, on top of the steady rate.',
+      },
+    ],
+    watch: [
+      'Before the change, the sale fills the waiting room of Tickets. The part shows 256 waiting, and p99 goes to about a second: everyone who is served has stood in that line first.',
+      'After it, the refusing happens at the limiter, and Tickets stays busy without a queue. Fans are still turned away, because there is still not room for them all, but those who get in are answered at once.',
+      'In the panel that says why requests failed, the reason changes: from turned away by Tickets, which was full, to refused by the limiter, over its rate.',
+    ],
     problem:
       'The ticket service handles 10 requests at a time at 40 ms each: 250 a second. During the sale 450 arrive. It cannot ' +
       'serve them all, and it is not allowed to grow. Left alone it fills its waiting room of 256, so everyone it does serve ' +
@@ -345,6 +981,50 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'never-twice': {
+    parts: [
+      {
+        term: 'Searchers',
+        text:
+          'A client. Each second it sends 360 reads and 40 writes. There are a million documents and they are asked for evenly, ' +
+          'so hardly any is asked for twice.',
+      },
+      { term: 'API', text: 'A service that does 2 ms of work and then runs a query on the database.' },
+      {
+        term: 'Database',
+        text:
+          'One server with 4 cores and 12 ms a query, so about 330 queries a second. Its cores are fixed. What can be added is ' +
+          'copies of it.',
+      },
+      {
+        term: 'Cache',
+        text: 'It is offered among the parts, and it is a trap. A cache answers a read that was made before, and here almost none was.',
+      },
+    ],
+    words: [
+      { term: 'Primary', text: 'The one database server that takes the writes.' },
+      {
+        term: 'Read replica',
+        text: 'A copy of the database on a server of its own. Writes are copied to it from the primary, and it answers reads.',
+      },
+      { term: 'Scaling out', text: 'Adding more servers. The other way, making one server bigger, is called scaling up.' },
+    ],
+    settings: [
+      {
+        term: 'Read replicas',
+        text: 'How many copies answer reads. Once there is at least one, the reads are spread over the replicas and the primary keeps only the writes.',
+      },
+      {
+        term: 'Connections per instance',
+        text:
+          'The size of the connection pool from API to the database, replicas included. It has to grow with the number of cores ' +
+          'behind it, and it still has to be a limit.',
+      },
+    ],
+    watch: [
+      'Before the change, the gauge on Database is at the top and most requests fail.',
+      'After it, the gauge comes down under the load line. Add a Cache as well and look at its share of hits: it stays close to nothing.',
+      'Set the replicas to 1 and run it again. It is no better than none: the one replica now carries all 360 reads alone.',
+    ],
     problem:
       'Every second 360 reads and 40 writes arrive, and one database server runs about 330 queries a second: 4 cores, 12 ms a ' +
       'query. It falls behind and most requests fail. The fix from Read-heavy does not work here. A cache answers a read that ' +
@@ -371,6 +1051,41 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   clockwork: {
+    parts: [
+      { term: 'Shoppers', text: 'A client, sending 2,000 reads a second. There are 100 prices, and each is asked for as often as any other.' },
+      { term: 'Prices', text: 'A service with slots to spare. It asks the cache for a price, and the database when the cache does not have it.' },
+      {
+        term: 'Cache',
+        text:
+          'Holds every price, and keeps each for exactly 20 seconds. It already fetches a missing price only once, for everyone ' +
+          'waiting on it.',
+      },
+      { term: 'Database', text: 'It has 16 cores and needs 130 ms for a query. It is fixed.' },
+    ],
+    words: [
+      {
+        term: 'Lifetime',
+        text:
+          'How long a cache keeps an item before it throws it away and fetches it afresh. It is often written TTL, for time to ' +
+          'live. It is what stops a cache from serving an old price for ever.',
+      },
+      { term: 'Expiry', text: 'The moment an item reaches the end of its lifetime. The next request for it is a miss.' },
+      { term: 'In step', text: 'Things that were started at the same moment, on the same timer, come due at the same moment, time after time.' },
+      { term: 'Jitter', text: 'A little randomness added to a timer, so that things drift out of step.' },
+    ],
+    settings: [
+      {
+        term: 'Randomise lifetimes',
+        text:
+          'A number from 0 to 1. With 0 every item lives the full time. With 0.1 each lives a time picked at random between ' +
+          'nine tenths of it and all of it.',
+      },
+    ],
+    watch: [
+      'Before the change, look at the chart of response time. p99 jumps every 20 seconds, as regular as a clock, and between the jumps everything is fast.',
+      'At each jump the Database shows many queries too many at once, and then nothing at all until the next.',
+      'After it, the first jump is still there. Each one after it is lower and wider, and within a minute the line is flat.',
+    ],
     problem:
       'A hundred prices are each asked for twenty times a second, and the cache keeps each for exactly twenty seconds. When ' +
       'the site starts, all hundred are fetched in the same moment. So they all expire in the same moment and are all fetched ' +
@@ -396,6 +1111,50 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'nine-times': {
+    parts: [
+      {
+        term: 'Users',
+        text:
+          'A client, sending 100 requests a second. It waits up to a second for an answer and, as the level starts, tries twice ' +
+          'more if a request fails.',
+      },
+      {
+        term: 'Web',
+        text:
+          'The service in front. It does 60 ms of work of its own and then calls API, giving it 150 ms and trying twice more if ' +
+          'that call fails.',
+      },
+      {
+        term: 'API',
+        text:
+          'The service at the back. It has 15 slots and a call takes about 40 ms, so it can handle 375 a second. At 0:20 it ' +
+          'becomes four times slower, for five seconds.',
+      },
+    ],
+    words: [
+      { term: 'Layer', text: 'One step in a chain of calls. Here there are two: Users calling Web, and Web calling API.' },
+      { term: 'The edge', text: 'The outermost layer, where requests come into the system. Here it is the connection from Users to Web.' },
+      {
+        term: 'Multiplying',
+        text:
+          'A try at an outer layer runs the whole inner layer again, with all of its tries. So the tries of the layers are ' +
+          'multiplied together: 3 times 3 is 9.',
+      },
+      { term: 'Retry budget', text: 'A limit on how much extra load retries may add across the whole chain.' },
+    ],
+    settings: [
+      {
+        term: 'Retries',
+        text:
+          'How many more times this connection sends a call that failed. Each connection has its own, and the number that ' +
+          'matters is what they come to when multiplied together.',
+      },
+    ],
+    watch: [
+      'Before the change, compare the 100 a second on Users with the rate arriving at API after 0:25. It is several times that, and it does not come down.',
+      'After it, the rate at API rises during the slow five seconds and is back to about 100 a few seconds later.',
+      'The level is scored only from 0:35, ten seconds after the API has recovered. What it asks is whether the system got better again by itself.',
+    ],
     problem:
       'Users call Web, and Web calls the API. Web gives the API 150 ms and tries twice more if a call fails. The user tries ' +
       'twice more as well, and every one of those tries is three calls by Web. So when the API has a bad five seconds, each ' +
@@ -423,6 +1182,50 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'wrong-suspect': {
+    parts: [
+      { term: 'Users', text: 'A client, sending 300 requests a second.' },
+      { term: 'Web', text: 'The service in front, with 40 slots. It does 2 ms of work and then calls API and waits.' },
+      {
+        term: 'API',
+        text:
+          'The service in the middle, with 32 slots. It does 3 ms of work and then runs a query on the database and waits. Its ' +
+          'connection to the database has a pool of 5.',
+      },
+      { term: 'Database', text: 'At the back. It has 4 cores and a query takes 16 ms, so it finishes 250 a second.' },
+      {
+        term: 'Load balancer',
+        text:
+          'It is offered among the parts in case you want more instances of Web or of API. That is the wrong fix, and it is ' +
+          'worth trying once to see why.',
+      },
+    ],
+    words: [
+      { term: 'Bottleneck', text: 'The one part that limits how much the whole system can do. Making anything else bigger changes nothing.' },
+      {
+        term: 'Waiting up the chain',
+        text:
+          'While a call waits for the part behind it, it holds its slot, and so does the call that is waiting for it in the part ' +
+          'in front. A shortage at the back shows as full slots all the way to the front.',
+      },
+      {
+        term: 'Working and waiting',
+        text:
+          'A slot can be busy doing work, or busy waiting for another part. The gauge shows both alike. The panel that says ' +
+          'where the time goes tells them apart.',
+      },
+    ],
+    settings: [
+      { term: 'Queries at full speed at once', text: "The database's cores. Each runs one query at a time at full speed." },
+      {
+        term: 'Connections per instance',
+        text: 'The pool on the connection from API to the database. It should follow the number of cores: one more than there are.',
+      },
+    ],
+    watch: [
+      'Before the change, every gauge is at the top, and Web is the part that turns requests away. Read the panel that says where the time goes: it follows the waiting through Web and API to the Database.',
+      'After it, the gauge on Database stands at about 80%, and Web and API, which were never changed, have emptied.',
+      'Try the wrong fix once: give Web a second instance behind a Load balancer. It costs more, and nothing improves.',
+    ],
     problem:
       'Web is turning away a quarter of all requests, and its gauge is at the top. But look at what it is doing: every one of ' +
       'its slots holds a request that is waiting for the API, and every slot of the API holds one that is waiting for the ' +
@@ -452,6 +1255,65 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   failover: {
+    parts: [
+      {
+        term: 'Customers',
+        text: 'A client, sending 300 requests a second. Nine in ten are browsing, which reads. One in ten is a purchase, which writes.',
+      },
+      { term: 'Shop', text: 'A service that does 2 ms of work and then reads from the database or writes to it.' },
+      {
+        term: 'Database',
+        text: 'One server, called the primary. At 0:20 it fails, and it is 18 seconds before the database can be used again.',
+      },
+      { term: 'Queue', text: 'A part you will add. It takes a purchase at once and holds it until it can be written down.' },
+      {
+        term: 'Worker',
+        text:
+          'A part you will add. It takes purchases from the queue and writes each one to the database. While the database is ' +
+          'away it tries again as often as its connection allows, and a purchase that runs out of tries is set aside and ' +
+          'counts as lost.',
+      },
+    ],
+    words: [
+      { term: 'Primary', text: 'The database server that takes the writes. There is only ever one.' },
+      { term: 'Failover', text: 'What happens when the primary fails: a new primary is chosen. Until that is done, nothing can be written.' },
+      {
+        term: 'Replica',
+        text: 'A copy of the database that answers reads. When the primary fails it goes on answering them, and it becomes the new primary.',
+      },
+      {
+        term: 'Patient retry',
+        text:
+          'Trying again after a wait, for long enough to outlast the fault. It suits a worker, which nobody is waiting for. It ' +
+          'does not suit a service, where each wait holds a slot.',
+      },
+    ],
+    settings: [
+      { term: 'Read replicas', text: 'How many copies of the database answer reads. With 1, reads survive the loss of the primary.' },
+      {
+        term: 'Used by',
+        text:
+          'Which requests go by this connection: all of them, only the reads or only the writes. It is how the reads are sent ' +
+          'one way and the writes another.',
+      },
+      {
+        term: 'The caller',
+        text: 'Whether the caller waits for the work to be done, or hands it over and moves on. A purchase is handed to the queue.',
+      },
+      { term: 'Retries', text: 'How many more times the worker tries a write that failed. 10 retries with 2 seconds between them last 20 seconds.' },
+      { term: 'Wait before the first retry', text: 'How long the worker waits before it tries the write again.' },
+      {
+        term: 'Each further wait is longer by',
+        text:
+          'What each wait is multiplied by to give the next. 1 keeps every wait the same length, so the worker finds out soon ' +
+          'after the database is back.',
+      },
+    ],
+    watch: [
+      'Before the change, everything turns red at 0:20 and stays red for 18 seconds.',
+      'After it, browsing does not notice. The number waiting on the Queue climbs for those 18 seconds and is gone a few seconds after the database returns.',
+      'The stars are for how long the oldest purchase waited in the queue. The Queue shows it on the canvas as its wait.',
+    ],
     problem:
       'There is one database server, and at twenty seconds it fails. Eighteen seconds pass before the database can be used ' +
       'again, and in that time every request fails: browsing, which only reads, and buying, which writes. That is 300 ' +
@@ -486,6 +1348,59 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'heavy-lifting': {
+    parts: [
+      {
+        term: 'Visitors',
+        text: 'A client, sending 600 requests a second. Three quarters ask for a picture, one of 20,000. The rest ask for data.',
+      },
+      {
+        term: 'CDN',
+        text:
+          'Keeps copies of files close to the people who ask for them. A file it has is handed over at once, and one it does ' +
+          'not have is fetched from behind it and kept. As the level starts it keeps a file for only 2 seconds. At 1:00 a ' +
+          'release empties it.',
+      },
+      { term: 'Balancer', text: 'A load balancer, spreading calls over the instances of Site.' },
+      {
+        term: 'Site',
+        text:
+          'The service. It has 2 instances with 8 slots each, and does about 12 ms of work on a request. For a picture it then ' +
+          'fetches the file from Images and waits for it.',
+      },
+      {
+        term: 'Images',
+        text:
+          'Object storage: where the files are kept. Handing one over takes about 40 ms, and it takes no longer when a thousand ' +
+          'are asked for at once. It is fixed.',
+      },
+    ],
+    words: [
+      {
+        term: 'File',
+        text: 'A picture, a script, a video: something that is the same for everyone who asks. That is what makes it safe to keep copies of.',
+      },
+      { term: 'Origin', text: 'Where a CDN goes for a file it does not have.' },
+      {
+        term: 'Object storage',
+        text: 'A store for files, of the kind cloud providers sell. Each file is slow to fetch compared with a cache, and it never fills up or queues.',
+      },
+    ],
+    settings: [
+      {
+        term: 'Used by',
+        text: 'Which requests go by this connection. Files only sends the pictures this way and leaves everything else on the other connection.',
+      },
+      {
+        term: 'Keep each file for',
+        text: 'How long the CDN keeps a copy before it fetches the file again. A picture does not change, so it can be kept for a long time.',
+      },
+      { term: 'Instances', text: 'How many copies of Site run. With the pictures gone, one is enough.' },
+    ],
+    watch: [
+      'Before the change, the gauge on Site is at the top, though three quarters of what it carries is pictures that it only passes along. On the CDN, the share held here is low.',
+      'After it, the share held on the CDN is high and Site is nearly idle.',
+      'At 1:00 the CDN is emptied. Its share drops for a moment, Images takes the rush, and Site does not notice.',
+    ],
     problem:
       'Of 600 requests a second, 450 are for a picture. The CDN keeps a picture for 2 seconds and there are 20,000 of them, so ' +
       'most requests find it has already let theirs go. It asks the site, which does 12 ms of work and then waits about 40 ms ' +
@@ -516,6 +1431,40 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'cold-start': {
+    parts: [
+      { term: 'Shoppers', text: 'A client. It sends 10 requests a second, and every 20 seconds there is a rush of 5 seconds at 200 a second.' },
+      {
+        term: 'Checkout',
+        text:
+          'A function. Nothing is kept running for it: each call runs in an environment of its own, which has to be started if ' +
+          'none is free. Starting one takes 800 ms, the call itself about 50 ms, and an idle environment is let go after 8 seconds.',
+      },
+    ],
+    words: [
+      {
+        term: 'Function',
+        text:
+          'Code that the cloud runs when it is called, and bills for the time it runs. It is often called serverless. There are ' +
+          'no instances to count, and nothing to pay while it is idle.',
+      },
+      {
+        term: 'Environment',
+        text: 'The place one call runs in. It handles one call at a time, and the next call can use it again if it is still there.',
+      },
+      { term: 'Cold start', text: 'A call that finds no environment free and has to wait for one to be started.' },
+      { term: 'Warm', text: 'An environment that is already started and waiting for a call.' },
+    ],
+    settings: [
+      {
+        term: 'Environments kept ready',
+        text: 'How many environments are always warm. They are never let go, and they are paid for whether or not a call uses them.',
+      },
+    ],
+    watch: [
+      'Before the change, look at the chart of response time. Most requests are answered in about 50 ms, and at every rush p99 jumps by about the 800 ms of a start.',
+      'After it, the jumps are gone and the cost under the canvas has gone up. Each environment kept ready adds $6 a month.',
+      'Try 10, which is the average number of calls in progress during a rush. The slowest requests are as slow as they were: the average is not what the busy moments need.',
+    ],
     problem:
       'In a rush 200 calls a second arrive where there were 10. Each takes 50 ms, so about ten are in progress at a time, and ' +
       'the function has one or two environments left from the quiet. Every call beyond those starts an environment and waits ' +
@@ -539,6 +1488,55 @@ export const guideEn: Record<string, LevelGuide> = {
     ],
   },
   'slow-lane': {
+    parts: [
+      {
+        term: 'People',
+        text:
+          'A client with two routes. Of 300 requests a second, 270 are on the route called feed and read the feed, and 30 are on ' +
+          'the route called post and send a photo in.',
+      },
+      { term: 'Balancer', text: 'A load balancer, spreading calls over the instances of API.' },
+      {
+        term: 'API',
+        text:
+          'The service. It has 2 instances with 8 slots each, and does 15 ms of work on a request. For the feed it then reads ' +
+          'from Feed. For a post it sends the photo on to Photos and waits, holding its slot.',
+      },
+      { term: 'Feed', text: 'A database, and a quick one: a read takes about 5 ms. It is fixed.' },
+      {
+        term: 'Photos',
+        text:
+          'Object storage, where the photos are kept. Taking one in takes about 400 ms. At 0:50 it becomes three times slower, ' +
+          'for 20 seconds. It is fixed.',
+      },
+    ],
+    words: [
+      {
+        term: 'Route',
+        text: 'One kind of request, with a name. A client can send each route by a connection of its own, and a level can score a route separately.',
+      },
+      {
+        term: 'Bulkhead',
+        text: 'A wall between kinds of work, so that one kind cannot use up what the other needs. The word comes from the walls that divide the hull of a ship.',
+      },
+      { term: 'Direct upload', text: 'Sending a file straight to storage, not through the service. The service is left with the quick requests.' },
+    ],
+    settings: [
+      {
+        term: 'Route',
+        text: 'Keeps this connection for the requests of one route. Every other route goes by the connection that is not kept for any.',
+      },
+      {
+        term: 'Give up after',
+        text: 'The timeout on this connection. A post waits on nothing but storage now, so it can be given a long time without holding anything up.',
+      },
+      { term: 'Instances', text: 'How many copies of API run. With the posts gone, the feed needs only one.' },
+    ],
+    watch: [
+      'Before the change, the gauge on API is at the top, and its slots are full of posts that are waiting for Photos. The panel under the canvas shows the two routes separately: both are failing.',
+      'After it, the feed is fast all the way through. At 0:50 Photos slows down, the posts take longer, and the gauge on API does not move.',
+      'Compare the two routes in the panel once more. The stars are for the cost, and for how few posts are given up on.',
+    ],
     problem:
       'Of 300 requests a second, 270 look at the feed and 30 post a photo. A feed request is 15 ms of work and a quick read. A ' +
       'post is 15 ms of work and then about 400 ms of waiting for Photos, and it holds a slot the whole time. Thirty of those ' +

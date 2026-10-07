@@ -62,13 +62,14 @@ different trick. There are three hints if you want them and, after the third, a 
 
 **The guide** is for anyone who would rather be shown, or who is stuck. It says how to read the
 screen and what the words mean, and has a lesson on every level (a first visit to the workbench
-is also offered a one-minute tour of it): what is going wrong, the idea
-that fixes it and the name it goes by elsewhere, what to change step by step, why that is the best
-answer, and what else people try and what comes of it. The answer is run and scored on the page,
+is also offered a one-minute tour of it). A lesson assumes nothing: it says what each part on the
+canvas is and what the words mean, then what is going wrong, the idea that fixes it and the name it
+goes by elsewhere, what to change step by step, what each setting it touched does, what to watch
+when you run it, why that is the best answer, and what else people try and what comes of it. The answer is run and scored on the page,
 and one button puts it on the canvas so you can watch it work. `npm run lessons` follows the steps
 of every lesson in the editor, in a real browser, and checks that each earns three stars.
 
-![A lesson from the guide: the first level explained, with the steps of the best answer](docs/screenshots/guide.png)
+![A lesson from the guide: the first level, beginning with what each part on the canvas is](docs/screenshots/guide.png)
 
 | # | Level | What it teaches |
 |---|---|---|

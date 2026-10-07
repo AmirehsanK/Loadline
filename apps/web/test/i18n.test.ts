@@ -181,7 +181,40 @@ describe('the guide', () => {
       expect(guideEn[id]!.steps.length, id).toBeGreaterThan(1);
       expect(guideFa[id]!.steps, id).toHaveLength(guideEn[id]!.steps.length);
       expect(guideFa[id]!.others, id).toHaveLength(guideEn[id]!.others.length);
-      for (const { path, text } of texts(guideFa[id], id)) expect(hasPersian(text), path).toBe(true);
+      expect(guideFa[id]!.words, id).toHaveLength(guideEn[id]!.words.length);
+      expect(guideFa[id]!.watch, id).toHaveLength(guideEn[id]!.watch.length);
+      for (const { path, text } of texts(guideFa[id], id)) {
+        // A part goes by the name it has on the canvas, which is the same in every language.
+        if (/\.parts\.\d+\.term$/.test(path)) continue;
+        expect(hasPersian(text), path).toBe(true);
+      }
+    }
+  });
+
+  it('says what every part a level starts with is, by the name it has on the canvas', () => {
+    // A lesson is for someone who has not met these parts. One left out is one they are left to guess at.
+    const kinds = new Set(Object.values(en.parts.types).map((type) => type.name));
+    for (const level of LEVELS) {
+      const explained = guideEn[level.id]!.parts.map((part) => part.term);
+      const starting = level.starter.nodes.map((node) => node.name);
+      for (const name of starting) expect(explained, `${level.id}: ${name}`).toContain(name);
+      // Anything else is a part the player adds, which has no name yet but that of its kind.
+      for (const term of explained) expect(starting.includes(term) || kinds.has(term), `${level.id}: ${term}`).toBe(true);
+      expect(guideFa[level.id]!.parts.map((part) => part.term), level.id).toEqual(explained);
+    }
+  });
+
+  it('says what each setting does under the name the steps gave it', () => {
+    const quoted = (steps: string[], pattern: RegExp) => new Set(steps.flatMap((step) => [...step.matchAll(pattern)].map((match) => match[1]!)));
+    for (const level of LEVELS) {
+      const english = guideEn[level.id]!;
+      const persianLesson = guideFa[level.id]!;
+      expect(english.settings.length, level.id).toBeGreaterThan(0);
+      expect(persianLesson.settings, level.id).toHaveLength(english.settings.length);
+      const named = quoted(english.steps, /"([^"]+)"/g);
+      for (const { term } of english.settings) expect(named.has(term), `${level.id}: ${term}`).toBe(true);
+      const namedFa = quoted(persianLesson.steps, /«([^»]+)»/g);
+      for (const { term } of persianLesson.settings) expect(namedFa.has(term), `${level.id}: ${term}`).toBe(true);
     }
   });
 

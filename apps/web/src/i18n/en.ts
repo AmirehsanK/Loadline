@@ -40,7 +40,8 @@ export const en = {
     title: 'The guide',
     intro:
       'For anyone who wants to learn this and is not sure where to start. It says how to read the screen and what the words ' +
-      'mean, and for every level what is going wrong, the idea that fixes it, and the best answer step by step.',
+      'mean. Then, for every level: what each part on the canvas is, what is going wrong, the idea that fixes it, the best ' +
+      'answer step by step, what each setting it changes does, and what to watch when you run it.',
     homeTitle: 'New to this?',
     homeHint: 'The guide explains every level: what goes wrong, why, and the best way to fix it.',
     open: 'Read the guide',
@@ -89,9 +90,13 @@ export const en = {
     lessonsTitle: 'The lessons',
     lesson: (index: number, total: number) => `Lesson ${index} of ${total}`,
     spoiler: 'This page gives the answer away. To find it yourself, play the level first: its hints go one step at a time.',
+    parts: 'What is on the canvas',
+    wordsHere: 'Words for this lesson',
     problem: 'What is going on',
     idea: 'The idea',
     steps: 'What to change',
+    settings: 'What those settings do',
+    watch: 'What to watch when you run it',
     why: 'Why this is the best answer',
     scores: 'What it scores',
     measuring: 'Running the answer…',

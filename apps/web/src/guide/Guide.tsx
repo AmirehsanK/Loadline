@@ -115,7 +115,10 @@ function LessonRow({ level, index }: { level: Scenario; index: number }) {
   );
 }
 
-/** One lesson: the level's problem, the idea, the best answer and why, and what else people try. */
+/**
+ * One lesson: what each part on the canvas is, the words it needs, the level's problem, the idea,
+ * the best answer with what its settings do and what to watch, why, and what else people try.
+ */
 function Lesson({ level }: { level: Scenario }) {
   const m = useMessages();
   const text = useLevelText(level);
@@ -146,6 +149,12 @@ function Lesson({ level }: { level: Scenario }) {
         </a>
       </div>
 
+      <Section title={m.guide.parts}>
+        <Terms entries={guide.parts} />
+      </Section>
+      <Section title={m.guide.wordsHere}>
+        <Terms entries={guide.words} />
+      </Section>
       <Section title={m.guide.problem}>
         <p>{guide.problem}</p>
       </Section>
@@ -170,6 +179,16 @@ function Lesson({ level }: { level: Scenario }) {
           </button>
           <span className="text-[0.9rem] text-ink-3">{m.guide.applyNote}</span>
         </div>
+      </Section>
+      <Section title={m.guide.settings}>
+        <Terms entries={guide.settings} />
+      </Section>
+      <Section title={m.guide.watch}>
+        <ul className="flex list-disc flex-col gap-1.5 ps-6">
+          {guide.watch.map((sight) => (
+            <li key={sight}>{sight}</li>
+          ))}
+        </ul>
       </Section>
       <Section title={m.guide.why}>
         <p>{guide.why}</p>

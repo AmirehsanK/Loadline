@@ -214,16 +214,21 @@ workload timeline with scripted faults, objectives, two bonus tiers, hints and a
 
 - **The guide.** For someone who wants to learn and does not know how to solve a level, the
   hints are not enough: they nudge, and stop short of explaining. The guide explains. Its front
-  page says how to read the screen and what the words mean. Each lesson takes one level: what is
-  going wrong and why, the idea that fixes it and the name it goes by elsewhere, what to change
-  step by step, why that is the best answer, and what else a player might try and what comes of
-  it. It gives the answer away and says so; the hints stay the gentle way in. A button opens the
-  level with the answer on the canvas, as an edit that undo takes back.
+  page says how to read the screen and what the words mean. Each lesson takes one level, and
+  is written for someone who has not met its parts before: what each part on the canvas is and
+  does here, the words the lesson needs, what is going wrong and why, the idea that fixes it and
+  the name it goes by elsewhere, what to change step by step, what each setting those steps touch
+  does, what to watch when it runs, why that is the best answer, and what else a player might try
+  and what comes of it. A lesson repeats what an earlier one explained, because a reader may open
+  any of them first. It gives the answer away and says so; the hints stay the gentle way in. A
+  button opens the level with the answer on the canvas, as an edit that undo takes back.
   - Nothing measured is written into a lesson. What the answer scores is run on the page by
     `runScenario`, so those figures cannot fall behind the engine.
   - What is written is tied down where it can be: each line about another attempt is a row of
     `attempts.ts`; every setting a step names is checked against the inspector's labels in both
-    languages; and the Persian gives no figure the English does not.
+    languages; every part a level starts with has to be explained under the name it has on the
+    canvas, and every setting explained has to be one the steps named; and the Persian gives no
+    figure the English does not.
   - A lesson is reachable from its level's panel and from the front page. Unlike the workbench it
     is a page to read, and fits a phone.
 

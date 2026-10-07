@@ -80,7 +80,10 @@ npm run lessons     # follows every lesson's steps in the editor; needs the buil
   the lesson has changed: retune the level and re-read its brief, hints and debrief against the
   new numbers before touching the table. Then read its lesson in the guide
   (`apps/web/src/i18n/guide.en.ts` and `guide.fa.ts`): the steps there are the reference design
-  in words, and each line under `others` is a row of that table. `scripts/lessons.mjs` has the
+  in words, and each line under `others` is a row of that table. A lesson also says what every
+  part the level starts with is (`parts`, by the name on the canvas), what each setting its steps
+  change does (`settings`, by the inspector's label) and what to watch (`watch`); tests check the
+  first two, so a part or a step added to a level needs its entry in both languages. `scripts/lessons.mjs` has the
   same steps as actions; change them together and run `npm run lessons`. The order of steps
   matters: the editor refuses a connection that would break a rule of the design, so a client's
   old connection has to be deleted before its new one is drawn.
