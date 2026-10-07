@@ -28,6 +28,12 @@ rename would be a find-and-replace, a repository rename and a new address for ev
   columns.
 - The connection is slow and its DNS is intermittent. An `npm install` that hangs is usually the
   network, not the lockfile.
+- Python is not on the PATH. Scripts here are JavaScript; for a one-off edit across files, write a
+  `.mjs` and run it with Node.
+- A session started in `D:\Git\loadline` does not see `D:\Git\.claude\launch.json`, so the two
+  servers below cannot be started by name from it. Start them from the shell instead:
+  `npm run dev -w @loadline/web`, and `npm run preview -w @loadline/web -- --port 5184`. A script
+  that needs the second must wait for it: started in the same breath, it finds the port closed.
 - The web app's dev server is the `loadline-web` entry in `D:\Git\.claude\launch.json`, on port
   5183. `loadline-built` serves the production build on 5184 (run `npm run build -w @loadline/web`
   first); only that one has the content security policy, which the dev server would trip over.

@@ -582,6 +582,8 @@ export const en = {
     down: (name: string) => `${name} is down.`,
     work: (name: string) => `Most of the time is ${name}'s own work. It has room to spare.`,
     via: (names: string[]) => `Reached through ${names.join(', then ')}.`,
+    routesTitle: 'By route, since the start',
+    route: (failing: string, slowest: string) => `${failing} fail · p99 ${slowest}`,
     failuresTitle: 'Why requests failed',
     none: 'No request has failed.',
     // One line per group of failures: how many, and what happened to them.

@@ -3,7 +3,7 @@ import { useDesign } from '../design/store.ts';
 import type { Messages } from '../i18n/en.ts';
 import { useMessages } from '../i18n/index.ts';
 import { useSim } from '../sim/store.ts';
-import { formatCount } from './format.ts';
+import { formatCount, formatDuration, formatPercent } from './format.ts';
 
 /** How many groups of failures to list; the rest are the long tail. */
 const SHOWN = 4;
@@ -16,6 +16,7 @@ export function Why() {
   const m = useMessages();
   const bottleneck = useSim((state) => state.bottleneck);
   const blame = useSim((state) => state.blame);
+  const routes = useSim((state) => state.routes);
   const nodes = useDesign((state) => state.nodes);
   const edges = useDesign((state) => state.edges);
   const nameOf = (id: string) => nodes.find((node) => node.id === id)?.data.name || id;
@@ -42,6 +43,28 @@ export function Why() {
         <p role="status">{bottleneck ? explain(bottleneck) : m.why.quiet}</p>
         {through.length > 0 && <p className="text-[0.9rem] text-ink-3">{m.why.via(through)}</p>}
       </section>
+      {routes.length > 0 && (
+        <section aria-labelledby="routes-title">
+          <h3 id="routes-title" className="mb-1 font-bold">
+            {m.why.routesTitle}
+          </h3>
+          <ul className="flex flex-col gap-0.5">
+            {routes.map((route) => {
+              const finished = route.ok + route.failed;
+              return (
+                <li key={route.name} className="flex items-baseline justify-between gap-3">
+                  <span className="truncate font-mono font-bold">{route.name}</span>
+                  <span className={`shrink-0 font-mono text-[0.9rem] ${route.failed > 0 ? 'text-oxide' : 'text-ink-2'}`}>
+                    {finished === 0
+                      ? '–'
+                      : m.why.route(formatPercent(route.failed / finished), route.ok > 0 ? formatDuration(route.p99) : '–')}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       <section aria-labelledby="failures-title">
         <h3 id="failures-title" className="mb-1 font-bold">
           {m.why.failuresTitle}

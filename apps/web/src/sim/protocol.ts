@@ -1,4 +1,4 @@
-import type { BlameReport, Bottleneck, Command, Design, Gauge, Report, WindowSample, Workload } from '@loadline/engine';
+import type { BlameReport, Bottleneck, Command, Design, Gauge, Report, RouteScore, WindowSample, Workload } from '@loadline/engine';
 import type { Outcome } from '@loadline/scenarios';
 
 /** Running totals since the start of the run. */
@@ -63,6 +63,8 @@ export interface Frame {
   blame: BlameReport[];
   /** Where the time has been going over the last few seconds. */
   bottleneck: Bottleneck | null;
+  /** What clients have seen of each route since the run started. Empty when the design names none. */
+  routes: RouteScore[];
   /** What the design has cost to run so far, in dollars a month. */
   monthlyCost: number;
   /** Present when the run is of a level. */

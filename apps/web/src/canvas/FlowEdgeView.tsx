@@ -10,7 +10,7 @@ import { DOT_SPEED, dotSpacing, failureEvery } from './traffic.ts';
 /**
  * A connection between two parts. The calls made over it in the last second travel along it as
  * dots: the more calls, the closer together, and for the share that failed, every so many dots
- * one is red. A label says how many are failing.
+ * one is red. A label says how many are failing, and one kept for a single route carries its name.
  */
 export function FlowEdgeView({
   id,
@@ -22,6 +22,7 @@ export function FlowEdgeView({
   targetPosition,
   selected,
   markerEnd,
+  data,
 }: EdgeProps<FlowEdge>) {
   const m = useMessages();
   const window = useSim((state) => {
@@ -30,6 +31,7 @@ export function FlowEdgeView({
   });
   const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
 
+  const route = data?.params.route ?? '';
   const calls = window?.calls ?? 0;
   const failing = calls > 0 ? (window?.failed ?? 0) / calls : 0;
   const spacing = dotSpacing(calls);
@@ -56,6 +58,17 @@ export function FlowEdgeView({
       {calls > 0 && <path d={path} className="flow-traffic" style={stream(spacing, 'var(--color-sea)')} />}
       {/* The failures are drawn over the dots they are among: one in every so many. */}
       {Number.isFinite(every) && <path d={path} className="flow-traffic" style={stream(spacing * every, 'var(--color-oxide)')} />}
+      {route !== '' && (
+        <EdgeLabelRenderer>
+          {/* Above the line, so that the label for failures can sit on it. */}
+          <div
+            className="nodrag nopan pointer-events-none absolute border-2 border-ink bg-pop px-1 font-mono text-[0.75rem] leading-tight font-bold text-ink"
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY - 20}px)` }}
+          >
+            {route}
+          </div>
+        </EdgeLabelRenderer>
+      )}
       {failing > 0 && (
         <EdgeLabelRenderer>
           <div

@@ -584,6 +584,8 @@ export const fa: Messages = {
     down: (name: string) => `${name} از کار افتاده است.`,
     work: (name: string) => `بیشتر زمان، صرف کارِ خودِ ${name} می‌شود. جای خالی دارد.`,
     via: (names: string[]) => `از مسیر ${names.join('، سپس ')}.`,
+    routesTitle: 'به تفکیک مسیر، از آغاز اجرا',
+    route: (failing: string, slowest: string) => `${failing} ناموفق · p99 ${slowest}`,
     failuresTitle: 'چرا درخواست‌ها ناموفق شدند',
     none: 'هیچ درخواستی ناموفق نشده است.',
     timeout: {

@@ -1,4 +1,4 @@
-import type { BlameReport, Bottleneck, Gauge, Issue, WindowSample } from '@loadline/engine';
+import type { BlameReport, Bottleneck, Gauge, Issue, RouteScore, WindowSample } from '@loadline/engine';
 import { create } from 'zustand';
 import type { LevelFrame, Totals } from './protocol.ts';
 
@@ -33,6 +33,8 @@ export interface SimState {
   blame: BlameReport[];
   /** Where the time has been going over the last few seconds. */
   bottleneck: Bottleneck | null;
+  /** What clients have seen of each route since the run started. */
+  routes: RouteScore[];
   /** What the design has cost to run so far, in dollars a month. */
   monthlyCost: number;
   /** How the run stands against its level, when it is a run of one. */
@@ -52,6 +54,7 @@ export const EMPTY_RUN = {
   gauges: [] as Gauge[],
   blame: [] as BlameReport[],
   bottleneck: null,
+  routes: [] as RouteScore[],
   failure: null,
   level: null,
   monthlyCost: 0,

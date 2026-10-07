@@ -160,6 +160,7 @@ export class Runner {
       },
       blame: sim ? describeBlame(sim) : [],
       bottleneck: recent && this.design ? findBottleneck(this.design, recent) : null,
+      routes: sim?.routeTotals() ?? [],
       monthlyCost: sim ? totalMonthlyCost(sim) : 0,
       level:
         sim && this.level && this.design

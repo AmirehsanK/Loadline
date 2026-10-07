@@ -63,6 +63,7 @@ worker.onmessage = (event: MessageEvent<FromWorker>) => {
     gauges: frame.gauges,
     blame: frame.blame,
     bottleneck: frame.bottleneck,
+    routes: frame.routes,
     monthlyCost: frame.monthlyCost,
     level: frame.level,
     samples: frame.samples.length > 0 ? [...state.samples, ...frame.samples].slice(-HISTORY) : state.samples,
