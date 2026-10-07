@@ -25,7 +25,7 @@ export function Inspector() {
   const issues = useSim((state) => state.issues);
 
   return (
-    <aside data-tour="settings" className="flex min-h-0 flex-col gap-4 overflow-y-auto border-s border-line bg-plate p-3" aria-labelledby="settings-title">
+    <aside data-tour="settings" className="flex min-h-0 flex-col gap-4 overflow-y-auto border-s-2 border-line bg-plate p-3" aria-labelledby="settings-title">
       <h2 id="settings-title" className="marking">
         {m.inspector.title}
       </h2>
@@ -46,7 +46,7 @@ function NodeSettings({ node }: { node: FlowNode }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {lockedPaths(level, node.id, node.type) === '*' && <p className="rounded-[3px] bg-shallows px-2 py-1.5">{m.level.lockedPart}</p>}
+      {lockedPaths(level, node.id, node.type) === '*' && <p className="bg-shallows px-2 py-1.5">{m.level.lockedPart}</p>}
       <TextField
         label={m.inspector.name}
         value={node.data.name}
@@ -223,7 +223,7 @@ function WorkField({
   const m = useMessages();
   const texts = m.fields.work;
   return (
-    <fieldset className="flex flex-col gap-2 rounded-[3px] border border-line p-2">
+    <fieldset className="flex flex-col gap-2 btn border-2 border-line bg-plate p-2">
       <legend className="field-label px-1">{label}</legend>
       <NumberField
         label={label}
@@ -301,7 +301,7 @@ function Summary({ node }: { node: FlowNode }) {
   }
   if (lines.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1 rounded-[3px] bg-sea-wash px-2 py-1.5 text-[0.9rem]">
+    <div className="flex flex-col gap-1 bg-sea-wash px-2 py-1.5 text-[0.9rem]">
       {lines.map((line) => (
         <p key={line}>{line}</p>
       ))}
@@ -349,7 +349,7 @@ function Faults({ faults, onInject }: { faults: Fault[]; onInject: (command: Com
   const running = useSim((state) => state.status === 'running');
   if (faults.length === 0) return null;
   return (
-    <section className="flex flex-col gap-1.5 border-t border-line pt-3" aria-labelledby="faults-title">
+    <section className="flex flex-col gap-1.5 border-t-2 border-line pt-3" aria-labelledby="faults-title">
       <h3 id="faults-title" className="flex items-center gap-1.5 font-bold">
         <BoltIcon />
         {m.inspector.faults.title}
@@ -363,7 +363,7 @@ function Faults({ faults, onInject }: { faults: Fault[]; onInject: (command: Com
             onClick={() => {
               onInject(fault.command);
             }}
-            className="rounded-[3px] border border-line px-2 py-1 text-[0.9rem] hover:border-oxide hover:text-oxide disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line"
+            className="btn border-2 border-line bg-plate px-2 py-1 text-[0.9rem] hover:border-oxide hover:text-oxide disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line"
           >
             {fault.label}
           </button>
@@ -383,7 +383,7 @@ function RemoveButton({ kind, id }: { kind: 'node' | 'edge'; id: string }): Reac
       onClick={() => {
         remove(kind, id);
       }}
-      className="flex items-center justify-center gap-1.5 self-start rounded-[3px] border border-line px-2.5 py-1 text-ink-2 hover:border-oxide hover:text-oxide"
+      className="flex items-center justify-center gap-1.5 self-start btn border-2 border-line bg-plate px-2.5 py-1 text-ink-2 hover:border-oxide hover:text-oxide"
     >
       <TrashIcon />
       {m.inspector.remove}
@@ -405,7 +405,7 @@ function Issues({ issues }: { issues: Issue[] }) {
   const warnings = issues.filter((issue) => issue.level === 'warning');
   if (issues.length === 0) return null;
   return (
-    <div className="mt-auto flex flex-col gap-3 border-t border-line pt-3" role="status">
+    <div className="mt-auto flex flex-col gap-3 border-t-2 border-line pt-3" role="status">
       {errors.length > 0 && (
         <section>
           <h3 className="mb-1 font-bold text-oxide">{m.inspector.problems}</h3>

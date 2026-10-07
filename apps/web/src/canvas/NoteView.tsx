@@ -14,7 +14,7 @@ export function NoteView({ id, data, selected, isConnectable }: NodeProps<FlowNo
   const lines = Math.min(8, Math.max(2, data.text.split('\n').length));
   return (
     <div
-      className={`w-48 rounded-[3px] border border-dashed bg-plate/85 ${selected ? 'border-ink outline-2 outline-offset-2 outline-ink' : 'border-ink-3'}`}
+      className={`w-48 border-2 border-dashed bg-plate/85 ${selected ? 'border-ink outline-2 outline-offset-2 outline-ink' : 'border-ink-3'}`}
     >
       <div className="cursor-grab px-2 pt-1 text-[0.75rem] tracking-wide text-ink-3 uppercase active:cursor-grabbing">{m.notes.label}</div>
       {isConnectable ? (

@@ -35,10 +35,10 @@ export function Dock() {
     // stretching it.
     <section
       data-tour="numbers"
-      className="grid h-64 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(0,1fr)] border-t border-line bg-plate"
+      className="grid h-64 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[minmax(0,1fr)] border-t-2 border-line bg-plate"
       aria-labelledby="metrics-title"
     >
-      <div className="flex min-h-0 w-[30rem] flex-col gap-2 border-e border-line p-3">
+      <div className="flex min-h-0 w-[30rem] flex-col gap-2 border-e-2 border-line p-3">
         <h2 id="metrics-title" className="marking">
           {m.metrics.title}
         </h2>
@@ -61,7 +61,7 @@ export function Dock() {
       <div className="flex min-h-0 min-w-0 flex-col gap-1 p-3">
         <div className="flex items-center justify-between gap-3">
           <h3 className="font-bold">{m.metrics.latencyTitle}</h3>
-          <div className="flex overflow-hidden rounded-[3px] border border-line" role="group" aria-label={m.metrics.view}>
+          <div className="flex overflow-hidden border-2 border-line" role="group" aria-label={m.metrics.view}>
             {(['chart', 'table'] as const).map((option) => (
               <button
                 key={option}
@@ -117,7 +117,7 @@ function SampleTable({ samples }: { samples: WindowSample[] }) {
         <thead className="sticky top-0 bg-plate text-ink-2">
           <tr>
             {[m.metrics.time, m.metrics.requests, m.metrics.series.p50, m.metrics.series.p99, m.metrics.errors].map((heading) => (
-              <th key={heading} scope="col" className="border-b border-line py-1 pe-4 text-end font-normal first:text-start">
+              <th key={heading} scope="col" className="border-b-2 border-line py-1 pe-4 text-end font-normal first:text-start">
                 {heading}
               </th>
             ))}
@@ -127,7 +127,7 @@ function SampleTable({ samples }: { samples: WindowSample[] }) {
           {rows.map((sample) => {
             const finished = sample.ok + sample.failed;
             return (
-              <tr key={sample.t} className="border-b border-grid">
+              <tr key={sample.t} className="border-b-2 border-grid">
                 <th scope="row" className="py-0.5 pe-4 text-start font-normal">
                   {formatClock(sample.t)}
                 </th>

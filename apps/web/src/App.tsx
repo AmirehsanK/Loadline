@@ -33,7 +33,7 @@ function Notice({ title, text }: { title: string; text?: string }) {
   const m = useMessages();
   return (
     <main className="grid min-h-dvh place-items-center p-6">
-      <div className="flex max-w-[34rem] flex-col items-start gap-3 border border-ink bg-plate p-6 shadow-[6px_6px_0_var(--color-ink)]">
+      <div className="flex max-w-[34rem] flex-col items-start gap-3 border-2 border-ink bg-plate p-6 shadow-[6px_6px_0_var(--color-ink)]">
         <p className="flex items-center gap-2 text-ink">
           <LoadMark />
           <span className="marking text-[1.4rem]!">{m.app.name}</span>
@@ -43,7 +43,7 @@ function Notice({ title, text }: { title: string; text?: string }) {
         </h1>
         {text !== undefined && <p className="text-ink-2">{text}</p>}
         {text !== undefined && (
-          <a href={hrefOf(HOME)} className="flex items-center gap-1.5 rounded-[3px] bg-ink px-3 py-1.5 font-bold text-plate hover:bg-ink-2">
+          <a href={hrefOf(HOME)} className="flex items-center gap-1.5 btn border-2 border-ink bg-pop px-3 py-1.5 font-bold text-ink">
             {m.shared.home}
             <ForwardIcon />
           </a>

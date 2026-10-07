@@ -20,7 +20,7 @@ import { useSim } from '../sim/store.ts';
 
 const SPEEDS = [1, 2, 5, 10];
 
-const quiet = 'rounded-[3px] border border-line hover:border-ink disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line';
+const quiet = 'border-2 border-line hover:border-ink disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line';
 
 export function TopBar() {
   const m = useMessages();
@@ -33,7 +33,7 @@ export function TopBar() {
   const startTour = useTour((state) => state.start);
 
   return (
-    <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-plate px-4 py-2">
+    <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b-2 border-line bg-plate px-4 py-2">
       <a href="#canvas" className="sr-only focus:not-sr-only">
         {m.app.skipToCanvas}
       </a>
@@ -51,7 +51,7 @@ export function TopBar() {
           type="button"
           disabled={status === 'blocked'}
           onClick={running ? pause : play}
-          className="flex min-w-24 items-center justify-center gap-1.5 rounded-[3px] bg-ink px-3 py-1.5 font-bold whitespace-nowrap text-plate hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-ink-3"
+          className="flex min-w-24 items-center justify-center gap-1.5 btn border-2 border-ink bg-pop px-3 py-1.5 font-bold whitespace-nowrap text-ink disabled:cursor-not-allowed disabled:bg-deck disabled:text-ink-3"
         >
           {running ? <PauseIcon /> : <PlayIcon />}
           {running ? m.run.pause : status === 'finished' ? m.run.again : m.run.play}
@@ -90,11 +90,11 @@ export function TopBar() {
       <RunNotice />
       <SharedNotice />
       {status === 'failed' && failure !== null && (
-        <p className="w-full rounded-[3px] bg-oxide-wash px-2 py-1" role="alert">
+        <p className="w-full bg-oxide-wash px-2 py-1" role="alert">
           <strong>{m.run.failed}.</strong> {failure}
         </p>
       )}
-      {status === 'blocked' && <p className="w-full rounded-[3px] bg-oxide-wash px-2 py-1">{m.run.blocked}</p>}
+      {status === 'blocked' && <p className="w-full bg-oxide-wash px-2 py-1">{m.run.blocked}</p>}
     </header>
   );
 }
@@ -196,7 +196,7 @@ function SpeedPicker({ ends }: { ends: boolean }) {
       <span id="speed-label" className="text-[0.85rem] text-ink-2">
         {m.run.speed}
       </span>
-      <div className="flex overflow-hidden rounded-[3px] border border-line" role="group" aria-labelledby="speed-label">
+      <div className="flex overflow-hidden border-2 border-line" role="group" aria-labelledby="speed-label">
         {options.map((option) => (
           <button
             key={option}
@@ -251,7 +251,7 @@ function TrafficControl() {
         onClick={() => {
           inject({ type: 'traffic', multiplier: 3, durationMs: 10_000 });
         }}
-        className="flex items-center gap-1.5 rounded-[3px] border border-line px-2.5 py-1 hover:border-oxide hover:text-oxide disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line"
+        className="flex items-center gap-1.5 btn border-2 border-line bg-plate px-2.5 py-1 hover:border-oxide hover:text-oxide disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line"
       >
         <BoltIcon />
         {m.run.spike}
@@ -277,9 +277,9 @@ function SharedLevelNotice({ level }: { level: Scenario }) {
 function SharedBar({ text, keep }: { text: string; keep: string }) {
   const m = useMessages();
   return (
-    <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-[3px] bg-shallows px-2 py-1" role="status">
+    <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 bg-shallows px-2 py-1" role="status">
       <p>{text}</p>
-      <button type="button" onClick={keepShared} className="rounded-[3px] border border-ink bg-plate px-2.5 py-0.5 font-bold hover:bg-ink hover:text-plate">
+      <button type="button" onClick={keepShared} className="btn border-2 border-ink bg-plate px-2.5 py-0.5 font-bold hover:bg-pop">
         {keep}
       </button>
       <span className="text-[0.85rem] text-ink-3">{m.shared.keepNote}</span>
@@ -297,7 +297,7 @@ function RunNotice() {
   const measured = useSim((state) => state.measuredSpeed);
   if (!behind) return null;
   return (
-    <p className="w-full rounded-[3px] bg-signal-wash px-2 py-1" role="status">
+    <p className="w-full bg-signal-wash px-2 py-1" role="status">
       {m.run.behind(measured.toFixed(1))}
     </p>
   );

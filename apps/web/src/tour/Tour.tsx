@@ -82,13 +82,13 @@ export function Tour({ inLevel }: { inLevel: boolean }) {
       <div
         role="region"
         aria-label={m.tour.title}
-        className="pointer-events-auto absolute inset-x-0 bottom-3 z-10 mx-auto flex w-fit items-center gap-3 rounded-[3px] border border-ink bg-plate px-3 py-2 whitespace-nowrap shadow-[4px_4px_0_var(--color-ink)]"
+        className="pointer-events-auto absolute inset-x-0 bottom-3 z-10 mx-auto flex w-fit items-center gap-3 border-2 border-ink bg-plate px-3 py-2 whitespace-nowrap shadow-[4px_4px_0_var(--color-ink)]"
       >
         <span>{m.tour.offer}</span>
-        <button type="button" onClick={start} className="rounded-[3px] bg-ink px-2.5 py-1 font-bold text-plate hover:bg-ink-2">
+        <button type="button" onClick={start} className="btn border-2 border-ink bg-pop px-2.5 py-1 font-bold text-ink">
           {m.tour.start}
         </button>
-        <button type="button" onClick={end} className="rounded-[3px] border border-line px-2.5 py-1 hover:border-ink">
+        <button type="button" onClick={end} className="btn border-2 border-line bg-plate px-2.5 py-1 hover:border-ink">
           {m.tour.decline}
         </button>
       </div>
@@ -102,8 +102,8 @@ export function Tour({ inLevel }: { inLevel: boolean }) {
       {/* A frame round what the card is about. Its shadow is what dims everything else. */}
       {box && (
         <div
-          className="absolute rounded-[3px] outline-3 outline-ink"
-          style={{ left: box.left, top: box.top, width: box.width, height: box.height, boxShadow: '0 0 0 100vmax rgb(15 34 51 / 0.38)' }}
+          className="absolute outline-3 outline-ink"
+          style={{ left: box.left, top: box.top, width: box.width, height: box.height, boxShadow: '0 0 0 100vmax rgb(17 17 17 / 0.45)' }}
         />
       )}
       <div
@@ -112,7 +112,7 @@ export function Tour({ inLevel }: { inLevel: boolean }) {
         aria-labelledby="tour-title"
         aria-describedby="tour-text"
         tabIndex={-1}
-        className="pointer-events-auto absolute flex flex-col gap-2 rounded-[3px] border border-ink bg-plate p-4 shadow-[6px_6px_0_var(--color-ink)] outline-none"
+        className="pointer-events-auto absolute flex flex-col gap-2 border-2 border-ink bg-plate p-4 shadow-[6px_6px_0_var(--color-ink)] outline-none"
         style={{ left: spot.left, top: spot.top, width: CARD_WIDTH }}
       >
         <p className="text-[0.85rem] text-ink-3">{m.tour.progress(at + 1, TOUR_STOPS.length)}</p>
@@ -132,7 +132,7 @@ export function Tour({ inLevel }: { inLevel: boolean }) {
               onClick={() => {
                 move(-1);
               }}
-              className="rounded-[3px] border border-line px-2.5 py-1 hover:border-ink"
+              className="btn border-2 border-line bg-plate px-2.5 py-1 hover:border-ink"
             >
               {m.tour.back}
             </button>
@@ -142,7 +142,7 @@ export function Tour({ inLevel }: { inLevel: boolean }) {
             onClick={() => {
               move(1);
             }}
-            className="rounded-[3px] bg-ink px-3 py-1 font-bold text-plate hover:bg-ink-2"
+            className="btn border-2 border-ink bg-pop px-3 py-1 font-bold text-ink"
           >
             {last ? m.tour.done : m.tour.next}
           </button>

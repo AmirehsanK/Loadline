@@ -32,7 +32,7 @@ export function ShareButton() {
         onClick={() => {
           setOpen(true);
         }}
-        className="rounded-[3px] border border-line px-3 py-1.5 hover:border-ink"
+        className="btn border-2 border-line bg-plate px-3 py-1.5 hover:border-ink"
       >
         {m.share.button}
       </button>
@@ -71,7 +71,7 @@ function Copyable({ label, hint, value, rows }: { label: string; hint: string; v
         <label htmlFor={id} className="font-bold">
           {label}
         </label>
-        <button type="button" onClick={copy} disabled={value === ''} className="rounded-[3px] border border-line px-2.5 py-0.5 hover:border-ink disabled:text-ink-3">
+        <button type="button" onClick={copy} disabled={value === ''} className="btn border-2 border-line bg-plate px-2.5 py-0.5 hover:border-ink disabled:text-ink-3">
           <span aria-live="polite">{copied ? m.share.copied : m.share.copy}</span>
         </button>
       </div>
@@ -162,10 +162,10 @@ function ShareDialog({ onClose }: { onClose: () => void }) {
       ref={dialog}
       aria-labelledby="share-title"
       onClose={onClose}
-      className="m-auto w-[36rem] max-w-[calc(100vw-2rem)] rounded-[3px] border border-ink bg-plate p-0 text-ink shadow-[6px_6px_0_var(--color-ink)] backdrop:bg-ink/40"
+      className="m-auto w-[36rem] max-w-[calc(100vw-2rem)] border-2 border-ink bg-plate p-0 text-ink shadow-[6px_6px_0_var(--color-ink)] backdrop:bg-ink/40"
     >
       <div className="flex max-h-[calc(100dvh-4rem)] flex-col">
-        <header className="border-b border-line px-5 py-3">
+        <header className="border-b-2 border-line px-5 py-3">
           <h2 id="share-title" className="marking text-[1.5rem]!">
             {m.share.title}
           </h2>
@@ -173,7 +173,7 @@ function ShareDialog({ onClose }: { onClose: () => void }) {
 
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 py-4">
           {links.status === 'failed' ? (
-            <p className="rounded-[3px] bg-oxide-wash px-2 py-1.5" role="alert">
+            <p className="bg-oxide-wash px-2 py-1.5" role="alert">
               {links.tooLarge ? m.share.tooLarge : m.share.failed}
             </p>
           ) : (
@@ -184,13 +184,13 @@ function ShareDialog({ onClose }: { onClose: () => void }) {
             </>
           )}
 
-          <section className="flex flex-col gap-2 border-t border-line pt-3">
+          <section className="flex flex-col gap-2 border-t-2 border-line pt-3">
             <h3 className="font-bold">{m.share.file}</h3>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={download} className="rounded-[3px] border border-line px-3 py-1.5 hover:border-ink">
+              <button type="button" onClick={download} className="btn border-2 border-line bg-plate px-3 py-1.5 hover:border-ink">
                 {m.share.export}
               </button>
-              <label className="cursor-pointer rounded-[3px] border border-line px-3 py-1.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink hover:border-ink">
+              <label className="cursor-pointer btn border-2 border-line bg-plate px-3 py-1.5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink hover:border-ink">
                 {m.share.import}
                 <input type="file" accept="application/json,.json" onChange={pick} className="sr-only" />
               </label>
@@ -204,13 +204,13 @@ function ShareDialog({ onClose }: { onClose: () => void }) {
           </section>
         </div>
 
-        <footer className="flex justify-end border-t border-line px-5 py-3">
+        <footer className="flex justify-end border-t-2 border-line px-5 py-3">
           <button
             type="button"
             onClick={() => {
               dialog.current?.close();
             }}
-            className="rounded-[3px] bg-ink px-3 py-1.5 font-bold text-plate hover:bg-ink-2"
+            className="btn border-2 border-ink bg-pop px-3 py-1.5 font-bold text-ink"
           >
             {m.share.close}
           </button>

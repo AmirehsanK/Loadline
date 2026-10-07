@@ -17,7 +17,7 @@ export function LocaleSwitch() {
       onClick={() => {
         setLocale(other);
       }}
-      className="rounded-[3px] border border-line px-2.5 py-1 whitespace-nowrap hover:border-ink"
+      className="btn border-2 border-line bg-plate px-2.5 py-1 whitespace-nowrap hover:border-ink"
     >
       {m.locale.switchTo}
     </button>

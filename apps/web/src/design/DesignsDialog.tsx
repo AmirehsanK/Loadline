@@ -16,7 +16,7 @@ export function DesignsButton() {
         onClick={() => {
           setOpen(true);
         }}
-        className="rounded-[3px] border border-line px-3 py-1.5 hover:border-ink"
+        className="btn border-2 border-line bg-plate px-3 py-1.5 hover:border-ink"
       >
         {m.designs.button}
       </button>
@@ -68,10 +68,10 @@ function DesignsDialog({ onClose }: { onClose: () => void }) {
       ref={dialog}
       aria-labelledby="designs-title"
       onClose={onClose}
-      className="m-auto w-[34rem] max-w-[calc(100vw-2rem)] rounded-[3px] border border-ink bg-plate p-0 text-ink shadow-[6px_6px_0_var(--color-ink)] backdrop:bg-ink/40"
+      className="m-auto w-[34rem] max-w-[calc(100vw-2rem)] border-2 border-ink bg-plate p-0 text-ink shadow-[6px_6px_0_var(--color-ink)] backdrop:bg-ink/40"
     >
       <div className="flex max-h-[calc(100dvh-4rem)] flex-col">
-        <header className="border-b border-line px-5 py-3">
+        <header className="border-b-2 border-line px-5 py-3">
           <h2 id="designs-title" className="marking text-[1.5rem]!">
             {m.designs.title}
           </h2>
@@ -105,7 +105,7 @@ function DesignsDialog({ onClose }: { onClose: () => void }) {
               <button
                 type="submit"
                 disabled={tidyName(name) === ''}
-                className="rounded-[3px] bg-ink px-3 py-1.5 font-bold whitespace-nowrap text-plate hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-ink-3"
+                className="btn border-2 border-ink bg-pop px-3 py-1.5 font-bold whitespace-nowrap text-ink disabled:cursor-not-allowed disabled:bg-deck disabled:text-ink-3"
               >
                 {m.designs.save}
               </button>
@@ -117,7 +117,7 @@ function DesignsDialog({ onClose }: { onClose: () => void }) {
             </p>
           </form>
 
-          <section className="flex flex-col gap-2 border-t border-line pt-3">
+          <section className="flex flex-col gap-2 border-t-2 border-line pt-3">
             {list.length === 0 ? (
               <p className="text-ink-2">{m.designs.empty}</p>
             ) : (
@@ -125,7 +125,7 @@ function DesignsDialog({ onClose }: { onClose: () => void }) {
               <p className="text-[0.85rem] text-ink-3">{m.designs.openHint}</p>
               <ul className="flex flex-col gap-1.5">
                 {list.map((saved) => (
-                  <li key={saved.id} className="flex items-center gap-3 rounded-[3px] border border-line bg-deck px-3 py-2">
+                  <li key={saved.id} className="flex items-center gap-3 border-2 border-line bg-deck px-3 py-2">
                     <div className="min-w-0 flex-1">
                       <div dir="auto" className="truncate font-bold">
                         {saved.name}
@@ -139,7 +139,7 @@ function DesignsDialog({ onClose }: { onClose: () => void }) {
                       onClick={() => {
                         open(saved);
                       }}
-                      className="rounded-[3px] border border-ink bg-plate px-2.5 py-1 font-bold hover:bg-ink hover:text-plate"
+                      className="btn border-2 border-ink bg-plate px-2.5 py-1 font-bold hover:bg-pop"
                     >
                       {m.designs.open}
                     </button>
@@ -150,7 +150,7 @@ function DesignsDialog({ onClose }: { onClose: () => void }) {
                         setList(removeDesign(saved.id));
                         setSaid(null);
                       }}
-                      className="rounded-[3px] border border-line px-2.5 py-1 hover:border-oxide hover:text-oxide"
+                      className="btn border-2 border-line bg-plate px-2.5 py-1 hover:border-oxide hover:text-oxide"
                     >
                       {m.designs.remove}
                     </button>
@@ -162,13 +162,13 @@ function DesignsDialog({ onClose }: { onClose: () => void }) {
           </section>
         </div>
 
-        <footer className="flex justify-end border-t border-line px-5 py-3">
+        <footer className="flex justify-end border-t-2 border-line px-5 py-3">
           <button
             type="button"
             onClick={() => {
               dialog.current?.close();
             }}
-            className="rounded-[3px] border border-line px-3 py-1.5 hover:border-ink"
+            className="btn border-2 border-line bg-plate px-3 py-1.5 hover:border-ink"
           >
             {m.designs.close}
           </button>

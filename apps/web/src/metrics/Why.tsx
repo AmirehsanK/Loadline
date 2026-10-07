@@ -34,7 +34,7 @@ export function Why() {
   const through = bottleneck ? bottleneck.path.slice(0, -1).map(nameOf) : [];
 
   return (
-    <div className="flex min-h-0 w-[22rem] flex-col gap-3 overflow-y-auto border-s border-line p-3">
+    <div className="flex min-h-0 w-[22rem] flex-col gap-3 overflow-y-auto border-s-2 border-line p-3">
       <section aria-labelledby="where-title">
         <h3 id="where-title" className="mb-1 font-bold">
           {m.why.title}

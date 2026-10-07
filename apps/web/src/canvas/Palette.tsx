@@ -32,7 +32,7 @@ export function PartsList({ types }: { types: readonly NodeType[] }) {
               onClick={() => {
                 addNode(type, m.parts.types[type].name, { x: 40 + (count % 6) * 30, y: 220 + (count % 6) * 30 });
               }}
-              className="flex w-full cursor-grab items-start gap-2 rounded-[3px] border border-line bg-deck px-2 py-1.5 text-start hover:border-ink active:cursor-grabbing"
+              className="flex w-full cursor-grab items-start gap-2 border-2 border-line bg-deck px-2 py-1.5 text-start hover:border-ink active:cursor-grabbing"
             >
               <span className="mt-0.5 text-ink">{PART_ICONS[type]}</span>
               <span>
@@ -56,7 +56,7 @@ export function Palette() {
   const addNote = useDesign((state) => state.addNote);
   const count = useDesign((state) => state.notes.length);
   return (
-    <aside data-tour="panel" className="flex min-h-0 flex-col gap-3 overflow-y-auto border-e border-line bg-plate p-3" aria-labelledby="parts-title">
+    <aside data-tour="panel" className="flex min-h-0 flex-col gap-3 overflow-y-auto border-e-2 border-line bg-plate p-3" aria-labelledby="parts-title">
       <h2 id="parts-title" className="marking">
         {m.parts.title}
       </h2>
@@ -67,7 +67,7 @@ export function Palette() {
         onClick={() => {
           addNote({ x: 40 + (count % 6) * 30, y: -80 - (count % 6) * 30 });
         }}
-        className="flex w-full items-start gap-2 rounded-[3px] border border-dashed border-ink-3 px-2 py-1.5 text-start hover:border-ink"
+        className="flex w-full items-start gap-2 border-2 border-dashed border-ink-3 px-2 py-1.5 text-start hover:border-ink"
       >
         <span className="mt-0.5 text-ink">
           <NoteIcon />

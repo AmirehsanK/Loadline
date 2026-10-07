@@ -50,8 +50,8 @@ export const STARTER: DesignInput = {
 };
 
 // The arrowhead that shows which way calls go. An SVG marker cannot read a CSS variable, so this
-// repeats the value of --color-ink-3.
-const ARROW = { type: MarkerType.ArrowClosed, width: 18, height: 18, color: '#5e7183' } as const;
+// repeats the value of --color-ink.
+const ARROW = { type: MarkerType.ArrowClosed, width: 18, height: 18, color: '#111111' } as const;
 
 const toFlowEdge = (edge: DesignEdge): FlowEdge => ({
   id: edge.id,

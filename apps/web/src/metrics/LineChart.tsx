@@ -209,7 +209,7 @@ export function LineChart({ x, series, formatX, formatY, label }: Props) {
         ))}
         {shown && (
           <div
-            className="pointer-events-none absolute top-0 z-10 rounded-[3px] border border-line bg-plate px-2 py-1.5 font-mono text-[11px] shadow-sm"
+            className="pointer-events-none absolute top-0 z-10 border-2 border-line bg-plate px-2 py-1.5 font-mono text-[11px] shadow-[3px_3px_0_var(--color-ink)]"
             style={
               // Flip to the other side of the crosshair in the right half, so it never leaves the chart.
               shown.left > origin.width / 2

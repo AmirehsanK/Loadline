@@ -22,7 +22,7 @@ export function Brief({ level }: { level: Scenario }) {
   const parts = allowedParts(level);
 
   return (
-    <aside data-tour="panel" className="flex min-h-0 flex-col gap-4 overflow-y-auto border-e border-line bg-plate p-3" aria-labelledby="level-title">
+    <aside data-tour="panel" className="flex min-h-0 flex-col gap-4 overflow-y-auto border-e-2 border-line bg-plate p-3" aria-labelledby="level-title">
       <header className="flex flex-col gap-1.5">
         <p className="font-mono text-[0.85rem] text-ink-2">{m.level.number(index, LEVELS.length)}</p>
         <h2 id="level-title" className="marking text-[1.6rem]!">
@@ -56,7 +56,7 @@ function ObjectiveRow({ result, outcome, now }: { result: ObjectiveResult; outco
     <li className="grid grid-cols-[1.1rem_minmax(0,1fr)] gap-x-1.5">
       <span
         className={`mt-0.5 grid size-[1.1rem] place-items-center rounded-full ${
-          state === 'met' ? 'bg-sea text-plate' : state === 'missed' ? 'bg-oxide text-plate' : 'border border-line'
+          state === 'met' ? 'bg-sea text-plate' : state === 'missed' ? 'bg-oxide text-plate' : 'border-2 border-line'
         }`}
       >
         {state === 'met' && <CheckIcon />}
@@ -100,7 +100,7 @@ function Objectives({ level }: { level: Scenario }) {
       {level.warmupMs > 0 && <p className="text-[0.85rem] text-ink-3">{m.level.scoredFrom(formatClock(level.warmupMs))}</p>}
 
       {broken.length > 0 && (
-        <div className="rounded-[3px] bg-oxide-wash px-2 py-1.5" role="alert">
+        <div className="bg-oxide-wash px-2 py-1.5" role="alert">
           <p className="font-bold">{m.level.rules}</p>
           <ul className="list-disc ps-4">
             {[...new Set(broken.map((rule) => text.rules?.[rule] ?? m.level.brokenRule))].map((line) => (
@@ -111,7 +111,7 @@ function Objectives({ level }: { level: Scenario }) {
       )}
 
       {bonus.map((tier, index) => (
-        <div key={index} className="flex flex-col gap-1.5 border-t border-line pt-2">
+        <div key={index} className="flex flex-col gap-1.5 border-t-2 border-line pt-2">
           <p className="flex items-center gap-1 text-[0.85rem] text-ink-2">
             <span className="flex text-ink" aria-hidden="true">
               {Array.from({ length: index + 2 }, (_, star) => (
@@ -159,7 +159,7 @@ function Hints({ level }: { level: Scenario }) {
       {shown > 0 && (
         <ol className="flex flex-col gap-2" aria-live="polite">
           {text.hints.slice(0, shown).map((hint, index) => (
-            <li key={index} className="rounded-[3px] bg-shallows px-2 py-1.5">
+            <li key={index} className="bg-shallows px-2 py-1.5">
               <span className="block font-mono text-[0.8rem] text-ink-2">{m.level.hint(index + 1, text.hints.length)}</span>
               {hint}
             </li>
@@ -172,7 +172,7 @@ function Hints({ level }: { level: Scenario }) {
           onClick={() => {
             setShown(shown + 1);
           }}
-          className="self-start rounded-[3px] border border-line px-2.5 py-1 hover:border-ink"
+          className="self-start btn border-2 border-line bg-plate px-2.5 py-1 hover:border-ink"
         >
           {shown === 0 ? m.level.showHint : m.level.nextHint}
         </button>
@@ -184,7 +184,7 @@ function Hints({ level }: { level: Scenario }) {
             onClick={() => {
               replace(level.reference);
             }}
-            className="self-start rounded-[3px] border border-line px-2.5 py-1 hover:border-ink"
+            className="self-start btn border-2 border-line bg-plate px-2.5 py-1 hover:border-ink"
           >
             {m.level.showSolution}
           </button>
@@ -208,7 +208,7 @@ function StartOver({ level }: { level: Scenario }) {
       onClick={() => {
         replace(level.starter);
       }}
-      className="mt-auto self-start rounded-[3px] border border-line px-2.5 py-1 text-ink-2 hover:border-oxide hover:text-oxide"
+      className="mt-auto self-start btn border-2 border-line bg-plate px-2.5 py-1 text-ink-2 hover:border-oxide hover:text-oxide"
     >
       {m.level.startOver}
     </button>

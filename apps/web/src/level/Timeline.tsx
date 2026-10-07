@@ -135,7 +135,7 @@ export function Timeline({ script }: { script: Script }) {
         </svg>
         {warmupMs > 0 && (
           <div
-            className="absolute inset-y-0 border-e border-dashed border-ink-3"
+            className="absolute inset-y-0 border-e-2 border-dashed border-ink-3"
             style={{ left: 0, width: `${(x(warmupMs) / WIDTH) * 100}%` }}
             title={m.level.timeline.warmup(formatClock(warmupMs))}
           />

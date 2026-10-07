@@ -93,9 +93,13 @@ npm run lessons     # follows every lesson's steps in the editor; needs the buil
 - Styles use logical directions (`ms-`, `pe-`, `start-`, `text-end`), so the interface can mirror
   for Persian. `npm run lint` fails on a physical one (`ml-`, `text-left`, ...). The canvas and the
   charts are the exception: they set `dir="ltr"` and are always drawn left to right.
-- The look is a painted hull (see the comment at the top of `apps/web/src/styles.css`). Sea blue
-  and violet are chart series colours and were validated for colour-blind separation; hull red and
-  signal amber mean failing and at risk, and are never used for a series.
+- The look is neo-brutalist (see the comment at the top of `apps/web/src/styles.css`): two-pixel
+  black lines, square corners, flat colour, hard shadows with no blur. The owner asked for it on
+  7 October 2026, in place of the painted hull the app began with; the load line mark and the
+  colour names are what is left of that. Something with an edge that can be pressed takes the
+  `btn` class, and the yellow `pop` is for the one thing to press next. Sea blue and violet are
+  chart series colours and were validated for colour-blind separation, so their values were not
+  changed; red and amber mean failing and at risk, and are never used for a series.
 
 ## Load-bearing decisions that look optional but are not
 

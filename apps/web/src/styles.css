@@ -1,28 +1,36 @@
 @import 'tailwindcss';
 
 /*
- * The palette is a painted hull: cool deck white, navy ink, sea blue for load being carried, and
- * the red of the paint below the waterline for load past the mark.
+ * The look is neo-brutalist: black lines two pixels thick, square corners, flat colour, and hard
+ * shadows with no blur, so that everything that can be pressed stands off the page and goes down
+ * when it is. Nothing is shaded and nothing fades.
+ *
+ * The names are from the painted hull the app began as, and the load line is still its mark: deck
+ * is the page, plate a surface on it, ink the lines and the text. Pop is the one loud colour, for
+ * the thing to press next.
  *
  * Sea and violet are the two chart series; they are checked for colour-blind separation and
- * contrast. Oxide and signal are status colours (failing, at risk) and are never used for a series.
+ * contrast, and were left as they were. Oxide and signal are status colours (failing, at risk)
+ * and are never used for a series.
  */
 @theme {
-  --color-deck: #f2f5f7;
+  --color-deck: #fdf5dc;
   --color-plate: #ffffff;
-  --color-shallows: #e8eff3;
-  --color-grid: #d6e0e6;
-  --color-line: #c5d1da;
-  --color-ink: #0f2233;
-  --color-ink-2: #44586a;
-  --color-ink-3: #5e7183;
+  --color-shallows: #ffe98f;
+  --color-canvas: #f7efd6;
+  --color-grid: #e4d9b6;
+  --color-line: #111111;
+  --color-ink: #111111;
+  --color-ink-2: #3d3d3d;
+  --color-ink-3: #5c5c5c;
+  --color-pop: #ffd60a;
   --color-sea: #0e8aa0;
-  --color-sea-wash: #d3eaef;
+  --color-sea-wash: #b9f0fb;
   --color-violet: #4a3aa7;
-  --color-oxide: #b3402a;
-  --color-oxide-wash: #f7e3de;
+  --color-oxide: #c92a12;
+  --color-oxide-wash: #ffd0c7;
   --color-signal: #b87400;
-  --color-signal-wash: #fbefd5;
+  --color-signal-wash: #ffe08a;
 
   /*
    * Estedad follows each Latin face. The Latin faces have no Persian letters, so the browser
@@ -48,7 +56,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-ink);
+    outline: 3px solid var(--color-violet);
     outline-offset: 2px;
   }
 
@@ -61,6 +69,28 @@
 }
 
 @layer components {
+  /*
+   * Anything with an edge that can be pressed. It stands off the page by its shadow, lifts a
+   * little under the pointer, and goes down flat when pressed. One that cannot be pressed lies flat.
+   */
+  .btn {
+    box-shadow: 3px 3px 0 var(--color-ink);
+    transition:
+      transform 80ms ease-out,
+      box-shadow 80ms ease-out;
+  }
+  .btn:hover:not(:disabled) {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--color-ink);
+  }
+  .btn:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 var(--color-ink);
+  }
+  .btn:disabled {
+    box-shadow: none;
+  }
+
   /* Panel titles are stencilled on, like the markings on a hull. */
   .marking {
     font-family: var(--font-display);
@@ -88,16 +118,19 @@
 
   .field-input {
     width: 100%;
-    border: 1px solid var(--color-line);
-    border-radius: 3px;
+    border: 2px solid var(--color-ink);
+    border-radius: 0;
     background: var(--color-plate);
     padding-block: 0.3rem;
     padding-inline: 0.5rem;
     font-family: var(--font-mono);
     color: var(--color-ink);
   }
-  .field-input:hover {
-    border-color: var(--color-ink-3);
+  .field-input:hover:not(:disabled) {
+    background: var(--color-shallows);
+  }
+  .field-input:focus-visible {
+    outline-offset: 0;
   }
   .field-input[aria-invalid='true'] {
     border-color: var(--color-oxide);
@@ -106,13 +139,11 @@
   /* A setting the level has fixed: readable, and plainly not for changing. */
   .field-input:disabled {
     border-style: dashed;
+    border-color: var(--color-ink-3);
     background: var(--color-deck);
     color: var(--color-ink-2);
     cursor: not-allowed;
     opacity: 1;
-  }
-  .field-input:disabled:hover {
-    border-color: var(--color-line);
   }
 }
 
@@ -150,10 +181,11 @@ html[lang='fa'] .uplot {
 /* --- The canvas ---------------------------------------------------------------------------- */
 
 .react-flow {
-  --xy-background-color: var(--color-shallows);
-  --xy-edge-stroke: var(--color-line);
+  --xy-background-color: var(--color-canvas);
+  --xy-edge-stroke: var(--color-ink);
+  --xy-edge-stroke-width: 2;
   --xy-connectionline-stroke: var(--color-ink);
-  --xy-connectionline-stroke-width: 1.5;
+  --xy-connectionline-stroke-width: 2;
   --xy-handle-background-color: var(--color-plate);
   --xy-handle-border-color: var(--color-ink);
   --xy-controls-button-background-color: var(--color-plate);
@@ -164,19 +196,19 @@ html[lang='fa'] .uplot {
 }
 
 .react-flow__handle {
-  width: 11px;
-  height: 11px;
-  border-width: 1.5px;
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
 }
 .react-flow__handle:hover,
 .react-flow__handle.connectingto {
-  background: var(--color-ink);
+  background: var(--color-pop);
 }
 
 .react-flow__controls {
-  border-radius: 3px;
-  box-shadow: none;
-  border: 1px solid var(--color-line);
+  border-radius: 0;
+  box-shadow: 3px 3px 0 var(--color-ink);
+  border: 2px solid var(--color-ink);
   overflow: hidden;
 }
 

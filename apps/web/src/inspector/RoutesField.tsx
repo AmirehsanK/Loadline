@@ -39,7 +39,7 @@ export function RoutesField({ nodeId, label, hint, locked, routes, mix, onChange
   };
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded-[3px] border border-line p-2">
+    <fieldset className="flex flex-col gap-2 btn border-2 border-line bg-plate p-2">
       <legend className="field-label px-1">{label}</legend>
       {hint !== undefined && <p className="text-[0.85rem] text-ink-3">{hint}</p>}
       {routes.map((route, index) => (
@@ -65,7 +65,7 @@ export function RoutesField({ nodeId, label, hint, locked, routes, mix, onChange
           onClick={() => {
             onChange([...routes, { name: freshName(routes), weight: 1, ...(routes.length === 0 ? mix : { fileRatio: 0, uploadRatio: 0, readRatio: 0.9 }) }]);
           }}
-          className="self-start rounded-[3px] border border-line px-2.5 py-1 hover:border-ink"
+          className="self-start btn border-2 border-line bg-plate px-2.5 py-1 hover:border-ink"
         >
           {text.add}
         </button>
@@ -108,7 +108,7 @@ function RouteCard({ route, share, locked, onRename, onPatch, onRemove }: RouteC
   );
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-[3px] bg-deck p-2">
+    <div className="flex flex-col gap-1.5 bg-deck p-2">
       <div className="flex items-center gap-1.5">
         <label htmlFor={nameId} className="sr-only">
           {text.name}
@@ -126,7 +126,7 @@ function RouteCard({ route, share, locked, onRename, onPatch, onRemove }: RouteC
         />
         <span className="shrink-0 font-mono text-[0.85rem] text-ink-2">{formatPercent(share)}</span>
         {locked === undefined && (
-          <button type="button" onClick={onRemove} aria-label={text.remove(route.name)} title={text.remove(route.name)} className="rounded-[3px] p-1.5 text-ink-2 hover:text-oxide">
+          <button type="button" onClick={onRemove} aria-label={text.remove(route.name)} title={text.remove(route.name)} className="p-1.5 text-ink-2 hover:text-oxide">
             <TrashIcon />
           </button>
         )}

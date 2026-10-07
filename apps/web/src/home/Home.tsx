@@ -17,7 +17,7 @@ export function Home() {
 
   return (
     <div className="flex min-h-dvh min-w-[62rem] flex-col">
-      <header className="flex items-center justify-between gap-6 border-b border-line bg-plate px-6 py-3">
+      <header className="flex items-center justify-between gap-6 border-b-2 border-line bg-plate px-6 py-3">
         <h1 className="flex items-center gap-2.5 text-ink">
           <LoadMark size={28} />
           <span className="marking text-[2.1rem]!">{m.app.name}</span>
@@ -38,23 +38,23 @@ export function Home() {
           <p className="headline">{m.home.tagline}</p>
           <p className="max-w-[36rem] text-[1.15rem] text-ink-2">{m.home.intro}</p>
           <Hull passed={passed} total={LEVELS.length} />
-          <div className="flex flex-col items-start gap-2 border-s-4 border-ink bg-plate py-3 ps-4 pe-5">
+          <div className="flex flex-col items-start gap-2 border-2 border-ink bg-sea-wash px-4 py-3 shadow-[5px_5px_0_var(--color-ink)]">
             <h2 className="marking">{m.home.sandbox}</h2>
             <p className="text-ink-2">{m.home.sandboxHint}</p>
             <a
               href={hrefOf({ page: 'sandbox' })}
-              className="flex items-center gap-1.5 rounded-[3px] border border-ink px-3 py-1.5 font-bold hover:bg-ink hover:text-plate"
+              className="flex items-center gap-1.5 btn border-2 border-ink bg-plate px-3 py-1.5 font-bold hover:bg-pop"
             >
               {m.home.openSandbox}
               <ForwardIcon />
             </a>
           </div>
-          <div className="flex flex-col items-start gap-2 border-s-4 border-sea bg-plate py-3 ps-4 pe-5">
+          <div className="flex flex-col items-start gap-2 border-2 border-ink bg-shallows px-4 py-3 shadow-[5px_5px_0_var(--color-ink)]">
             <h2 className="marking">{m.guide.homeTitle}</h2>
             <p className="text-ink-2">{m.guide.homeHint}</p>
             <a
               href={hrefOf({ page: 'guide', id: null })}
-              className="flex items-center gap-1.5 rounded-[3px] border border-ink px-3 py-1.5 font-bold hover:bg-ink hover:text-plate"
+              className="flex items-center gap-1.5 btn border-2 border-ink bg-plate px-3 py-1.5 font-bold hover:bg-pop"
             >
               {m.guide.open}
               <ForwardIcon />
@@ -69,9 +69,9 @@ export function Home() {
             </h2>
             <p className="font-mono text-ink-2">{m.home.passed(passed, LEVELS.length)}</p>
           </div>
-          <ol className="flex flex-col border-t border-ink">
+          <ol className="flex flex-col border-2 border-ink shadow-[6px_6px_0_var(--color-ink)]">
             {LEVELS.map((level, index) => (
-              <LevelRow key={level.id} level={level} index={index + 1} stars={stars[level.id] ?? 0} />
+              <LevelRow key={level.id} level={level} index={index + 1} stars={stars[level.id] ?? 0} last={index === LEVELS.length - 1} />
             ))}
           </ol>
         </section>
@@ -80,7 +80,7 @@ export function Home() {
   );
 }
 
-function LevelRow({ level, index, stars }: { level: Scenario; index: number; stars: number }) {
+function LevelRow({ level, index, stars, last }: { level: Scenario; index: number; stars: number; last: boolean }) {
   const m = useMessages();
   const text = useLevelText(level);
   const done = stars > 0;
@@ -88,9 +88,10 @@ function LevelRow({ level, index, stars }: { level: Scenario; index: number; sta
     <li>
       <a
         href={hrefOf({ page: 'level', id: level.id })}
-        className={`group grid grid-cols-[4.2rem_minmax(0,1fr)_auto_auto] items-center gap-4 border-b border-s-4 border-b-line bg-plate py-3 ps-4 pe-4 hover:bg-shallows ${
-          done ? 'border-s-sea' : 'border-s-line'
-        }`}
+        // A level that has been passed is marked down its edge; the last row needs no line under it.
+        className={`group grid grid-cols-[4.2rem_minmax(0,1fr)_auto_auto] items-center gap-4 border-s-8 bg-plate py-3 ps-4 pe-4 hover:bg-pop ${
+          last ? '' : 'border-b-2 border-b-line'
+        } ${done ? 'border-s-sea' : 'border-s-plate hover:border-s-pop'}`}
       >
         <span className={`font-display text-[2.6rem] leading-none font-bold ${done ? 'text-sea' : 'text-ink'}`} aria-hidden="true">
           {m.home.ordinal(index)}
@@ -126,10 +127,20 @@ function Hull({ passed, total }: { passed: number; total: number }) {
   const wave = `M-60 0 ${'q15 -5 30 0 t30 0 '.repeat(Math.ceil(WIDTH / 60) + 1)}V${HEIGHT} H-60 Z`;
 
   return (
-    <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full max-w-[36rem] border border-ink bg-plate" aria-hidden="true" focusable="false">
+    <svg
+      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      className="w-full max-w-[36rem] border-2 border-ink bg-plate shadow-[6px_6px_0_var(--color-ink)]"
+      aria-hidden="true"
+      focusable="false"
+    >
       {/* Below the line the hull is painted red. */}
-      <rect y={LADEN_Y} width={WIDTH} height={HEIGHT - LADEN_Y} fill="var(--color-oxide)" opacity="0.14" />
-      <path d={`M0 ${LADEN_Y}H${WIDTH}`} stroke="var(--color-oxide)" strokeWidth="1" strokeDasharray="2 5" />
+      <rect y={LADEN_Y} width={WIDTH} height={HEIGHT - LADEN_Y} fill="var(--color-oxide-wash)" />
+      <path d={`M0 ${LADEN_Y}H${WIDTH}`} stroke="var(--color-ink)" strokeWidth="2" strokeDasharray="6 6" />
+
+      {/* The water is flat colour with a hard edge, and everything painted on the hull shows through it. */}
+      <g transform={`translate(0 ${waterY})`}>
+        <path d={wave} className="hull-water" fill="var(--color-sea-wash)" stroke="var(--color-ink)" strokeWidth="2" />
+      </g>
 
       {/* Draught marks: one for each level. */}
       <g stroke="var(--color-ink)" fill="var(--color-ink)">
@@ -137,7 +148,7 @@ function Hull({ passed, total }: { passed: number; total: number }) {
         {Array.from({ length: total + 1 }, (_, step) => (
           <path key={step} d={`M34 ${markY(step)}h${step % 5 === 0 ? 20 : 11}`} strokeWidth="2" />
         ))}
-        {[0, total / 2, total].map((step) => (
+        {[0, Math.round(total / 2), total].map((step) => (
           <text key={step} x="60" y={markY(step) + 6} stroke="none" className="font-display text-[17px] font-bold">
             {step}
           </text>
@@ -148,10 +159,6 @@ function Hull({ passed, total }: { passed: number; total: number }) {
       <g stroke="var(--color-ink)" strokeWidth="7" fill="none">
         <circle cx={WIDTH / 2} cy={LADEN_Y} r="34" />
         <path d={`M${WIDTH / 2 - 62} ${LADEN_Y}h124`} />
-      </g>
-
-      <g transform={`translate(0 ${waterY})`}>
-        <path d={wave} className="hull-water" fill="var(--color-sea)" opacity="0.5" />
       </g>
     </svg>
   );

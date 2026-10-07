@@ -62,7 +62,7 @@ export function ClientNodeView({ id, data, selected }: NodeProps<FlowNodeOf<'cli
   const m = useMessages();
   const traffic = useSim((state) => state.traffic);
   return (
-    <div className={`flex w-44 items-center gap-2.5 rounded-full border border-ink bg-plate py-2 ps-3 pe-5 ${outline(selected)}`}>
+    <div className={`flex w-44 items-center gap-2.5 rounded-full border-2 border-ink bg-plate shadow-[4px_4px_0_var(--color-ink)] py-2 ps-3 pe-5 ${outline(selected)}`}>
       <span className="grid size-7 shrink-0 place-items-center rounded-full bg-ink text-plate">{PART_ICONS.client}</span>
       <div className="min-w-0">
         <div className="truncate font-bold">{data.name || id}</div>
@@ -79,7 +79,7 @@ export function GateNodeView({ id, type, data, selected }: NodeProps<FlowNodeOf<
   const { window, gauge } = useLive(id);
   const failing = window?.failed ?? 0;
   return (
-    <div className={`flex w-44 items-center gap-2 rounded-[3px] border border-ink bg-deck py-1.5 ps-2.5 pe-3 ${outline(selected)}`}>
+    <div className={`flex w-44 items-center gap-2 border-2 border-ink bg-deck py-1.5 shadow-[4px_4px_0_var(--color-ink)] ps-2.5 pe-3 ${outline(selected)}`}>
       <Handle type="target" position={Position.Left} />
       <span className="shrink-0 text-ink">{PART_ICONS[type]}</span>
       <div className="min-w-0 flex-1">
@@ -118,7 +118,7 @@ function Plate({ id, type, name, selected, level, children, calls = true }: Plat
   const m = useMessages();
   const instances = useSim(gaugeOf(id))?.instances;
   return (
-    <div className={`flex h-[5.3rem] w-52 overflow-hidden rounded-[3px] border border-ink bg-plate ${outline(selected)}`}>
+    <div className={`flex h-[5.3rem] w-52 overflow-hidden border-2 border-ink bg-plate shadow-[4px_4px_0_var(--color-ink)] ${outline(selected)}`}>
       <Handle type="target" position={Position.Left} />
       {level !== undefined && <LoadGauge level={level} label={m.node.load(formatPercent(level))} lineLabel={m.node.loadLine} />}
       <div className="flex min-w-0 flex-1 flex-col justify-between py-1.5 ps-2.5 pe-3">

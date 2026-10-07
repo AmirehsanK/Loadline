@@ -114,13 +114,13 @@ function Strip({ payload }: { payload: string }) {
   const failing = finished > 0 && last ? last.failed / finished : 0;
 
   return (
-    <footer className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-line bg-plate px-3 py-2">
+    <footer className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t-2 border-line bg-plate px-3 py-2">
       <div className="flex items-center gap-1.5" role="group" aria-label={m.run.controls}>
         <button
           type="button"
           disabled={status === 'blocked'}
           onClick={running ? pause : play}
-          className="flex min-w-20 items-center justify-center gap-1.5 rounded-[3px] bg-ink px-3 py-1 font-bold whitespace-nowrap text-plate hover:bg-ink-2 disabled:bg-ink-3"
+          className="flex min-w-20 items-center justify-center gap-1.5 btn border-2 border-ink bg-pop px-3 py-1 font-bold whitespace-nowrap text-ink disabled:bg-deck disabled:text-ink-3"
         >
           {running ? <PauseIcon /> : <PlayIcon />}
           {running ? m.run.pause : status === 'finished' ? m.run.again : m.run.play}
@@ -133,7 +133,7 @@ function Strip({ payload }: { payload: string }) {
           onClick={() => {
             restart(false);
           }}
-          className="rounded-[3px] border border-line p-1.5 hover:border-ink disabled:text-ink-3"
+          className="btn border-2 border-line bg-plate p-1.5 hover:border-ink disabled:text-ink-3"
         >
           <RestartIcon />
         </button>

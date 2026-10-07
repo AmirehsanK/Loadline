@@ -79,7 +79,7 @@ export function Result({ level }: { level: Scenario }) {
       onClose={() => {
         setDismissed(true);
       }}
-      className="m-auto w-[34rem] max-w-[calc(100vw-2rem)] rounded-[3px] border border-ink bg-plate p-0 text-ink shadow-[6px_6px_0_var(--color-ink)] backdrop:bg-ink/40"
+      className="m-auto w-[34rem] max-w-[calc(100vw-2rem)] border-2 border-ink bg-plate p-0 text-ink shadow-[6px_6px_0_var(--color-ink)] backdrop:bg-ink/40"
     >
       {outcome && (
         <div className="flex max-h-[calc(100dvh-4rem)] flex-col">
@@ -105,7 +105,7 @@ export function Result({ level }: { level: Scenario }) {
             )}
 
             {outcome.broken.length > 0 && (
-              <div className="rounded-[3px] bg-oxide-wash px-2 py-1.5">
+              <div className="bg-oxide-wash px-2 py-1.5">
                 <p className="font-bold">{m.level.rules}</p>
                 <ul className="list-disc ps-4">
                   {[...new Set(outcome.broken.map((rule) => text.rules?.[rule] ?? m.level.brokenRule))].map((line) => (
@@ -116,7 +116,7 @@ export function Result({ level }: { level: Scenario }) {
             )}
 
             {nextTier && nextTier.length > 0 && (
-              <section className="border-t border-line pt-3">
+              <section className="border-t-2 border-line pt-3">
                 <h3 className="mb-1.5 font-bold">{m.level.result.nextStar}</h3>
                 <ul className="flex flex-col gap-1.5">
                   {nextTier.map((result, index) => (
@@ -127,7 +127,7 @@ export function Result({ level }: { level: Scenario }) {
             )}
 
             {passed && (
-              <section className="border-t border-line pt-3">
+              <section className="border-t-2 border-line pt-3">
                 <h3 className="mb-1.5 font-bold">{m.level.result.debrief}</h3>
                 <p>{text.debrief}</p>
               </section>
@@ -135,20 +135,20 @@ export function Result({ level }: { level: Scenario }) {
             {passed && !next && <p className="text-ink-2">{m.level.result.allDone}</p>}
           </div>
 
-          <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-3">
+          <footer className="flex flex-wrap items-center justify-end gap-2 border-t-2 border-line px-5 py-3">
             <button
               type="button"
               onClick={() => {
                 dialog.current?.close();
               }}
-              className="rounded-[3px] border border-line px-3 py-1.5 hover:border-ink"
+              className="btn border-2 border-line bg-plate px-3 py-1.5 hover:border-ink"
             >
               {passed ? m.level.result.stay : m.level.result.retry}
             </button>
             {passed && (
               <a
                 href={hrefOf(next ? { page: 'level', id: next.id } : { page: 'sandbox' })}
-                className="flex items-center gap-1.5 rounded-[3px] bg-ink px-3 py-1.5 font-bold text-plate hover:bg-ink-2"
+                className="flex items-center gap-1.5 btn border-2 border-ink bg-pop px-3 py-1.5 font-bold text-ink"
               >
                 {next ? m.level.result.next : m.level.result.toSandbox}
                 <ForwardIcon />

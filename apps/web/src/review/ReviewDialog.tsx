@@ -24,7 +24,7 @@ export function ReviewButton() {
         onClick={() => {
           setOpen(true);
         }}
-        className="rounded-[3px] border border-line px-3 py-1.5 hover:border-ink"
+        className="btn border-2 border-line bg-plate px-3 py-1.5 hover:border-ink"
       >
         {m.review.button}
       </button>
@@ -182,17 +182,17 @@ function ReviewDialog({ onClose }: { onClose: () => void }) {
 
   const asking = asked.status === 'asking';
   const reply = asked.status === 'asking' || asked.status === 'answered' ? asked.text : '';
-  const quiet = 'rounded-[3px] border border-line px-3 py-1.5 hover:border-ink disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line';
+  const quiet = 'btn border-2 border-line bg-plate px-3 py-1.5 hover:border-ink disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:border-line';
 
   return (
     <dialog
       ref={dialog}
       aria-labelledby="review-title"
       onClose={onClose}
-      className="m-auto w-[44rem] max-w-[calc(100vw-2rem)] rounded-[3px] border border-ink bg-plate p-0 text-ink shadow-[6px_6px_0_var(--color-ink)] backdrop:bg-ink/40"
+      className="m-auto w-[44rem] max-w-[calc(100vw-2rem)] border-2 border-ink bg-plate p-0 text-ink shadow-[6px_6px_0_var(--color-ink)] backdrop:bg-ink/40"
     >
       <div className="flex max-h-[calc(100dvh-4rem)] flex-col">
-        <header className="border-b border-line px-5 py-3">
+        <header className="border-b-2 border-line px-5 py-3">
           <h2 id="review-title" className="marking text-[1.5rem]!">
             {m.review.title}
           </h2>
@@ -201,7 +201,7 @@ function ReviewDialog({ onClose }: { onClose: () => void }) {
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 py-4">
           <p className="text-ink-2">{m.review.intro}</p>
           {!ran && (
-            <p className="rounded-[3px] bg-signal-wash px-2 py-1.5" role="status">
+            <p className="bg-signal-wash px-2 py-1.5" role="status">
               {m.review.needRun}
             </p>
           )}
@@ -214,7 +214,7 @@ function ReviewDialog({ onClose }: { onClose: () => void }) {
             </button>
           </section>
 
-          <section className="flex flex-col gap-2 border-t border-line pt-3">
+          <section className="flex flex-col gap-2 border-t-2 border-line pt-3">
             <h3 className="font-bold">{m.review.keyTitle}</h3>
             <p className="text-ink-2">{m.review.keyHint}</p>
             <label htmlFor={keyId} className="field-label">
@@ -251,7 +251,7 @@ function ReviewDialog({ onClose }: { onClose: () => void }) {
                 type="button"
                 onClick={ask}
                 disabled={!prompt || apiKey.trim() === '' || asking}
-                className="rounded-[3px] bg-ink px-3 py-1.5 font-bold text-plate hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-ink-3"
+                className="btn border-2 border-ink bg-pop px-3 py-1.5 font-bold text-ink disabled:cursor-not-allowed disabled:bg-deck disabled:text-ink-3"
               >
                 {m.review.ask}
               </button>
@@ -271,33 +271,33 @@ function ReviewDialog({ onClose }: { onClose: () => void }) {
             <div aria-live="polite" className="flex flex-col gap-2">
               {asking && reply === '' && <p className="text-ink-2">{m.review.asking}</p>}
               {reply !== '' && (
-                <div className="rounded-[3px] border border-line bg-deck px-3 py-2">
+                <div className="border-2 border-line bg-deck px-3 py-2">
                   <Reply blocks={parseMarkdown(reply)} />
                 </div>
               )}
               {asked.status === 'answered' && asked.model !== '' && <p className="text-[0.85rem] text-ink-3">{m.review.answeredBy(asked.model)}</p>}
               {asked.status === 'answered' && asked.cutShort && <p className="text-[0.85rem] text-ink-3">{m.review.cutShort}</p>}
               {asked.status === 'failed' && (
-                <p className="rounded-[3px] bg-oxide-wash px-2 py-1.5" role="alert">
+                <p className="bg-oxide-wash px-2 py-1.5" role="alert">
                   {asked.why === 'other' ? m.review.failed.other(asked.message) : m.review.failed[asked.why]}
                 </p>
               )}
             </div>
           </section>
 
-          <section className="flex flex-col gap-2 border-t border-line pt-3">
+          <section className="flex flex-col gap-2 border-t-2 border-line pt-3">
             <h3 className="font-bold">{m.review.agentTitle}</h3>
             <p className="text-ink-2">{m.review.agentHint}</p>
           </section>
         </div>
 
-        <footer className="flex justify-end border-t border-line px-5 py-3">
+        <footer className="flex justify-end border-t-2 border-line px-5 py-3">
           <button
             type="button"
             onClick={() => {
               dialog.current?.close();
             }}
-            className="rounded-[3px] bg-ink px-3 py-1.5 font-bold text-plate hover:bg-ink-2"
+            className="btn border-2 border-ink bg-pop px-3 py-1.5 font-bold text-ink"
           >
             {m.review.close}
           </button>

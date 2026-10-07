@@ -22,7 +22,7 @@ export function Guide() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-line bg-plate px-6 py-3">
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b-2 border-line bg-plate px-6 py-3">
         <a href={hrefOf(HOME)} className="flex items-center gap-2.5 text-ink">
           <LoadMark size={28} />
           <span className="marking text-[2.1rem]!">{m.app.name}</span>
@@ -54,9 +54,9 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 /** Terms and what they mean, as a list. */
 function Terms({ entries }: { entries: { term: string; text: string }[] }) {
   return (
-    <dl className="flex flex-col border-t border-line">
+    <dl className="flex flex-col border-t-2 border-line">
       {entries.map((entry) => (
-        <div key={entry.term} className="grid gap-x-5 gap-y-0.5 border-b border-line py-2.5 sm:grid-cols-[12rem_minmax(0,1fr)]">
+        <div key={entry.term} className="grid gap-x-5 gap-y-0.5 border-b-2 border-line py-2.5 sm:grid-cols-[12rem_minmax(0,1fr)]">
           <dt className="font-bold">{entry.term}</dt>
           <dd className="text-ink-2">{entry.text}</dd>
         </div>
@@ -81,7 +81,7 @@ function Contents() {
         <Terms entries={m.guide.words} />
       </Section>
       <Section title={m.guide.lessonsTitle}>
-        <ol className="flex flex-col border-t border-ink">
+        <ol className="flex flex-col border-t-2 border-ink">
           {LEVELS.map((level, index) => (
             <LessonRow key={level.id} level={level} index={index + 1} />
           ))}
@@ -98,7 +98,7 @@ function LessonRow({ level, index }: { level: Scenario; index: number }) {
     <li>
       <a
         href={hrefOf({ page: 'guide', id: level.id })}
-        className="group grid grid-cols-[3.2rem_minmax(0,1fr)_auto] items-center gap-4 border-b border-line bg-plate px-4 py-2.5 hover:bg-shallows"
+        className="group grid grid-cols-[3.2rem_minmax(0,1fr)_auto] items-center gap-4 border-b-2 border-line bg-plate px-4 py-2.5 hover:bg-shallows"
       >
         <span className="font-display text-[2rem] leading-none font-bold" aria-hidden="true">
           {m.home.ordinal(index)}
@@ -136,10 +136,10 @@ function Lesson({ level }: { level: Scenario }) {
         </p>
         <h1 className="headline">{text.title}</h1>
         <p className="border-s-4 border-ink bg-plate py-2.5 ps-4 pe-4 text-[1.1rem]">{text.brief}</p>
-        <p className="rounded-[3px] bg-signal-wash px-3 py-2">{m.guide.spoiler}</p>
+        <p className="bg-signal-wash px-3 py-2">{m.guide.spoiler}</p>
         <a
           href={hrefOf({ page: 'level', id: level.id })}
-          className="flex items-center gap-1.5 self-start rounded-[3px] border border-ink px-3 py-1.5 font-bold hover:bg-ink hover:text-plate"
+          className="flex items-center gap-1.5 self-start btn border-2 border-ink bg-plate px-3 py-1.5 font-bold hover:bg-pop"
         >
           {m.guide.play}
           <ForwardIcon />
@@ -164,7 +164,7 @@ function Lesson({ level }: { level: Scenario }) {
             onClick={() => {
               openWithAnswer(level);
             }}
-            className="rounded-[3px] bg-ink px-3 py-1.5 font-bold text-plate hover:bg-ink-2"
+            className="btn border-2 border-ink bg-pop px-3 py-1.5 font-bold text-ink"
           >
             {m.guide.apply}
           </button>
@@ -185,7 +185,7 @@ function Lesson({ level }: { level: Scenario }) {
         </ul>
       </Section>
 
-      <nav className="flex items-center justify-between gap-4 border-t border-line pt-4">
+      <nav className="flex items-center justify-between gap-4 border-t-2 border-line pt-4">
         {previous ? (
           <a href={hrefOf({ page: 'guide', id: previous.id })} className="flex items-center gap-1.5 hover:underline">
             <BackIcon />
@@ -231,7 +231,7 @@ function Score({ level }: { level: Scenario }) {
     );
   }
   return (
-    <div className="flex flex-col gap-3 border border-line bg-plate px-4 py-3">
+    <div className="flex flex-col gap-3 border-2 border-line bg-plate px-4 py-3">
       <Stars earned={outcome.stars} size={22} label={m.level.result.stars(outcome.stars)} />
       <ul className="flex flex-col gap-1.5">
         {outcome.results.map((result, row) => (
@@ -239,7 +239,7 @@ function Score({ level }: { level: Scenario }) {
         ))}
       </ul>
       {outcome.bonus.map((tier, star) => (
-        <div key={star} className="border-t border-line pt-2">
+        <div key={star} className="border-t-2 border-line pt-2">
           <p className="mb-1.5 text-[0.9rem] text-ink-2">{m.level.star(star + 2)}</p>
           <ul className="flex flex-col gap-1.5">
             {tier.map((result, row) => (

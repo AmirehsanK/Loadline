@@ -59,7 +59,7 @@ export function FlowEdgeView({
       {failing > 0 && (
         <EdgeLabelRenderer>
           <div
-            className={`nodrag nopan pointer-events-none absolute rounded-[3px] px-1.5 py-0.5 font-mono text-[0.8rem] font-bold ${
+            className={`nodrag nopan pointer-events-none absolute px-1.5 py-0.5 font-mono text-[0.8rem] font-bold ${
               failing >= 0.05 ? 'bg-oxide text-plate' : 'bg-signal-wash text-ink'
             }`}
             style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
